@@ -4,7 +4,6 @@
 
 <div align="center">
 
-![Life Canvas OS](./resources/public/logo.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Electron](https://img.shields.io/badge/Electron-39.2.6-blue)](https://www.electronjs.org/)
