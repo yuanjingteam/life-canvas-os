@@ -17,12 +17,14 @@ if IS_DEV:
     from fastapi import FastAPI
     from core.health import router as health_router
     from api.test import router as test_router
+    from api.auth import router as auth_router
 
     app = FastAPI(title="Life Canvas OS API")
 
     # 注册路由
     app.include_router(health_router, tags=["health"])
     app.include_router(test_router)  # 添加测试路由
+    app.include_router(auth_router)  # 添加认证路由
 
     @app.get("/")
     async def root():
@@ -39,9 +41,14 @@ else:
     # 生产模式：IPC 通信（通过 stdin/stdout 与 Electron 通信）
     def ipc_loop():
         """IPC 通信循环"""
+        # 导入认证处理器
+        from api.auth import handle_auth_action
+
         action_handlers = {
             'ping': lambda params: {'action': 'pong', 'status': 'ok'},
-            # TODO: 添加其他 action 处理器
+            'verify_pin': lambda params: handle_auth_action('verify_pin', params),
+            'set_pin': lambda params: handle_auth_action('set_pin', params),
+            'get_auth_status': lambda params: handle_auth_action('get_auth_status', params),
         }
 
         for line in sys.stdin:
