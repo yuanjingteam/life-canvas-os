@@ -138,6 +138,19 @@
   --apple-error: #FF3B30;
 }
 
+.dark {
+  /* Apple UI Colors (Dark) */
+  --apple-bgMain: #000000;
+  --apple-bgSidebar: #1C1C1E;
+  --apple-textMain: #FFFFFF;
+  --apple-textSec: rgba(255, 255, 255, 0.6);
+  --apple-textTer: rgba(255, 255, 255, 0.3);
+  --apple-accent: #0A84FF;
+  --apple-border: rgba(255, 255, 255, 0.1);
+  --apple-success: #30D158;
+  --apple-error: #FF453A;
+}
+
 /* Custom UI Components */
 .liquid-glass {
   backdrop-filter: blur(10px) saturate(180%);
@@ -186,4 +199,61 @@
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
   }
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-from-bottom-4 {
+  from {
+    transform: translateY(1rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+.zoom-in-95 {
+  animation: zoom-in-95 0.5s ease-out;
+}
+
+.slide-in-from-bottom-4 {
+  animation: slide-in-from-bottom-4 0.7s ease-out;
+}
+
+/* Duration utilities */
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+.duration-700 {
+  animation-duration: 700ms;
 }
