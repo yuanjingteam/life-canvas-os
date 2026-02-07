@@ -1,5 +1,12 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '~/renderer/components/layout/MainLayout';
+import { DashboardPage } from '~/renderer/pages/dashboard/DashboardPage';
+import { FuelSystemPage } from '~/renderer/pages/systems/FuelSystemPage';
+import { JournalPage } from '~/renderer/pages/journal/JournalPage';
+import { JournalDetailPage } from '~/renderer/pages/journal/JournalDetailPage';
+import { JournalEditorPage } from '~/renderer/pages/journal/JournalEditorPage';
+import { TimelinePage } from '~/renderer/pages/timeline/TimelinePage';
+import { SettingsPage } from '~/renderer/pages/settings/SettingsPage';
 
 // 页面组件（暂时使用占位符）
 function PlaceholderPage({ name }: { name: string }) {
@@ -32,12 +39,14 @@ export function AppRoutes() {
 
         {/* 主应用路由（带布局） */}
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<PlaceholderPage name="全局总览" />} />
-          <Route path="/system/fuel" element={<PlaceholderPage name="饮食系统" />} />
-          <Route path="/journal" element={<PlaceholderPage name="生活日记" />} />
-          <Route path="/journal/:id" element={<PlaceholderPage name="日记详情" />} />
-          <Route path="/timeline" element={<PlaceholderPage name="审计时间轴" />} />
-          <Route path="/settings" element={<PlaceholderPage name="系统设置" />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/system/fuel" element={<FuelSystemPage />} />
+          <Route path="/journal" element={<JournalPage />} />
+          <Route path="/journal/new" element={<JournalEditorPage />} />
+          <Route path="/journal/:id" element={<JournalDetailPage />} />
+          <Route path="/journal/:id/edit" element={<JournalEditorPage />} />
+          <Route path="/timeline" element={<TimelinePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/system/:type" element={<PlaceholderPage name="子系统详情" />} />
         </Route>
       </Routes>
