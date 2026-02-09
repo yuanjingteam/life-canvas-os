@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { Sparkles, Search, Smile, Frown, Meh, Heart, Calendar, Plus } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/components/ui/input';
-import { Button } from '~/components/ui/button';
-import { Badge } from '~/components/ui/badge';
+import { Input } from '~/renderer/components/ui/input';
+import { Button } from '~/renderer/components/ui/button';
+import { Badge } from '~/renderer/components/ui/badge';
 
 type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
 

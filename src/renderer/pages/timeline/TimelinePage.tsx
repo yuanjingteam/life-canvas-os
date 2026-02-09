@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { History, Beef, Sparkles, Calendar as CalendarIcon, Clock, Search } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/components/ui/input';
-import { Badge } from '~/components/ui/badge';
+import { Input } from '~/renderer/components/ui/input';
+import { Badge } from '~/renderer/components/ui/badge';
 
 type TimelineEvent = {
   id: string;

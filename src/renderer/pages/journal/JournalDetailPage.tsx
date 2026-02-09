@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Trash2, Edit, Calendar } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/components/ui/button';
-import { Badge } from '~/components/ui/badge';
+import { Button } from '~/renderer/components/ui/button';
+import { Badge } from '~/renderer/components/ui/badge';
 import { DIMENSIONS } from '~/renderer/lib/constants';
 import MDEditor from '@uiw/react-md-editor';
 

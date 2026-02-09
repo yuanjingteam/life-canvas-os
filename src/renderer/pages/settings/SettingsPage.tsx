@@ -20,13 +20,13 @@ import {
 } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Input } from '~/components/ui/input';
-import { Button } from '~/components/ui/button';
-import { Switch } from '~/components/ui/switch';
-import { Slider } from '~/components/ui/slider';
-import { Badge } from '~/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
-import { Label } from '~/components/ui/label';
+import { Input } from '~/renderer/components/ui/input';
+import { Button } from '~/renderer/components/ui/button';
+import { Switch } from '~/renderer/components/ui/switch';
+import { Slider } from '~/renderer/components/ui/slider';
+import { Badge } from '~/renderer/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/renderer/components/ui/tabs';
+import { Label } from '~/renderer/components/ui/label';
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();

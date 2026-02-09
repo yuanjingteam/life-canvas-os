@@ -4,10 +4,10 @@ import { ArrowLeft, Save, X } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/components/ui/button';
-import { Input } from '~/components/ui/input';
-import { Textarea } from '~/components/ui/textarea';
-import { Badge } from '~/components/ui/badge';
+import { Button } from '~/renderer/components/ui/button';
+import { Input } from '~/renderer/components/ui/input';
+import { Textarea } from '~/renderer/components/ui/textarea';
+import { Badge } from '~/renderer/components/ui/badge';
 import { DIMENSIONS } from '~/renderer/lib/constants';
 
 type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
