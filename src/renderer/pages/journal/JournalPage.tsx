@@ -1,21 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Search, Smile, Frown, Meh, Heart, Calendar, Plus } from 'lucide-react';
+import { Sparkles, Search, Calendar, Plus } from 'lucide-react';
 import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Input } from '~/renderer/components/ui/input';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
-
-type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
-
-const MOODS: { type: MoodType; icon: any; color: string; label: string }[] = [
-  { type: 'great', icon: Heart, color: 'text-pink-500', label: '很棒' },
-  { type: 'good', icon: Smile, color: 'text-green-500', label: '不错' },
-  { type: 'neutral', icon: Meh, color: 'text-yellow-500', label: '一般' },
-  { type: 'bad', icon: Frown, color: 'text-orange-500', label: '不好' },
-  { type: 'terrible', icon: Frown, color: 'text-red-500', label: '很糟' },
-];
+import { MOODS, type MoodType } from '~/renderer/lib/constants';
+import { formatDateCN, formatTimeCN, formatWeekdayCN } from '~/renderer/lib/dateUtils';
+import type { DimensionType } from '~/shared/types';
 
 export function JournalPage() {
   const { state, updateState } = useApp();
@@ -26,13 +19,13 @@ export function JournalPage() {
   const addEntry = () => {
     if (!content.trim()) return;
     const entry = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       timestamp: Date.now(),
       content,
       mood,
       tags: [] as string[],
       attachments: [] as string[],
-      linkedDimensions: [] as string[],
+      linkedDimensions: [] as DimensionType[],
     };
     updateState({ journals: [entry, ...state.journals] });
     setContent('');
@@ -45,11 +38,7 @@ export function JournalPage() {
 
   // 按日期分组
   const groupedJournals = filteredJournals.reduce((acc, journal) => {
-    const date = new Date(journal.timestamp).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    const date = formatDateCN(journal.timestamp);
     if (!acc[date]) {
       acc[date] = [];
     }
@@ -108,11 +97,7 @@ export function JournalPage() {
                   ))}
                 </div>
                 <div className="text-xs text-apple-textTer dark:text-white/30 font-medium">
-                  {new Date().toLocaleDateString('zh-CN', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
+                  {formatWeekdayCN(Date.now())}
                 </div>
               </div>
 
@@ -160,10 +145,7 @@ export function JournalPage() {
                             <div className="flex-1 space-y-2">
                               <div className="flex justify-between items-start">
                                 <div className="text-xs font-bold text-apple-textTer dark:text-white/20 uppercase tracking-widest">
-                                  {new Date(j.timestamp).toLocaleTimeString('zh-CN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
+                                  {formatTimeCN(j.timestamp)}
                                 </div>
                                 {j.tags && j.tags.length > 0 && (
                                   <div className="flex gap-1">

@@ -4,6 +4,7 @@ import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Input } from '~/renderer/components/ui/input';
 import { Badge } from '~/renderer/components/ui/badge';
+import { formatDateCN } from '~/renderer/lib/dateUtils';
 
 type TimelineEvent = {
   id: string;
@@ -56,11 +57,7 @@ export function TimelinePage() {
   const groupedEvents = useMemo(() => {
     const groups: Record<string, TimelineEvent[]> = {};
     events.forEach((event) => {
-      const date = new Date(event.timestamp).toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      const date = formatDateCN(event.timestamp);
       if (!groups[date]) groups[date] = [];
       groups[date].push(event);
     });

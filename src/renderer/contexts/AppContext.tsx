@@ -26,7 +26,8 @@ export function AppProvider({ children }: AppProviderProps) {
         return { ...INITIAL_STATE, ...JSON.parse(saved) };
       }
     } catch (error) {
-      console.error('Failed to load state from localStorage:', error);
+      // localStorage 访问失败（隐私模式或配额超满），使用初始状态
+      // 生产环境可以考虑添加错误上报
     }
     return INITIAL_STATE;
   });
@@ -36,7 +37,8 @@ export function AppProvider({ children }: AppProviderProps) {
     try {
       localStorage.setItem('life-canvas-state', JSON.stringify(state));
     } catch (error) {
-      console.error('Failed to save state to localStorage:', error);
+      // localStorage 保存失败（通常是配额超满）
+      // 生产环境可以考虑添加用户提示或错误上报
     }
   }, [state]);
 

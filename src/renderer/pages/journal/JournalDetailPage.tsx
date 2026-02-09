@@ -5,18 +5,9 @@ import { useApp } from '~/renderer/contexts/AppContext';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
 import { Badge } from '~/renderer/components/ui/badge';
-import { DIMENSIONS } from '~/renderer/lib/constants';
+import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
+import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
 import MDEditor from '@uiw/react-md-editor';
-
-type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
-
-const MOODS: { type: MoodType; icon: string; color: string; label: string }[] = [
-  { type: 'great', icon: '💖', color: 'text-pink-500', label: '很棒' },
-  { type: 'good', icon: '😊', color: 'text-green-500', label: '不错' },
-  { type: 'neutral', icon: '😐', color: 'text-yellow-500', label: '一般' },
-  { type: 'bad', icon: '😞', color: 'text-orange-500', label: '不好' },
-  { type: 'terrible', icon: '😢', color: 'text-red-500', label: '很糟' },
-];
 
 export function JournalDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -93,20 +84,14 @@ export function JournalDetailPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-apple-border dark:border-white/5">
             <div className="flex items-center gap-4">
-              <span className="text-4xl">{moodObj?.icon}</span>
+              <span className="text-4xl">{moodObj?.emoji()}</span>
               <div>
                 <div className="text-sm font-medium text-apple-textTer dark:text-white/30 uppercase tracking-widest">
                   {moodObj?.label}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-apple-textSec dark:text-white/40 mt-1">
                   <Calendar size={14} />
-                  {new Date(entry.timestamp).toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTimeCN(entry.timestamp)}
                 </div>
               </div>
             </div>

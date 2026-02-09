@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from "~/renderer/components/ui/tabs";
 import { Label } from "~/renderer/components/ui/label";
+import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
@@ -40,16 +41,7 @@ export function SettingsPage() {
   >("idle");
   const [newValue, setNewValue] = useState("");
 
-  const calculateLifeProgress = () => {
-    const birthDate = new Date(state.user.birthday);
-    const today = new Date();
-    const ageInMs = today.getTime() - birthDate.getTime();
-    const expectedLifespanInMs =
-      state.user.lifespan * 365.25 * 24 * 60 * 60 * 1000;
-    return Math.min(100, Math.max(0, (ageInMs / expectedLifespanInMs) * 100));
-  };
-
-  const lifeProgress = calculateLifeProgress();
+  const lifeProgress = calculateLifeProgress(state.user.birthday, state.user.lifespan);
 
   const handleTestAI = () => {
     setTestStatus("testing");

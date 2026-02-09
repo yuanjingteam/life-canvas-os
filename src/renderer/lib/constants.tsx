@@ -1,19 +1,41 @@
 import React from 'react';
-import { 
-  Beef, 
-  Dumbbell, 
-  BookOpen, 
-  Zap, 
-  Moon, 
-  Wallet, 
-  Users, 
+import {
+  Beef,
+  Dumbbell,
+  BookOpen,
+  Zap,
+  Moon,
+  Wallet,
+  Users,
   TreePine,
   LayoutDashboard,
   Settings,
   History,
-  Sparkles
+  Sparkles,
+  Heart,
+  Smile,
+  Meh,
+  Frown,
 } from 'lucide-react';
 import { DimensionType, DimensionInfo, AppState } from '~/shared/types';
+
+// 情绪类型定义
+export type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
+
+// 统一的情绪配置
+export const MOODS: {
+  type: MoodType;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  emoji: () => string;
+  color: string;
+  label: string;
+}[] = [
+  { type: 'great', icon: Heart, emoji: () => '💖', color: 'text-pink-500', label: '很棒' },
+  { type: 'good', icon: Smile, emoji: () => '😊', color: 'text-green-500', label: '不错' },
+  { type: 'neutral', icon: Meh, emoji: () => '😐', color: 'text-yellow-500', label: '一般' },
+  { type: 'bad', icon: Frown, emoji: () => '😞', color: 'text-orange-500', label: '不好' },
+  { type: 'terrible', icon: Frown, emoji: () => '😢', color: 'text-red-500', label: '很糟' },
+];
 
 export const DIMENSIONS: DimensionInfo[] = [
   { type: DimensionType.FUEL, label: '饮食 (饮食营养)', icon: 'Beef', color: '#FF5733' },

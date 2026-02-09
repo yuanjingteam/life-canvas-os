@@ -8,17 +8,8 @@ import { Button } from '~/renderer/components/ui/button';
 import { Input } from '~/renderer/components/ui/input';
 import { Textarea } from '~/renderer/components/ui/textarea';
 import { Badge } from '~/renderer/components/ui/badge';
-import { DIMENSIONS } from '~/renderer/lib/constants';
-
-type MoodType = 'great' | 'good' | 'neutral' | 'bad' | 'terrible';
-
-const MOODS: { type: MoodType; icon: any; color: string; label: string }[] = [
-  { type: 'great', icon: () => '💖', color: 'text-pink-500', label: '很棒' },
-  { type: 'good', icon: () => '😊', color: 'text-green-500', label: '不错' },
-  { type: 'neutral', icon: () => '😐', color: 'text-yellow-500', label: '一般' },
-  { type: 'bad', icon: () => '😞', color: 'text-orange-500', label: '不好' },
-  { type: 'terrible', icon: () => '😢', color: 'text-red-500', label: '很糟' },
-];
+import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
+import type { DimensionType } from '~/shared/types';
 
 export function JournalEditorPage() {
   const navigate = useNavigate();
@@ -35,7 +26,7 @@ export function JournalEditorPage() {
   const [mood, setMood] = useState<MoodType>(existingEntry?.mood || 'good');
   const [tags, setTags] = useState<string[]>(existingEntry?.tags || []);
   const [tagInput, setTagInput] = useState('');
-  const [linkedDimensions, setLinkedDimensions] = useState<string[]>(
+  const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>(
     existingEntry?.linkedDimensions || [],
   );
 
@@ -50,7 +41,7 @@ export function JournalEditorPage() {
     setTags(tags.filter((t) => t !== tagToRemove));
   };
 
-  const handleToggleDimension = (dimType: string) => {
+  const handleToggleDimension = (dimType: DimensionType) => {
     setLinkedDimensions((prev) =>
       prev.includes(dimType)
         ? prev.filter((d) => d !== dimType)
@@ -62,7 +53,7 @@ export function JournalEditorPage() {
     if (!content.trim()) return;
 
     const entry = {
-      id: isEditing ? id! : Math.random().toString(36).substr(2, 9),
+      id: isEditing ? id! : crypto.randomUUID(),
       timestamp: existingEntry?.timestamp || Date.now(),
       title: title.trim(),
       content,
@@ -135,7 +126,7 @@ export function JournalEditorPage() {
                         : 'opacity-50 hover:opacity-80 hover:scale-105'
                     }`}
                   >
-                    <span className="text-3xl">{m.icon()}</span>
+                    <span className="text-3xl">{m.emoji()}</span>
                     <span className="text-xs font-medium text-apple-textSec dark:text-white/60">
                       {m.label}
                     </span>
@@ -152,7 +143,7 @@ export function JournalEditorPage() {
                   height={400}
                   preview="edit"
                   hideToolbar={false}
-                  visibleDragBar={false}
+                  visibleDragbar={false}
                 />
               </div>
             </div>

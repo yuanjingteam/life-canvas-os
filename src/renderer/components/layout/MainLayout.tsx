@@ -29,12 +29,17 @@ export function MainLayout() {
 
   const handleUnlock = (pin: string) => {
     // TODO: 实际的 PIN 验证逻辑
-    // 这里暂时接受任何 4 位 PIN
-    if (pin === '1234' || pin.length === 4) {
+    // 生产环境应该：
+    // 1. 从安全存储（如 electron safeStorage）读取存储的 PIN 哈希
+    // 2. 使用 timing-safe 比较 API 验证 PIN
+    // 3. 限制尝试次数，防止暴力破解
+
+    // 当前为演示模式：接受任意 4 位 PIN
+    if (pin.length === 4 && /^\d+$/.test(pin)) {
       setUnlockError(undefined);
       unlock();
     } else {
-      setUnlockError('PIN 码错误，请重试');
+      setUnlockError('PIN 码必须是 4 位数字');
     }
   };
 
