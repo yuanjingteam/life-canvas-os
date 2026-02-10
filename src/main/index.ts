@@ -8,6 +8,23 @@ import { MainWindow } from './windows/main'
 import { waitFor } from '~/shared/utils'
 import { pythonManager } from './python/manager'
 
+// 防止 EPIPE 错误导致应用崩溃
+const safeConsoleWrite = (fn: typeof console.log) => {
+  return (...args: any[]) => {
+    try {
+      fn(...args)
+    } catch (error) {
+      // 忽略 EPIPE 错误
+      if ((error as any)?.code !== 'EPIPE') {
+        throw error
+      }
+    }
+  }
+}
+
+console.error = safeConsoleWrite(console.error)
+console.log = safeConsoleWrite(console.log)
+
 makeAppWithSingleInstanceLock(async () => {
   // 启动 Python 后端进程
   console.log('[Main] Starting Python backend...')
