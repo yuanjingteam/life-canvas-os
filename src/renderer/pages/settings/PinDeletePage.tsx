@@ -1,73 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Shield, Trash2, AlertTriangle } from 'lucide-react';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
-import { Input } from '~/renderer/components/ui/input';
 import { toast } from '~/renderer/lib/toast';
+import {
+  PIN_CONFIG,
+  PIN_MESSAGES,
+  type PinApiError,
+} from '~/renderer/lib/pin';
+import { usePinApi, handlePinApiError } from '~/renderer/hooks';
+import { PinInput, PinStrengthIndicator, LoadingSpinner } from '~/renderer/components/pin';
 
 export function PinDeletePage() {
   const navigate = useNavigate();
+  const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi();
+
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 自动聚焦输入框
-  useEffect(() => {
-    const firstInput = document.querySelector('input[type="tel"]') as HTMLInputElement;
-    firstInput?.focus();
-  }, []);
-
   const handleVerifyPin = async () => {
-    if (pin.length !== 6) {
-      toast.error('请输入 6 位数字 PIN');
+    if (pin.length !== PIN_CONFIG.LENGTH) {
+      toast.error(PIN_MESSAGES.INVALID_LENGTH);
       return;
     }
 
-    if (isVerifying) {
-      return; // 防止重复提交
-    }
-
+    if (isVerifying) return;
     setIsVerifying(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // 验证成功，显示确认对话框
-        setShowConfirmDialog(true);
-        setIsVerifying(false);
-      } else {
-        if (result.code === 401) {
-          const attempts = result.data?.attempts_remaining || 0;
-          toast.error(result.message || 'PIN 验证失败', {
-            description: `剩余尝试次数：${attempts}`,
-          });
-        } else if (result.code === 429) {
-          const seconds = result.data?.remaining_seconds || 30;
-          toast.error(result.message || 'PIN 已锁定', {
-            description: `请 ${seconds} 秒后重试`,
-          });
-        } else {
-          toast.error('验证失败', {
-            description: result.message || '请稍后重试',
-          });
-        }
-        setPin('');
-        setIsVerifying(false);
-      }
-    } catch (error) {
-      toast.error('网络错误', {
-        description: '请检查后端服务是否运行',
-      });
+      await verifyWithErrorHandling(pin, toast);
+      setShowConfirmDialog(true);
+    } catch (error: unknown) {
+      const err = error as PinApiError;
+      handlePinApiError(err, toast);
+      setPin('');
+    } finally {
       setIsVerifying(false);
     }
   };
@@ -76,47 +47,19 @@ export function PinDeletePage() {
     setIsDeleting(true);
 
     try {
-      // TODO: 后端可能需要提供 DELETE /api/pin 接口
-      // 临时方案：通过后端提供的其他方式删除PIN
-      // 这里假设有一个 DELETE 接口
+      await deleteWithErrorHandling(pin, toast);
+      localStorage.setItem('pin-setup-status', 'skipped');
 
-      const response = await fetch('http://127.0.0.1:8000/api/pin', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
+      toast.success(PIN_MESSAGES.DELETE_SUCCESS, {
+        description: PIN_MESSAGES.DELETE_SUCCESS_DESC,
       });
 
-      const result = await response.json();
-
-      if (response.ok || response.status === 204) {
-        // 删除成功，更新本地状态
-        localStorage.setItem('pin-setup-status', 'skipped');
-
-        toast.success('PIN 已删除', {
-          description: '私密日记功能已关闭',
-        });
-
-        // 返回设置页面
-        setTimeout(() => navigate('/settings', { replace: true }), 1000);
-      } else {
-        toast.error('删除失败', {
-          description: result.message || '请稍后重试',
-        });
-      }
-    } catch (error) {
-      toast.error('网络错误', {
-        description: '请检查后端服务是否运行',
-      });
+      setTimeout(() => navigate('/settings', { replace: true }), PIN_CONFIG.NAVIGATION_DELAY);
+    } catch (error: unknown) {
+      // 错误已在 hook 中处理
     } finally {
       setIsDeleting(false);
       setShowConfirmDialog(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && pin.length === 6 && !isVerifying) {
-      e.preventDefault();
-      handleVerifyPin();
     }
   };
 
@@ -152,57 +95,29 @@ export function PinDeletePage() {
                 <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                   验证 PIN 码
                 </label>
-                <div className="relative mt-2">
-                  <Input
-                    type={showPin ? 'text' : 'tel'}
-                    inputMode="numeric"
-                    placeholder="••••••"
-                    value={pin}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                      setPin(value);
-                    }}
-                    onKeyDown={handleKeyDown}
-                    maxLength={6}
-                    className="text-center text-2xl tracking-[0.5em] h-14"
-                    disabled={isVerifying}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-apple-textTer hover:text-apple-textSec dark:hover:text-white/60"
-                  >
-                    {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {/* 强度指示器 */}
-                <div className="flex gap-1 mt-2">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div
-                      key={i}
-                      className={`h-1.5 flex-1 rounded-full transition-all ${
-                        i <= pin.length
-                          ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]'
-                          : 'bg-apple-border dark:bg-white/10'
-                      }`}
-                    />
-                  ))}
-                </div>
+                <PinInput
+                  value={pin}
+                  onChange={setPin}
+                  showPin={showPin}
+                  onToggleVisibility={() => setShowPin(!showPin)}
+                  onSubmit={handleVerifyPin}
+                  disabled={isVerifying}
+                />
+                <PinStrengthIndicator pinLength={pin.length} />
               </div>
 
               {/* 警告信息 */}
-              <div className="flex items-start gap-3 p-4 mt-4 bg-red-500/5 dark:bg-red-500/5 rounded-xl border border-red-500/20 dark:border-red-500/10">
+              <div className="flex items-start gap-3 p-4 bg-red-500/5 dark:bg-red-500/5 rounded-xl border border-red-500/20 dark:border-red-500/10">
                 <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={16} />
                 <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
-                  <p className="font-semibold text-red-500 dark:text-red-400">危险操作</p>
+                  <p className="font-semibold text-red-500 dark:text-red-400">{PIN_MESSAGES.DELETE_WARNING}</p>
                   <p>• 删除后，私密日记将变为公开</p>
                   <p>• 任何人都可以查看您的私密日记</p>
                   <p>• 此操作不可撤销</p>
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-4">
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => navigate('/settings')}
@@ -213,14 +128,11 @@ export function PinDeletePage() {
                 </Button>
                 <Button
                   onClick={handleVerifyPin}
-                  disabled={pin.length !== 6 || isVerifying}
+                  disabled={pin.length !== PIN_CONFIG.LENGTH || isVerifying}
                   className="flex-1 bg-red-500 hover:bg-red-600"
                 >
                   {isVerifying ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      验证中...
-                    </span>
+                    <LoadingSpinner text="验证中..." />
                   ) : (
                     <span className="flex items-center gap-2">
                       <Shield size={18} />
@@ -238,32 +150,30 @@ export function PinDeletePage() {
               <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-red-500/10 to-orange-500/10 flex items-center justify-center">
                 <AlertTriangle className="text-red-500" size={40} />
               </div>
-
-              <div className="space-y-2">
-                <h2 className="text-xl font-bold text-apple-textMain dark:text-white">
-                  确认删除 PIN 码？
+              <div>
+                <h2 className="text-2xl font-bold text-apple-textMain dark:text-white">
+                  确认删除 PIN 码
                 </h2>
-                <p className="text-apple-textSec dark:text-white/40 text-sm">
-                  此操作将永久删除您的 PIN 码保护
+                <p className="text-apple-textSec dark:text-white/40 text-sm mt-2">
+                  您确定要删除 PIN 码吗？此操作不可撤销
                 </p>
               </div>
 
-              <div className="p-4 bg-red-500/5 dark:bg-red-500/5 rounded-xl border border-red-500/20 dark:border-red-500/10 text-left">
+              {/* 最终警告 */}
+              <div className="flex items-start gap-3 p-4 bg-red-500/5 dark:bg-red-500/5 rounded-xl border border-red-500/20 dark:border-red-500/10">
+                <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={16} />
                 <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
-                  <p className="font-semibold text-red-500 dark:text-red-400 mb-2">删除后将会：</p>
-                  <p>• 所有私密日记变为公开可见</p>
-                  <p>• 任何人都可以访问您的私密内容</p>
-                  <p>• 需要重新设置 PIN 才能恢复保护</p>
+                  <p className="font-semibold text-red-500 dark:text-red-400">最后提醒</p>
+                  <p>• 删除后所有私密日记将变为公开可见</p>
+                  <p>• 任何人都将能够查看您的私密内容</p>
+                  <p>• 此操作无法撤销，请谨慎操作</p>
                 </div>
               </div>
 
               <div className="flex gap-3">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setShowConfirmDialog(false);
-                    setPin('');
-                  }}
+                  onClick={() => setShowConfirmDialog(false)}
                   className="flex-1"
                   disabled={isDeleting}
                 >
@@ -271,19 +181,13 @@ export function PinDeletePage() {
                 </Button>
                 <Button
                   onClick={handleDelete}
-                  disabled={isDeleting}
                   className="flex-1 bg-red-500 hover:bg-red-600"
+                  disabled={isDeleting}
                 >
                   {isDeleting ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      删除中...
-                    </span>
+                    <LoadingSpinner text="删除中..." />
                   ) : (
-                    <span className="flex items-center gap-2">
-                      <Trash2 size={18} />
-                      确认删除
-                    </span>
+                    '确认删除'
                   )}
                 </Button>
               </div>

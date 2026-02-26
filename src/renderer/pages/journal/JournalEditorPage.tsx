@@ -14,6 +14,7 @@ import { TagInput } from '~/renderer/components/ui/tag-input';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import type { DimensionType } from '~/shared/types';
 import { toast } from '~/renderer/lib/toast';
+import { pinApi } from '~/renderer/api';
 
 export function JournalEditorPage() {
   const navigate = useNavigate();
@@ -39,10 +40,11 @@ export function JournalEditorPage() {
   useEffect(() => {
     const checkPinStatus = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/pin/status');
-        const result = await response.json();
+        const response = await pinApi.status();
+
         if (response.ok) {
-          setPinStatus(result.data);
+          const result = await response.json();
+          setPinStatus(result);
         }
       } catch (error) {
         console.error('Failed to check PIN status:', error);

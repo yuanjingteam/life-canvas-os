@@ -9,6 +9,7 @@ import { PinVerifyDialog } from '~/renderer/components/auth/PinVerifyDialog';
 import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
 import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
 import MDEditor from '@uiw/react-md-editor';
+import { pinApi } from '~/renderer/api';
 
 export function JournalDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,20 +54,18 @@ export function JournalDetailPage() {
     };
 
     const handleVerify = async (pin: string) => {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
+      try {
+        const response = await pinApi.verify(pin);
 
-      const result = await response.json();
+        if (!response.ok) {
+          return false;
+        }
 
-      if (response.ok) {
         sessionStorage.setItem('pin-verified', 'true');
         setIsPinVerified(true);
         setShowPinDialog(false);
         return true;
-      } else {
+      } catch {
         return false;
       }
     };

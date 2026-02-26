@@ -1,27 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Shield,
-  CheckCircle2,
-  Lock,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Trash2,
-} from "lucide-react";
+import { Shield, Lock, KeyRound } from "lucide-react";
 import { GlassCard } from "~/renderer/components/GlassCard";
 import { Button } from "~/renderer/components/ui/button";
-import { Input } from "~/renderer/components/ui/input";
 import { toast } from "~/renderer/lib/toast";
+import {
+  PIN_CONFIG,
+  PIN_MESSAGES,
+  type PinApiError,
+} from "~/renderer/lib/pin";
+import { usePinApi, handlePinApiError } from "~/renderer/hooks";
+import {
+  PinInput,
+  PinStrengthIndicator,
+  PinMatchIndicator,
+  LoadingSpinner,
+} from "~/renderer/components/pin";
 
 type Step = "verify-old" | "enter-new" | "confirm-new";
 
 export function PinChangePage() {
   const navigate = useNavigate();
+  const { verifyWithErrorHandling, changeWithErrorHandling } = usePinApi();
+
   const [currentStep, setCurrentStep] = useState<Step>("verify-old");
   const [oldPin, setOldPin] = useState("");
-  const [verifiedOldPin, setVerifiedOldPin] = useState(""); // 保存已验证的旧PIN
+  const [verifiedOldPin, setVerifiedOldPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [showOldPin, setShowOldPin] = useState(false);
@@ -29,63 +33,25 @@ export function PinChangePage() {
   const [showConfirmPin, setShowConfirmPin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 自动聚焦第一个输入框
-  useEffect(() => {
-    const firstInput = document.querySelector(
-      'input[type="tel"], input[type="password"]',
-    ) as HTMLInputElement;
-    firstInput?.focus();
-  }, [currentStep]);
-
   // 步骤1：验证旧PIN
   const handleVerifyOldPin = async () => {
-    if (oldPin.length !== 6) {
-      toast.error("请输入 6 位数字 PIN");
+    if (oldPin.length !== PIN_CONFIG.LENGTH) {
+      toast.error(PIN_MESSAGES.INVALID_LENGTH);
       return;
     }
 
-    if (isSubmitting) {
-      return; // 防止重复提交
-    }
-
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/pin/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: oldPin }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // 验证成功，保存旧PIN并进入下一步
-        setVerifiedOldPin(oldPin);
-        setCurrentStep("enter-new");
-        setOldPin("");
-      } else {
-        if (result.code === 401) {
-          const attempts = result.data?.attempts_remaining || 0;
-          toast.error(result.message || "PIN 验证失败", {
-            description: `剩余尝试次数：${attempts}`,
-          });
-        } else if (result.code === 429) {
-          const seconds = result.data?.remaining_seconds || 30;
-          toast.error(result.message || "PIN 已锁定", {
-            description: `请 ${seconds} 秒后重试`,
-          });
-        } else {
-          toast.error("验证失败", {
-            description: result.message || "请稍后重试",
-          });
-        }
-        setOldPin("");
-      }
-    } catch (error) {
-      toast.error("网络错误", {
-        description: "请检查后端服务是否运行",
-      });
+      await verifyWithErrorHandling(oldPin, toast);
+      setVerifiedOldPin(oldPin);
+      setCurrentStep("enter-new");
+      setOldPin("");
+    } catch (error: unknown) {
+      const err = error as PinApiError;
+      handlePinApiError(err, toast);
+      setOldPin("");
     } finally {
       setIsSubmitting(false);
     }
@@ -93,74 +59,46 @@ export function PinChangePage() {
 
   // 步骤2&3：设置新PIN
   const handleSubmitNewPin = async () => {
-    if (newPin.length !== 6) {
-      toast.error("请输入 6 位数字 PIN");
+    if (newPin.length !== PIN_CONFIG.LENGTH) {
+      toast.error(PIN_MESSAGES.INVALID_LENGTH);
       return;
     }
     if (newPin !== confirmPin) {
-      toast.error("两次输入的 PIN 不一致");
+      toast.error(PIN_MESSAGES.PIN_MISMATCH);
       setConfirmPin("");
       return;
     }
     if (newPin === verifiedOldPin) {
-      toast.error("新 PIN 不能与旧 PIN 相同");
+      toast.error(PIN_MESSAGES.PIN_SAME_AS_OLD);
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/pin/change", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          old_pin: verifiedOldPin,
-          new_pin: newPin,
-        }),
+      await changeWithErrorHandling(verifiedOldPin, newPin, toast);
+      toast.success(PIN_MESSAGES.CHANGE_SUCCESS, {
+        description: PIN_MESSAGES.CHANGE_SUCCESS_DESC,
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast.success("PIN 修改成功", {
-          description: "请妥善保管您的新 PIN 码",
+      setTimeout(() => navigate("/settings", { replace: true }), PIN_CONFIG.NAVIGATION_DELAY);
+    } catch (error: unknown) {
+      const err = error as PinApiError;
+      if (err.code === 401) {
+        toast.error("旧 PIN 验证失败", {
+          description: "请重新输入",
         });
-        // 返回设置页面
-        setTimeout(() => navigate("/settings", { replace: true }), 1000);
+        setCurrentStep("verify-old");
+        setOldPin("");
+        setVerifiedOldPin("");
+        setNewPin("");
+        setConfirmPin("");
       } else {
-        if (result.code === 401) {
-          toast.error("旧 PIN 验证失败", {
-            description: "请重新输入",
-          });
-          setCurrentStep("verify-old");
-          setOldPin("");
-          setVerifiedOldPin("");
-          setNewPin("");
-          setConfirmPin("");
-        } else {
-          toast.error("PIN 修改失败", {
-            description: result.message || "请稍后重试",
-          });
-        }
+        handlePinApiError(err, toast);
       }
-    } catch (error) {
-      toast.error("网络错误", {
-        description: "请检查后端服务是否运行",
-      });
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent, action: () => void) => {
-    if (e.key === "Enter" && !isSubmitting) {
-      e.preventDefault();
-      action();
-    }
-  };
-
-  const isNewPinValid = newPin.length === 6;
-  const isConfirmValid = confirmPin.length === 6 && newPin === confirmPin;
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
@@ -201,43 +139,15 @@ export function PinChangePage() {
               <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                 当前 PIN 码
               </label>
-              <div className="relative mt-2">
-                <Input
-                  type={showOldPin ? "text" : "tel"}
-                  inputMode="numeric"
-                  placeholder="••••••"
-                  value={oldPin}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setOldPin(value);
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, handleVerifyOldPin)}
-                  maxLength={6}
-                  className="text-center text-2xl tracking-[0.5em] h-14"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowOldPin(!showOldPin)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-apple-textTer hover:text-apple-textSec dark:hover:text-white/60"
-                >
-                  {showOldPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              {/* 强度指示器 */}
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div
-                    key={i}
-                    className={`h-1.5 flex-1 rounded-full transition-all ${
-                      i <= oldPin.length
-                        ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
-                        : "bg-apple-border dark:bg-white/10"
-                    }`}
-                  />
-                ))}
-              </div>
+              <PinInput
+                value={oldPin}
+                onChange={setOldPin}
+                showPin={showOldPin}
+                onToggleVisibility={() => setShowOldPin(!showOldPin)}
+                onSubmit={handleVerifyOldPin}
+                disabled={isSubmitting}
+              />
+              <PinStrengthIndicator pinLength={oldPin.length} />
             </div>
 
             <div className="flex gap-3 mt-4">
@@ -250,14 +160,11 @@ export function PinChangePage() {
               </Button>
               <Button
                 onClick={handleVerifyOldPin}
-                disabled={oldPin.length !== 6 || isSubmitting}
+                disabled={oldPin.length !== PIN_CONFIG.LENGTH || isSubmitting}
                 className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    验证中...
-                  </span>
+                  <LoadingSpinner text="验证中..." />
                 ) : (
                   <span className="flex items-center gap-2">
                     <Shield size={18} />
@@ -276,46 +183,14 @@ export function PinChangePage() {
               <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                 新 PIN 码
               </label>
-              <div className="relative">
-                <Input
-                  type={showNewPin ? "text" : "tel"}
-                  inputMode="numeric"
-                  placeholder="••••••"
-                  value={newPin}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setNewPin(value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newPin.length === 6) {
-                      setCurrentStep("confirm-new");
-                    }
-                  }}
-                  maxLength={6}
-                  className="text-center text-2xl tracking-[0.5em] h-14"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPin(!showNewPin)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-apple-textTer hover:text-apple-textSec dark:hover:text-white/60"
-                >
-                  {showNewPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              {/* 强度指示器 */}
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div
-                    key={i}
-                    className={`h-1.5 flex-1 rounded-full transition-all ${
-                      i <= newPin.length
-                        ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
-                        : "bg-apple-border dark:bg-white/10"
-                    }`}
-                  />
-                ))}
-              </div>
+              <PinInput
+                value={newPin}
+                onChange={setNewPin}
+                showPin={showNewPin}
+                onToggleVisibility={() => setShowNewPin(!showNewPin)}
+                onSubmit={() => newPin.length === PIN_CONFIG.LENGTH && setCurrentStep("confirm-new")}
+              />
+              <PinStrengthIndicator pinLength={newPin.length} />
             </div>
 
             <div className="flex gap-3">
@@ -333,7 +208,7 @@ export function PinChangePage() {
               </Button>
               <Button
                 onClick={() => setCurrentStep("confirm-new")}
-                disabled={newPin.length !== 6}
+                disabled={newPin.length !== PIN_CONFIG.LENGTH}
                 className="flex-1 bg-purple-500 hover:bg-purple-600"
               >
                 下一步
@@ -349,47 +224,16 @@ export function PinChangePage() {
               <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                 确认新 PIN 码
               </label>
-              <div className="relative">
-                <Input
-                  type={showConfirmPin ? "text" : "tel"}
-                  inputMode="numeric"
-                  placeholder="••••••"
-                  value={confirmPin}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    setConfirmPin(value);
-                  }}
-                  onKeyDown={(e) => handleKeyDown(e, handleSubmitNewPin)}
-                  maxLength={6}
-                  className="text-center text-2xl tracking-[0.5em] h-14"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPin(!showConfirmPin)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-apple-textTer hover:text-apple-textSec dark:hover:text-white/60"
-                >
-                  {showConfirmPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              {/* 匹配状态 */}
+              <PinInput
+                value={confirmPin}
+                onChange={setConfirmPin}
+                showPin={showConfirmPin}
+                onToggleVisibility={() => setShowConfirmPin(!showConfirmPin)}
+                onSubmit={handleSubmitNewPin}
+                disabled={isSubmitting}
+              />
               {confirmPin.length > 0 && (
-                <div className="flex items-center gap-2 text-xs">
-                  {isConfirmValid ? (
-                    <>
-                      <CheckCircle2 className="text-green-500" size={14} />
-                      <span className="text-green-500">PIN 码一致</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-apple-error" />
-                      <span className="text-apple-error dark:text-red-400">
-                        PIN 码不一致
-                      </span>
-                    </>
-                  )}
-                </div>
+                <PinMatchIndicator isValid={newPin === confirmPin && confirmPin.length === PIN_CONFIG.LENGTH} />
               )}
             </div>
 
@@ -397,7 +241,7 @@ export function PinChangePage() {
             <div className="flex items-start gap-3 p-4 bg-apple-accent/5 dark:bg-purple-500/5 rounded-xl border border-apple-accent/10 dark:border-purple-500/10">
               <Lock className="text-purple-500 shrink-0 mt-0.5" size={16} />
               <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
-                <p>• PIN 码必须是 6 位数字</p>
+                <p>• PIN 码必须是 {PIN_CONFIG.LENGTH} 位数字</p>
                 <p>• 请妥善保管 PIN 码，丢失后无法找回</p>
               </div>
             </div>
@@ -416,14 +260,11 @@ export function PinChangePage() {
               </Button>
               <Button
                 onClick={handleSubmitNewPin}
-                disabled={!isConfirmValid || isSubmitting}
+                disabled={newPin !== confirmPin || confirmPin.length !== PIN_CONFIG.LENGTH || isSubmitting}
                 className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    修改中...
-                  </span>
+                  <LoadingSpinner text="修改中..." />
                 ) : (
                   <span className="flex items-center gap-2">
                     <Shield size={18} />

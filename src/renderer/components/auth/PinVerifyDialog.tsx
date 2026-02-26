@@ -3,6 +3,9 @@ import { X, Lock } from 'lucide-react';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { Input } from '~/renderer/components/ui/input';
 import { Button } from '~/renderer/components/ui/button';
+import { pinApi } from '~/renderer/api';
+import { PIN_CONFIG } from '~/renderer/lib/pin';
+import type { PinApiError } from '~/renderer/lib/pin';
 
 interface PinVerifyDialogProps {
   isOpen: boolean;
@@ -17,8 +20,8 @@ export function PinVerifyDialog({ isOpen, onClose, onVerify, error: externalErro
   const [error, setError] = useState(externalError || '');
 
   const handleSubmit = async () => {
-    if (pin.length !== 6) {
-      setError('请输入 6 位数字 PIN');
+    if (pin.length !== PIN_CONFIG.LENGTH) {
+      setError(`请输入 ${PIN_CONFIG.LENGTH} 位数字 PIN`);
       return;
     }
 
@@ -26,37 +29,32 @@ export function PinVerifyDialog({ isOpen, onClose, onVerify, error: externalErro
     setError('');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
+      const response = await pinApi.verify(pin);
 
-      const result = await response.json();
+      if (!response.ok) {
+        const error = (await response.json()) as PinApiError;
 
-      if (response.ok) {
-        // 验证成功
-        const success = await onVerify(pin);
-        if (success) {
-          handleClose();
-        }
-      } else {
         // 验证失败
-        if (result.code === 401) {
-          const attempts = result.data?.attempts_remaining || 0;
-          setError(`${result.message || 'PIN 验证失败'}，剩余尝试次数：${attempts}`);
-        } else if (result.code === 429) {
-          const seconds = result.data?.remaining_seconds || 30;
-          setError(`${result.message || 'PIN 已锁定'}，请 ${seconds} 秒后重试`);
-        } else if (result.code === 424) {
+        if (error.code === 401) {
+          const attempts = error.data?.attempts_remaining || 0;
+          setError(`${error.message || 'PIN 验证失败'}，剩余尝试次数：${attempts}`);
+        } else if (error.code === 429) {
+          const seconds = error.data?.remaining_seconds || PIN_CONFIG.DEFAULT_LOCK_SECONDS;
+          setError(`${error.message || 'PIN 已锁定'}，请 ${seconds} 秒后重试`);
+        } else if (error.code === 424) {
           setError('PIN 未设置');
         } else {
-          setError(result.message || '验证失败');
+          setError(error.message || '验证失败');
         }
         setPin('');
+        return;
       }
-    } catch (err) {
-      setError('网络错误，请检查后端服务');
+
+      // 验证成功
+      const success = await onVerify(pin);
+      if (success) {
+        handleClose();
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -69,7 +67,7 @@ export function PinVerifyDialog({ isOpen, onClose, onVerify, error: externalErro
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && pin.length === 6 && !isVerifying) {
+    if (e.key === 'Enter' && pin.length === PIN_CONFIG.LENGTH && !isVerifying) {
       handleSubmit();
     }
   };
@@ -110,12 +108,12 @@ export function PinVerifyDialog({ isOpen, onClose, onVerify, error: externalErro
             placeholder="••••••"
             value={pin}
             onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+              const value = e.target.value.replace(/\D/g, '').slice(0, PIN_CONFIG.LENGTH);
               setPin(value);
               setError('');
             }}
             onKeyDown={handleKeyDown}
-            maxLength={6}
+            maxLength={PIN_CONFIG.LENGTH}
             disabled={isVerifying}
             className="text-center text-2xl tracking-[0.5em] h-14"
             autoFocus
@@ -128,7 +126,7 @@ export function PinVerifyDialog({ isOpen, onClose, onVerify, error: externalErro
 
           {/* 强度指示器 */}
           <div className="flex gap-1">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {Array.from({ length: PIN_CONFIG.LENGTH }).map((_, i) => (
               <div
                 key={i}
                 className={`h-1.5 flex-1 rounded-full transition-all ${
@@ -153,7 +151,7 @@ export function PinVerifyDialog({ isOpen, onClose, onVerify, error: externalErro
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={pin.length !== 6 || isVerifying}
+            disabled={pin.length !== PIN_CONFIG.LENGTH || isVerifying}
             className="flex-1 bg-purple-500 hover:bg-purple-600"
           >
             {isVerifying ? '验证中...' : '验证'}

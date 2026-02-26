@@ -5,6 +5,9 @@ import { GlassCard } from '~/renderer/components/GlassCard';
 import { Button } from '~/renderer/components/ui/button';
 import { Input } from '~/renderer/components/ui/input';
 import { toast } from '~/renderer/lib/toast';
+import { pinApi } from '~/renderer/api';
+import { PIN_CONFIG } from '~/renderer/lib/pin';
+import type { PinApiError } from '~/renderer/lib/pin';
 
 export function PinSetupPage() {
   const navigate = useNavigate();
@@ -26,8 +29,8 @@ export function PinSetupPage() {
 
   const handleSubmit = async () => {
     // 验证
-    if (pin.length !== 6) {
-      toast.error('请输入 6 位数字 PIN');
+    if (pin.length !== PIN_CONFIG.LENGTH) {
+      toast.error(`请输入 ${PIN_CONFIG.LENGTH} 位数字 PIN`);
       return;
     }
     if (pin !== confirmPin) {
@@ -39,38 +42,31 @@ export function PinSetupPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
-      });
+      const response = await pinApi.setup(pin);
 
-      const result = await response.json();
+      if (!response.ok) {
+        const error = (await response.json()) as PinApiError;
 
-      if (response.ok) {
-        // 标记 PIN 设置已完成
-        localStorage.setItem('pin-setup-status', 'completed');
-
-        toast.success('PIN 设置成功', {
-          description: '您现在可以使用私密日记功能了',
-        });
-        // 返回原页面
-        setTimeout(() => navigate(returnUrl, { replace: true }), 1000);
-      } else {
-        if (result.code === 409) {
+        if (error.code === 409) {
           toast.error('PIN 已设置', {
             description: '您已经设置过 PIN 码了',
           });
         } else {
           toast.error('PIN 设置失败', {
-            description: result.message || '请稍后重试',
+            description: error.message || '请稍后重试',
           });
         }
+        return;
       }
-    } catch (error) {
-      toast.error('网络错误', {
-        description: '请检查后端服务是否运行',
+
+      // 标记 PIN 设置已完成
+      localStorage.setItem('pin-setup-status', 'completed');
+
+      toast.success('PIN 设置成功', {
+        description: '您现在可以使用私密日记功能了',
       });
+      // 返回原页面
+      setTimeout(() => navigate(returnUrl, { replace: true }), PIN_CONFIG.NAVIGATION_DELAY);
     } finally {
       setIsSubmitting(false);
     }
@@ -78,17 +74,17 @@ export function PinSetupPage() {
 
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // 只允许数字，最多 6 位
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const value = e.target.value.replace(/\D/g, '').slice(0, PIN_CONFIG.LENGTH);
     setPin(value);
   };
 
   const handleConfirmPinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    const value = e.target.value.replace(/\D/g, '').slice(0, PIN_CONFIG.LENGTH);
     setConfirmPin(value);
   };
 
-  const isPinValid = pin.length === 6;
-  const isConfirmValid = confirmPin.length === 6 && pin === confirmPin;
+  const isPinValid = pin.length === PIN_CONFIG.LENGTH;
+  const isConfirmValid = confirmPin.length === PIN_CONFIG.LENGTH && pin === confirmPin;
 
   return (
     <div className="min-h-screen bg-apple-bgMain dark:bg-black flex items-center justify-center p-6">
@@ -119,7 +115,7 @@ export function PinSetupPage() {
               设置 PIN 码
             </h1>
             <p className="text-apple-textSec dark:text-white/40 text-sm mt-2">
-              PIN 码用于保护您的私密日记（6 位数字）
+              PIN 码用于保护您的私密日记（{PIN_CONFIG.LENGTH} 位数字）
             </p>
           </div>
         </GlassCard>
@@ -138,7 +134,7 @@ export function PinSetupPage() {
                 placeholder="••••••"
                 value={pin}
                 onChange={handlePinChange}
-                maxLength={6}
+                maxLength={PIN_CONFIG.LENGTH}
                 className="text-center text-2xl tracking-[0.5em] h-14"
               />
               <button
@@ -152,11 +148,11 @@ export function PinSetupPage() {
 
             {/* 强度指示器 */}
             <div className="flex gap-1">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
+              {Array.from({ length: PIN_CONFIG.LENGTH }).map((_, i) => (
                 <div
                   key={i}
                   className={`h-1.5 flex-1 rounded-full transition-all ${
-                    i <= pin.length
+                    i < pin.length
                       ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]'
                       : 'bg-apple-border dark:bg-white/10'
                   }`}
@@ -177,7 +173,7 @@ export function PinSetupPage() {
                 placeholder="••••••"
                 value={confirmPin}
                 onChange={handleConfirmPinChange}
-                maxLength={6}
+                maxLength={PIN_CONFIG.LENGTH}
                 className="text-center text-2xl tracking-[0.5em] h-14"
                 disabled={!isPinValid}
               />
@@ -212,7 +208,7 @@ export function PinSetupPage() {
           <div className="flex items-start gap-3 p-4 bg-apple-accent/5 dark:bg-purple-500/5 rounded-xl border border-apple-accent/10 dark:border-purple-500/10">
             <Lock className="text-purple-500 shrink-0 mt-0.5" size={16} />
             <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
-              <p>• PIN 码必须是 6 位数字</p>
+              <p>• PIN 码必须是 {PIN_CONFIG.LENGTH} 位数字</p>
               <p>• 请妥善保管 PIN 码，丢失后无法找回</p>
               <p>• 设置后可随时在设置中修改</p>
             </div>
