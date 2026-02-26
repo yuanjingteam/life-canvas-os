@@ -1,20 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, CheckCircle2, Lock, Eye, EyeOff, KeyRound, Trash2 } from 'lucide-react';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
-import { Input } from '~/renderer/components/ui/input';
-import { toast } from '~/renderer/lib/toast';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Shield,
+  CheckCircle2,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Trash2,
+} from "lucide-react";
+import { GlassCard } from "~/renderer/components/GlassCard";
+import { Button } from "~/renderer/components/ui/button";
+import { Input } from "~/renderer/components/ui/input";
+import { toast } from "~/renderer/lib/toast";
 
-type Step = 'verify-old' | 'enter-new' | 'confirm-new';
+type Step = "verify-old" | "enter-new" | "confirm-new";
 
 export function PinChangePage() {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<Step>('verify-old');
-  const [oldPin, setOldPin] = useState('');
-  const [verifiedOldPin, setVerifiedOldPin] = useState(''); // 保存已验证的旧PIN
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
+  const [currentStep, setCurrentStep] = useState<Step>("verify-old");
+  const [oldPin, setOldPin] = useState("");
+  const [verifiedOldPin, setVerifiedOldPin] = useState(""); // 保存已验证的旧PIN
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [showOldPin, setShowOldPin] = useState(false);
   const [showNewPin, setShowNewPin] = useState(false);
   const [showConfirmPin, setShowConfirmPin] = useState(false);
@@ -22,14 +31,16 @@ export function PinChangePage() {
 
   // 自动聚焦第一个输入框
   useEffect(() => {
-    const firstInput = document.querySelector('input[type="tel"], input[type="password"]') as HTMLInputElement;
+    const firstInput = document.querySelector(
+      'input[type="tel"], input[type="password"]',
+    ) as HTMLInputElement;
     firstInput?.focus();
   }, [currentStep]);
 
   // 步骤1：验证旧PIN
   const handleVerifyOldPin = async () => {
     if (oldPin.length !== 6) {
-      toast.error('请输入 6 位数字 PIN');
+      toast.error("请输入 6 位数字 PIN");
       return;
     }
 
@@ -40,9 +51,9 @@ export function PinChangePage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://127.0.0.1:8000/api/pin/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin: oldPin }),
       });
 
@@ -51,29 +62,29 @@ export function PinChangePage() {
       if (response.ok) {
         // 验证成功，保存旧PIN并进入下一步
         setVerifiedOldPin(oldPin);
-        setCurrentStep('enter-new');
-        setOldPin('');
+        setCurrentStep("enter-new");
+        setOldPin("");
       } else {
         if (result.code === 401) {
           const attempts = result.data?.attempts_remaining || 0;
-          toast.error(result.message || 'PIN 验证失败', {
+          toast.error(result.message || "PIN 验证失败", {
             description: `剩余尝试次数：${attempts}`,
           });
         } else if (result.code === 429) {
           const seconds = result.data?.remaining_seconds || 30;
-          toast.error(result.message || 'PIN 已锁定', {
+          toast.error(result.message || "PIN 已锁定", {
             description: `请 ${seconds} 秒后重试`,
           });
         } else {
-          toast.error('验证失败', {
-            description: result.message || '请稍后重试',
+          toast.error("验证失败", {
+            description: result.message || "请稍后重试",
           });
         }
-        setOldPin('');
+        setOldPin("");
       }
     } catch (error) {
-      toast.error('网络错误', {
-        description: '请检查后端服务是否运行',
+      toast.error("网络错误", {
+        description: "请检查后端服务是否运行",
       });
     } finally {
       setIsSubmitting(false);
@@ -83,25 +94,25 @@ export function PinChangePage() {
   // 步骤2&3：设置新PIN
   const handleSubmitNewPin = async () => {
     if (newPin.length !== 6) {
-      toast.error('请输入 6 位数字 PIN');
+      toast.error("请输入 6 位数字 PIN");
       return;
     }
     if (newPin !== confirmPin) {
-      toast.error('两次输入的 PIN 不一致');
-      setConfirmPin('');
+      toast.error("两次输入的 PIN 不一致");
+      setConfirmPin("");
       return;
     }
     if (newPin === verifiedOldPin) {
-      toast.error('新 PIN 不能与旧 PIN 相同');
+      toast.error("新 PIN 不能与旧 PIN 相同");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/pin/change', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://127.0.0.1:8000/api/pin/change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           old_pin: verifiedOldPin,
           new_pin: newPin,
@@ -111,30 +122,30 @@ export function PinChangePage() {
       const result = await response.json();
 
       if (response.ok) {
-        toast.success('PIN 修改成功', {
-          description: '请妥善保管您的新 PIN 码',
+        toast.success("PIN 修改成功", {
+          description: "请妥善保管您的新 PIN 码",
         });
         // 返回设置页面
-        setTimeout(() => navigate('/settings', { replace: true }), 1000);
+        setTimeout(() => navigate("/settings", { replace: true }), 1000);
       } else {
         if (result.code === 401) {
-          toast.error('旧 PIN 验证失败', {
-            description: '请重新输入',
+          toast.error("旧 PIN 验证失败", {
+            description: "请重新输入",
           });
-          setCurrentStep('verify-old');
-          setOldPin('');
-          setVerifiedOldPin('');
-          setNewPin('');
-          setConfirmPin('');
+          setCurrentStep("verify-old");
+          setOldPin("");
+          setVerifiedOldPin("");
+          setNewPin("");
+          setConfirmPin("");
         } else {
-          toast.error('PIN 修改失败', {
-            description: result.message || '请稍后重试',
+          toast.error("PIN 修改失败", {
+            description: result.message || "请稍后重试",
           });
         }
       }
     } catch (error) {
-      toast.error('网络错误', {
-        description: '请检查后端服务是否运行',
+      toast.error("网络错误", {
+        description: "请检查后端服务是否运行",
       });
     } finally {
       setIsSubmitting(false);
@@ -142,7 +153,7 @@ export function PinChangePage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, action: () => void) => {
-    if (e.key === 'Enter' && !isSubmitting) {
+    if (e.key === "Enter" && !isSubmitting) {
       e.preventDefault();
       action();
     }
@@ -152,62 +163,52 @@ export function PinChangePage() {
   const isConfirmValid = confirmPin.length === 6 && newPin === confirmPin;
 
   return (
-    <div className="min-h-screen bg-apple-bgMain dark:bg-black flex items-center justify-center p-6">
+    <div className="flex-1 flex items-center justify-center p-6">
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30 dark:opacity-100">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-apple-accent/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="w-full max-w-md space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* 返回按钮 */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/settings')}
-          className="mb-4"
-        >
-          <ArrowLeft size={20} />
-        </Button>
-
+      <div className="w-full max-w-md space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 relative z-10">
         {/* 标题卡片 */}
-        <GlassCard className="!p-8 text-center space-y-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500/10 to-indigo-500/10 flex items-center justify-center">
-            {currentStep === 'verify-old' ? (
-              <Lock className="text-purple-500" size={40} />
+        <GlassCard className="!p-6 text-center space-y-3">
+          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-purple-500/10 to-indigo-500/10 flex items-center justify-center">
+            {currentStep === "verify-old" ? (
+              <Lock className="text-purple-500" size={32} />
             ) : (
-              <KeyRound className="text-purple-500" size={40} />
+              <KeyRound className="text-purple-500" size={32} />
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-apple-textMain dark:text-white">
-              {currentStep === 'verify-old' ? '验证 PIN 码' : '修改 PIN 码'}
+            <h1 className="text-xl font-bold text-apple-textMain dark:text-white">
+              {currentStep === "verify-old" ? "验证 PIN 码" : "修改 PIN 码"}
             </h1>
-            <p className="text-apple-textSec dark:text-white/40 text-sm mt-2">
-              {currentStep === 'verify-old'
-                ? '请输入当前 PIN 码以继续'
-                : currentStep === 'enter-new'
-                ? '请输入新的 6 位 PIN 码'
-                : '请再次输入新 PIN 码确认'}
+            <p className="text-apple-textSec dark:text-white/40 text-sm mt-1">
+              {currentStep === "verify-old"
+                ? "请输入当前 PIN 码以继续"
+                : currentStep === "enter-new"
+                  ? "请输入新的 6 位 PIN 码"
+                  : "请再次输入新 PIN 码确认"}
             </p>
           </div>
         </GlassCard>
 
         {/* 步骤1：验证旧PIN */}
-        {currentStep === 'verify-old' && (
-          <GlassCard className="!p-8 space-y-6">
-            <div className="space-y-3">
+        {currentStep === "verify-old" && (
+          <GlassCard className="!p-6 space-y-5">
+            <div className="space-y-2">
               <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                 当前 PIN 码
               </label>
-              <div className="relative">
+              <div className="relative mt-2">
                 <Input
-                  type={showOldPin ? 'text' : 'tel'}
+                  type={showOldPin ? "text" : "tel"}
                   inputMode="numeric"
                   placeholder="••••••"
                   value={oldPin}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
                     setOldPin(value);
                   }}
                   onKeyDown={(e) => handleKeyDown(e, handleVerifyOldPin)}
@@ -231,54 +232,63 @@ export function PinChangePage() {
                     key={i}
                     className={`h-1.5 flex-1 rounded-full transition-all ${
                       i <= oldPin.length
-                        ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]'
-                        : 'bg-apple-border dark:bg-white/10'
+                        ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                        : "bg-apple-border dark:bg-white/10"
                     }`}
                   />
                 ))}
               </div>
             </div>
 
-            <Button
-              onClick={handleVerifyOldPin}
-              disabled={oldPin.length !== 6 || isSubmitting}
-              className="w-full h-12 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  验证中...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Shield size={18} />
-                  验证 PIN 码
-                </span>
-              )}
-            </Button>
+            <div className="flex gap-3 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/settings")}
+                className="flex-1"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleVerifyOldPin}
+                disabled={oldPin.length !== 6 || isSubmitting}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    验证中...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Shield size={18} />
+                    验证 PIN 码
+                  </span>
+                )}
+              </Button>
+            </div>
           </GlassCard>
         )}
 
         {/* 步骤2：输入新PIN */}
-        {currentStep === 'enter-new' && (
-          <GlassCard className="!p-8 space-y-6">
-            <div className="space-y-3">
+        {currentStep === "enter-new" && (
+          <GlassCard className="!p-6 space-y-5">
+            <div className="space-y-2">
               <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                 新 PIN 码
               </label>
               <div className="relative">
                 <Input
-                  type={showNewPin ? 'text' : 'tel'}
+                  type={showNewPin ? "text" : "tel"}
                   inputMode="numeric"
                   placeholder="••••••"
                   value={newPin}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
                     setNewPin(value);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newPin.length === 6) {
-                      setCurrentStep('confirm-new');
+                    if (e.key === "Enter" && newPin.length === 6) {
+                      setCurrentStep("confirm-new");
                     }
                   }}
                   maxLength={6}
@@ -300,8 +310,8 @@ export function PinChangePage() {
                     key={i}
                     className={`h-1.5 flex-1 rounded-full transition-all ${
                       i <= newPin.length
-                        ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]'
-                        : 'bg-apple-border dark:bg-white/10'
+                        ? "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                        : "bg-apple-border dark:bg-white/10"
                     }`}
                   />
                 ))}
@@ -312,17 +322,17 @@ export function PinChangePage() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setCurrentStep('verify-old');
-                  setOldPin('');
-                  setVerifiedOldPin('');
-                  setNewPin('');
+                  setCurrentStep("verify-old");
+                  setOldPin("");
+                  setVerifiedOldPin("");
+                  setNewPin("");
                 }}
                 className="flex-1"
               >
                 返回
               </Button>
               <Button
-                onClick={() => setCurrentStep('confirm-new')}
+                onClick={() => setCurrentStep("confirm-new")}
                 disabled={newPin.length !== 6}
                 className="flex-1 bg-purple-500 hover:bg-purple-600"
               >
@@ -333,20 +343,20 @@ export function PinChangePage() {
         )}
 
         {/* 步骤3：确认新PIN */}
-        {currentStep === 'confirm-new' && (
-          <GlassCard className="!p-8 space-y-6">
-            <div className="space-y-3">
+        {currentStep === "confirm-new" && (
+          <GlassCard className="!p-6 space-y-5">
+            <div className="space-y-2">
               <label className="text-sm font-semibold text-apple-textMain dark:text-white">
                 确认新 PIN 码
               </label>
               <div className="relative">
                 <Input
-                  type={showConfirmPin ? 'text' : 'tel'}
+                  type={showConfirmPin ? "text" : "tel"}
                   inputMode="numeric"
                   placeholder="••••••"
                   value={confirmPin}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
                     setConfirmPin(value);
                   }}
                   onKeyDown={(e) => handleKeyDown(e, handleSubmitNewPin)}
@@ -374,7 +384,9 @@ export function PinChangePage() {
                   ) : (
                     <>
                       <div className="w-3.5 h-3.5 rounded-full border-2 border-apple-error" />
-                      <span className="text-apple-error dark:text-red-400">PIN 码不一致</span>
+                      <span className="text-apple-error dark:text-red-400">
+                        PIN 码不一致
+                      </span>
                     </>
                   )}
                 </div>
@@ -394,8 +406,8 @@ export function PinChangePage() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setCurrentStep('enter-new');
-                  setConfirmPin('');
+                  setCurrentStep("enter-new");
+                  setConfirmPin("");
                 }}
                 className="flex-1"
                 disabled={isSubmitting}

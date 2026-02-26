@@ -28,7 +28,7 @@ export function MainLayout() {
     if (path === '/system/fuel') return 'fuel';
     if (path.startsWith('/journal')) return 'journal';
     if (path === '/timeline') return 'timeline';
-    if (path === '/settings') return 'settings';
+    if (path.startsWith('/settings')) return 'settings';
     return 'dashboard';
   };
 
@@ -127,7 +127,7 @@ export function MainLayout() {
 
       {/* 主内容区域 */}
       <main className="flex-1 h-screen overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-10 py-12">
+        <div className="min-h-full max-w-7xl mx-auto px-10 py-12 flex flex-col">
           <Outlet />
         </div>
       </main>

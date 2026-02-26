@@ -114,7 +114,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+    <div className=" space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       <header className="space-y-1">
         <h1 className="text-3xl font-black text-apple-textMain dark:text-white tracking-tight flex items-center gap-3">
           <Monitor className="text-apple-accent" />
