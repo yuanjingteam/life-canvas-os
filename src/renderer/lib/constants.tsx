@@ -152,21 +152,8 @@ export const INITIAL_STATE: AppState = {
     [DimensionType.ENVIRONMENT]: 85,
   },
   fuelSystem: {
-    baseline: "早餐：燕麦片与煎蛋。午餐：沙拉与鸡胸肉。晚餐：优质蛋白与蔬菜。",
-    deviations: [
-      {
-        id: "dev-1",
-        timestamp: now - 3600000, // 1小时前
-        description: "加班太累，忍不住点了一份超大份麻辣烫作为宵夜。",
-        type: "excess",
-      },
-      {
-        id: "dev-2",
-        timestamp: now - oneDay - 14400000, // 昨天傍晚
-        description: "朋友生日聚会，吃了三块奶油蛋糕和大量炸鸡。",
-        type: "excess",
-      },
-    ],
+    baseline: "",
+    deviations: [],
   },
   journals: [],
   isLocked: true, // Default to locked for security demo
