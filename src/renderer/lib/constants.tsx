@@ -135,11 +135,11 @@ const oneDay = 24 * 60 * 60 * 1000;
 
 export const INITIAL_STATE: AppState = {
   user: {
-    name: "画布用户",
-    birthday: "1995-01-01",
-    mbti: "INTJ",
-    values: ["自由", "成长", "健康"],
-    lifespan: 85,
+    name: "",
+    birthday: "",
+    mbti: "",
+    values: [],
+    lifespan: 0,
   },
   dimensions: {
     [DimensionType.FUEL]: 80,
