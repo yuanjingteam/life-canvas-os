@@ -7,6 +7,7 @@ import { Textarea } from '~/renderer/components/ui/textarea';
 import { Label } from '~/renderer/components/ui/label';
 import { TagInput } from '~/renderer/components/ui/tag-input';
 import { Input } from '~/renderer/components/ui/input';
+import { Badge } from '~/renderer/components/ui/badge';
 import { useDietApi, BaselineData, Deviation } from '~/renderer/hooks/useDietApi';
 import { MealItem } from '~/renderer/api/diet';
 
@@ -410,13 +411,30 @@ export function FuelSystemPage() {
                 <Label className="text-sm font-semibold text-apple-textMain dark:text-white">
                   口味：
                 </Label>
-                <div className={`transition-all ${!isEditingBaseline ? 'opacity-60 pointer-events-none' : ''}`}>
+                {isEditingBaseline ? (
                   <TagInput
                     value={baselineForm.taste || []}
                     onChange={(tags) => setBaselineForm({ ...baselineForm, taste: tags })}
                     placeholder="例如：清淡、少油少盐"
+                    tagClassName="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
                   />
-                </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {baselineForm.taste.length === 0 ? (
+                      <span className="text-sm text-apple-textTer dark:text-white/30">未设置</span>
+                    ) : (
+                      baselineForm.taste.map((taste, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-sm px-3 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
+                        >
+                          {taste}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
