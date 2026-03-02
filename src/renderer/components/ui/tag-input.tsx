@@ -11,6 +11,7 @@ export interface TagInputProps {
   placeholder?: string;
   inputClassName?: string;
   containerClassName?: string;
+  tagClassName?: string;
   maxLength?: number;
 }
 
@@ -24,6 +25,7 @@ export function TagInput({
   placeholder = '添加标签...',
   inputClassName,
   containerClassName,
+  tagClassName,
   maxLength,
 }: TagInputProps) {
   const [inputValue, setInputValue] = React.useState('');
@@ -55,7 +57,10 @@ export function TagInput({
         <Badge
           key={tag}
           variant="secondary"
-          className="text-sm px-3 py-1 bg-apple-accent/5 text-apple-accent border border-apple-accent/10"
+          className={cn(
+            'text-sm px-3 py-1',
+            tagClassName || 'bg-apple-accent/5 text-apple-accent border border-apple-accent/10'
+          )}
         >
           {tag}
           <button
