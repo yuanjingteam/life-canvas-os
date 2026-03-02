@@ -5,6 +5,7 @@ from .common import (
     PaginatedResponse,
     ValidationError,
     ErrorResponse,
+    DataImportRequest,
     success_response,
     error_response,
 )
@@ -89,6 +90,7 @@ __all__ = [
     "PaginatedResponse",
     "ValidationError",
     "ErrorResponse",
+    "DataImportRequest",
     "success_response",
     "error_response",
     # User

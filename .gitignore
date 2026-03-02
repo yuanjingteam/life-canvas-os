@@ -18,22 +18,8 @@
 /build
 /dist
 /out
-
-# ====================
-# Misc
-# ====================
-.DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.eslintcache
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+/release
+/packages
 
 # ====================
 # Python
@@ -43,6 +29,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyo
 
 # Distribution / packaging
 .Python
@@ -59,6 +46,7 @@ sdist/
 var/
 wheels/
 pip-wheel-metadata/
+share/python-wheels/
 
 # PyInstaller
 *.manifest
@@ -74,6 +62,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
+.hypothesis/
 
 # Translations
 *.mo
@@ -104,6 +93,7 @@ backend/logs/
 backend/__pycache__/
 backend/**/__pycache__/
 backend/*.db
+backend/*.log
 
 # Build artifacts
 backend/backend.spec
@@ -111,21 +101,90 @@ backend/build/
 backend/dist/
 
 # ====================
-# IDE
+# Frontend / Build
 # ====================
-.vscode/
+# Vite cache
+.vite/
+node_modules/.vite/
+
+# Electron Builder output
+*.dmg
+*.exe
+*.zip
+*.tar.gz
+*.deb
+*.rpm
+*.AppImage
+*.snap
+
+# ====================
+# IDE & Editor
+# ====================
+# VSCode (keep specific config files)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Other IDEs
 .idea/
 *.sublime-project
 *.sublime-workspace
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
 # ====================
-# OS
+# Environment & Secrets
 # ====================
-Thumbs.db
+# Environment files
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# API Keys and secrets
+*_api_key.txt
+*_secret.json
+secrets/
+credentials/
+
+# ====================
+# Logs & Debug
+# ====================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+backend.log
+.eslintcache
+
+# ====================
+# OS specific
+# ====================
+# macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
 .directory
 
 # ====================
@@ -150,4 +209,6 @@ backups/
 *.tmp
 *.temp
 .cache/
-
+*.pid
+*.seed
+*.pid.lock

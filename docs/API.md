@@ -1,9 +1,22 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.0.0
+> 版本：v1.1.0
+> 最后更新：2026-03-02
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
+
+## 📝 更新日志
+
+### v1.1.0 (2026-03-02)
+- ✨ **AI 洞察**：移除 `force` 参数，添加每日生成次数限制（3次/天）
+- ✨ **AI 洞察**：超过限制时返回历史洞察并提示用户
+- ✨ **数据导入**：修复数据库锁定问题，支持运行时导入
+- 📝 **数据导入**：更新响应格式，添加 `backup_path` 字段
+- 📝 **AI 洞察**：更新响应格式，添加 `_limit_reached`、`_message`、`_remaining_today` 字段
+
+### v1.0.0
+- 🎉 初始版本
 
 ---
 
@@ -1440,31 +1453,93 @@
 
 **请求参数**：
 ```json
-{
-  "force": false
-}
+{}
 ```
 
 **参数说明**：
-- `force`: 是否强制重新生成（默认 false）
+- 无需参数，接口会自动检查今日生成次数
 
-**成功响应（200）**：
+**使用限制**：
+- 每天最多生成 **3 次**洞察
+- 超过限制后返回最新的历史洞察
+- 每日限制在 UTC 00:00 重置
+
+**成功响应（200）- 正常生成**：
 ```json
 {
   "code": 200,
-  "message": "success",
+  "message": "洞察生成成功",
   "data": {
     "id": 100,
     "user_id": 1,
-    "content": "[{\"category\":\"饮食\",\"insight\":\"最近饮食一致性较高，继续保持\"},{\"category\":\"运动\",\"insight\":\"运动量适中，建议增加有氧运动\"}]",
-    "system_scores": "{\"FUEL\":75,\"PHYSICAL\":60,\"INTELLECTUAL\":70,\"OUTPUT\":80,\"RECOVERY\":65,\"ASSET\":70,\"CONNECTION\":75,\"ENVIRONMENT\":68}",
+    "content": [
+      {
+        "category": "celebration",
+        "insight": "饮食系统得分最高，继续保持"
+      },
+      {
+        "category": "warning",
+        "insight": "运动系统得分偏低，需要加强锻炼"
+      },
+      {
+        "category": "action",
+        "insight": "建议每天运动30分钟，可显著改善体质"
+      }
+    ],
+    "system_scores": {
+      "FUEL": 75,
+      "PHYSICAL": 60,
+      "INTELLECTUAL": 70,
+      "OUTPUT": 80,
+      "RECOVERY": 65,
+      "ASSET": 70,
+      "CONNECTION": 75,
+      "ENVIRONMENT": 68
+    },
     "provider_used": "deepseek",
-    "generated_at": "2026-02-06T10:00:00Z",
-    "created_at": "2026-02-06T10:00:00Z"
+    "generated_at": "2026-03-02T03:10:31",
+    "generated_at_ts": 1772392231000,
+    "_remaining_today": 2
   },
-  "timestamp": 1707219200000
+  "timestamp": 1772421031453
 }
 ```
+
+**成功响应（200）- 达到上限**：
+```json
+{
+  "code": 200,
+  "message": "洞察生成成功",
+  "data": {
+    "id": 100,
+    "user_id": 1,
+    "content": [
+      {
+        "category": "celebration",
+        "insight": "饮食系统得分最高，继续保持"
+      }
+    ],
+    "system_scores": {
+      "FUEL": 75,
+      "PHYSICAL": 60
+    },
+    "provider_used": "deepseek",
+    "generated_at": "2026-03-02T03:10:31",
+    "generated_at_ts": 1772392231000,
+    "_limit_reached": true,
+    "_message": "今日洞察生成次数已达上限（3次），正在返回最新的历史洞察"
+  },
+  "timestamp": 1772421031453
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `_remaining_today` | Integer | 今日剩余可生成次数（仅在未达上限时返回） |
+| `_limit_reached` | Boolean | 是否达到每日上限（仅在达上限时返回） |
+| `_message` | String | 提示信息（仅在达上限时返回） |
 
 **错误响应（424 - AI 未配置）**：
 ```json
@@ -1473,6 +1548,20 @@
   "message": "AI 服务未配置",
   "data": {
     "hint": "请先在设置中配置 AI 服务"
+  },
+  "timestamp": 1707219200000
+}
+```
+
+**错误响应（429 - 次数达上限且无历史）**：
+```json
+{
+  "code": 429,
+  "message": "今日洞察次数已达上限，且暂无历史洞察数据",
+  "data": {
+    "daily_limit": 3,
+    "today_count": 3,
+    "hint": "请明天再试"
   },
   "timestamp": 1707219200000
 }
@@ -1493,16 +1582,37 @@
 ```json
 {
   "code": 200,
-  "message": "success",
+  "message": "获取洞察历史成功",
   "data": {
     "items": [
       {
         "id": 100,
-        "content": "[{\"category\":\"饮食\",\"insight\":\"...\"}]",
-        "system_scores": "{\"FUEL\":75,\"PHYSICAL\":60}",
+        "user_id": 1,
+        "content": [
+          {
+            "category": "celebration",
+            "insight": "饮食系统得分最高，继续保持"
+          },
+          {
+            "category": "warning",
+            "insight": "运动系统得分偏低，需要加强锻炼"
+          }
+        ],
+        "system_scores": {
+          "FUEL": 75,
+          "PHYSICAL": 60,
+          "INTELLECTUAL": 70,
+          "OUTPUT": 80,
+          "RECOVERY": 65,
+          "ASSET": 70,
+          "CONNECTION": 75,
+          "ENVIRONMENT": 68
+        },
         "provider_used": "deepseek",
-        "generated_at": "2026-02-06T10:00:00Z",
-        "created_at": "2026-02-06T10:00:00Z"
+        "generated_at": "2026-03-02T03:10:31",
+        "generated_at_ts": 1772392231000,
+        "created_at": "2026-03-02T03:10:31",
+        "created_at_ts": 1772392231000
       }
     ],
     "total": 15,
@@ -1526,14 +1636,39 @@
 ```json
 {
   "code": 200,
-  "message": "success",
+  "message": "获取最新洞察成功",
   "data": {
     "id": 100,
-    "content": "[{\"category\":\"饮食\",\"insight\":\"最近饮食一致性较高\"},{\"category\":\"运动\",\"insight\":\"运动系统评分稳定\"}]",
-    "system_scores": "{\"FUEL\":75,\"PHYSICAL\":60,\"INTELLECTUAL\":70,\"OUTPUT\":80,\"RECOVERY\":65,\"ASSET\":70,\"CONNECTION\":75,\"ENVIRONMENT\":68}",
+    "user_id": 1,
+    "content": [
+      {
+        "category": "celebration",
+        "insight": "饮食系统得分最高，继续保持"
+      },
+      {
+        "category": "warning",
+        "insight": "运动系统得分偏低，需要加强锻炼"
+      },
+      {
+        "category": "action",
+        "insight": "建议每天运动30分钟，可显著改善体质"
+      }
+    ],
+    "system_scores": {
+      "FUEL": 75,
+      "PHYSICAL": 60,
+      "INTELLECTUAL": 70,
+      "OUTPUT": 80,
+      "RECOVERY": 65,
+      "ASSET": 70,
+      "CONNECTION": 75,
+      "ENVIRONMENT": 68
+    },
     "provider_used": "deepseek",
-    "generated_at": "2026-02-06T10:00:00Z",
-    "created_at": "2026-02-06T10:00:00Z"
+    "generated_at": "2026-03-02T03:10:31",
+    "generated_at_ts": 1772392231000,
+    "created_at": "2026-03-02T03:10:31",
+    "created_at_ts": 1772392231000
   },
   "timestamp": 1707219200000
 }
@@ -1690,9 +1825,17 @@ GET /api/timeline?page=2&page_size=10
 
 **接口地址**：`POST /api/data/import`
 
-**查询参数**：
-- `backup_path`: 必填，备份文件的服务器绝对路径
-- `verify`: 可选，是否验证数据完整性，默认为 `true`
+**请求参数**：
+```json
+{
+  "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_104334.zip",
+  "verify": true
+}
+```
+
+**参数说明**：
+- `backup_path`: 必填，备份文件的完整路径
+- `verify`: 可选，是否验证备份文件完整性，默认为 `true`
 
 **成功响应（200）**：
 ```json
@@ -1700,11 +1843,18 @@ GET /api/timeline?page=2&page_size=10
   "code": 200,
   "message": "数据导入成功",
   "data": {
-    "imported_at": "2026-02-06T10:00:00Z"
+    "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_104334.zip",
+    "imported_at": "2026-03-02T10:47:45.698477"
   },
-  "timestamp": 1707219200000
+  "timestamp": 1772419665698
 }
 ```
+
+**注意事项**：
+- 导入操作会覆盖当前数据库所有数据
+- 导入前会自动关闭所有数据库连接
+- 导入过程中后端服务会暂时停止响应其他请求
+- 建议在导入前先创建当前数据的备份
 
 ---
 

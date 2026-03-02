@@ -94,6 +94,8 @@ class DatabaseBackup:
         Returns:
             是否恢复成功
         """
+        import time
+
         backup_file = Path(backup_path)
         if not backup_file.exists():
             raise FileNotFoundError(f"Backup file not found: {backup_path}")
@@ -104,9 +106,11 @@ class DatabaseBackup:
                 raise ValueError("Invalid backup file")
 
         # 创建当前数据库的备份（防止恢复失败）
+        safety_backup = None
         if self.db_path.exists():
             safety_backup = self.create_backup("before_restore")
 
+        temp_dir = None
         try:
             temp_dir = self.backup_dir / "temp"
             temp_dir.mkdir(exist_ok=True)
@@ -123,21 +127,65 @@ class DatabaseBackup:
             # 关闭所有数据库连接
             self._close_all_connections()
 
-            # 恢复文件
-            shutil.copy2(restored_db, self.db_path)
+            # Windows 文锁定需要重试机制
+            files_to_delete = [
+                self.db_path,
+                Path(str(self.db_path) + "-wal"),
+                Path(str(self.db_path) + "-shm")
+            ]
+
+            # 先删除现有数据库文件
+            for file_path in files_to_delete:
+                if file_path.exists():
+                    for attempt in range(5):
+                        try:
+                            os.remove(file_path)
+                            break
+                        except PermissionError:
+                            if attempt < 4:
+                                time.sleep(0.5 * (attempt + 1))
+                            else:
+                                raise
+
+            # 复制新数据库文件（带重试）
+            for attempt in range(5):
+                try:
+                    shutil.copy2(restored_db, self.db_path)
+                    break
+                except PermissionError:
+                    if attempt < 4:
+                        time.sleep(0.5 * (attempt + 1))
+                    else:
+                        raise
 
             print(f"[OK] Database restored from: {backup_path}")
             return True
 
         except Exception as e:
             print(f"[ERROR] Restore failed: {e}")
-            # 恢复失败时使用安全备份
-            if self.db_path.exists():
-                self.restore_backup(safety_backup, verify=False)
+            # 恢复失败时尝试使用安全备份（仅一次，避免递归）
+            if safety_backup and self.db_path.exists():
+                try:
+                    # 直接复制安全备份，不再递归调用
+                    self._close_all_connections()
+                    for attempt in range(5):
+                        try:
+                            with zipfile.ZipFile(safety_backup, 'r') as zipf:
+                                zipf.extractall(temp_dir or self.backup_dir / "temp")
+                            restored = (temp_dir or self.backup_dir / "temp") / self.db_path.name
+                            shutil.copy2(restored, self.db_path)
+                            break
+                        except PermissionError:
+                            if attempt < 4:
+                                time.sleep(0.5 * (attempt + 1))
+                            else:
+                                raise
+                except Exception as restore_error:
+                    print(f"[ERROR] Safety backup restore also failed: {restore_error}")
             raise
 
         finally:
-            if temp_dir.exists():
+            if temp_dir and temp_dir.exists():
                 shutil.rmtree(temp_dir)
 
     def _verify_backup(self, backup_path: Path) -> bool:
@@ -175,11 +223,19 @@ class DatabaseBackup:
     def _close_all_connections(self):
         """关闭所有数据库连接（SQLite 特有）"""
         try:
-            # SQLite 需要通过特定方式关闭连接
+            # 使用 DatabaseManager 关闭所有连接
+            from backend.db.session import DatabaseManager
+            DatabaseManager.close_all_connections()
+
+            # 额外确保 engine 被释放
             from backend.db.session import engine
             engine.dispose()
-        except Exception:
-            pass
+
+            import time
+            time.sleep(0.3)  # 给系统时间释放文件句柄
+
+        except Exception as e:
+            print(f"[WARN] Error closing connections: {e}")
 
     def list_backups(self) -> list:
         """列出所有备份"""

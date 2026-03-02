@@ -41,6 +41,15 @@ class InsightService:
         ).order_by(Insight.generated_at.desc()).first()
 
     @staticmethod
+    def get_today_insight_count(db: Session, user_id: int) -> int:
+        """获取今日已生成的洞察次数"""
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return db.query(Insight).filter(
+            Insight.user_id == user_id,
+            Insight.generated_at >= today_start
+        ).count()
+
+    @staticmethod
     async def call_deepseek_api(api_key: str, system_scores: dict) -> List[Dict[str, Any]]:
         """调用 DeepSeek API 生成洞察"""
         url = "https://api.deepseek.com/v1/chat/completions"
@@ -158,7 +167,7 @@ Return only JSON array, no other content."""
     @staticmethod
     async def generate_insight(db: Session, request: InsightGenerateRequest) -> Tuple[dict, int]:
         """
-        生成洞察
+        生成洞察（每天最多3次）
 
         Returns:
             (response_data, status_code)
@@ -182,6 +191,40 @@ Return only JSON array, no other content."""
                 code=424
             ), 424
 
+        # 检查今日生成次数
+        today_count = InsightService.get_today_insight_count(db, user.id)
+        daily_limit = 3
+
+        if today_count >= daily_limit:
+            # 超过限制，返回最新的旧洞察
+            latest_insight = InsightService.get_latest_insight(db, user.id)
+
+            if latest_insight:
+                response_data = InsightGenerateResponse(
+                    id=latest_insight.id,
+                    user_id=latest_insight.user_id,
+                    content=latest_insight.content,
+                    system_scores=latest_insight.system_scores,
+                    provider_used=latest_insight.provider_used,
+                    generated_at=latest_insight.generated_at
+                ).model_dump()
+
+                # 添加限制提示信息
+                response_data['_limit_reached'] = True
+                response_data['_message'] = f'今日洞察生成次数已达上限（{daily_limit}次），正在返回最新的历史洞察'
+
+                return response_data, 200
+            else:
+                return error_response(
+                    message="今日洞察次数已达上限，且暂无历史洞察数据",
+                    code=429,
+                    data={
+                        "daily_limit": daily_limit,
+                        "today_count": today_count,
+                        "hint": "请明天再试"
+                    }
+                ), 429
+
         # 解密 API Key
         try:
             api_key = UserService.decrypt_api_key(encrypted_key)
@@ -193,15 +236,6 @@ Return only JSON array, no other content."""
 
         # 获取当前系统评分
         system_scores = InsightService.get_system_scores(db, user.id)
-
-        # 检查是否强制重新生成
-        if not request.force:
-            latest_insight = InsightService.get_latest_insight(db, user.id)
-            # 如果最近 24 小时内已生成，直接返回
-            if latest_insight:
-                time_diff = datetime.now() - latest_insight.generated_at
-                if time_diff < timedelta(hours=24):
-                    return InsightResponse.model_validate(latest_insight).model_dump(), 200
 
         # 调用 AI API
         try:
@@ -239,14 +273,19 @@ Return only JSON array, no other content."""
         db.commit()
         db.refresh(insight)
 
-        return InsightGenerateResponse(
+        response_data = InsightGenerateResponse(
             id=insight.id,
             user_id=insight.user_id,
             content=insight.content,
             system_scores=insight.system_scores,
             provider_used=insight.provider_used,
             generated_at=insight.generated_at
-        ).model_dump(), 200
+        ).model_dump()
+
+        # 添加剩余次数提示
+        response_data['_remaining_today'] = daily_limit - today_count - 1
+
+        return response_data, 200
 
     @staticmethod
     def get_insights(

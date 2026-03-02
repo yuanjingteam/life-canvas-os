@@ -84,6 +84,20 @@ class ErrorResponse(BaseModel):
     timestamp: int = Field(default_factory=lambda: int(datetime.now().timestamp() * 1000))
 
 
+class DataImportRequest(BaseModel):
+    """数据导入请求"""
+    backup_path: str = Field(description="备份文件路径")
+    verify: bool = Field(default=True, description="是否验证备份文件")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_093033.zip",
+                "verify": True
+            }
+        }
+
+
 # ============ 便捷工厂函数 ============
 
 def success_response(data: Any = None, message: str = "success", code: int = 200) -> dict:

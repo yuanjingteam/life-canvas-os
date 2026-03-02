@@ -4,6 +4,7 @@
 import os
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Tuple, Optional
 from sqlalchemy.orm import Session
 
@@ -77,11 +78,25 @@ class DataService:
             return error_response(message="用户不存在", code=404), 404
 
         try:
-            backup_mgr = DatabaseBackup(db.bind.url.database)
+            db_path = db.bind.url.database
+
+            # 在恢复前关闭当前会话和所有数据库连接
+            db.close()
+            db.expunge_all()
+
+            # 关闭所有数据库连接池
+            DatabaseManager.close_all_connections()
+
+            # 等待文件句柄释放
+            import time
+            time.sleep(0.5)
+
+            backup_mgr = DatabaseBackup(db_path)
             success = backup_mgr.restore_backup(backup_path, verify=verify)
 
             if success:
                 return {
+                    "backup_path": backup_path,
                     "imported_at": datetime.now().isoformat()
                 }, 200
             else:
@@ -160,3 +175,75 @@ class DataService:
         }
 
         return health_status
+
+    @staticmethod
+    def reset_system(db: Session) -> Tuple[dict, int]:
+        """
+        重置系统（删除所有数据并恢复到初始状态）
+
+        流程：
+        1. 创建当前数据库的备份
+        2. 关闭当前会话和所有数据库连接
+        3. 删除数据库文件
+        4. 重新初始化数据库
+
+        Returns:
+            (response_data, status_code)
+        """
+        user = DataService.get_user(db)
+        if not user:
+            return error_response(message="用户不存在", code=404), 404
+
+        try:
+            db_path = db.bind.url.database
+
+            # 1. 创建备份
+            backup_mgr = DatabaseBackup(db_path)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = backup_mgr.create_backup(f"before_reset_{timestamp}")
+
+            # 2. 关闭当前会话
+            db.close()
+            db.expunge_all()
+
+            # 3. 关闭所有数据库连接
+            DatabaseManager.close_all_connections()
+
+            # 4. 删除数据库文件（包括 -wal 和 -shm 文件）
+            import time
+            db_file = Path(db_path)
+            wal_file = Path(str(db_file) + "-wal")
+            shm_file = Path(str(db_file) + "-shm")
+
+            # Windows 文件锁定需要重试机制
+            files_to_delete = [db_file, wal_file, shm_file]
+            for file_path in files_to_delete:
+                if file_path.exists():
+                    for attempt in range(5):
+                        try:
+                            os.remove(file_path)
+                            break
+                        except PermissionError:
+                            if attempt < 4:
+                                time.sleep(0.5 * (attempt + 1))
+                            else:
+                                raise
+
+            # 5. 重新初始化数据库
+            from backend.db.init_db import init_db
+            from backend.db.session import SessionLocal
+
+            # 创建新的数据库会话进行初始化
+            new_db = SessionLocal()
+            try:
+                init_db(new_db)
+            finally:
+                new_db.close()
+
+            return {
+                "backup_path": backup_path,
+                "reset_at": datetime.now().isoformat()
+            }, 200
+
+        except Exception as e:
+            return error_response(message=f"系统重置失败: {str(e)}", code=500), 500

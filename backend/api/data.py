@@ -8,7 +8,7 @@ from datetime import datetime
 
 from backend.db.session import get_db
 from backend.services.data_service import DataService
-from backend.schemas.common import success_response, error_response
+from backend.schemas.common import success_response, error_response, DataImportRequest
 
 router = APIRouter(prefix="/api/data", tags=["data-management"])
 
@@ -84,18 +84,17 @@ async def export_data(
 
 @router.post("/import")
 async def import_data(
-    backup_path: str,
-    verify: bool = True,
+    request: DataImportRequest,
     db: Session = Depends(get_db)
 ):
     """
     导入数据
 
-    Args:
+    请求体:
         backup_path: 备份文件路径
-        verify: 是否验证备份文件
+        verify: 是否验证备份文件 (默认 True)
     """
-    data, status_code = DataService.import_data(db, backup_path, verify)
+    data, status_code = DataService.import_data(db, request.backup_path, request.verify)
 
     if status_code >= 400:
         raise HTTPException(
@@ -151,4 +150,28 @@ async def health_check(db: Session = Depends(get_db)):
     return success_response(
         data=data,
         message="系统健康"
+    )
+
+
+@router.post("/reset")
+async def reset_system(db: Session = Depends(get_db)):
+    """
+    重置系统（危险操作，会删除所有数据）
+
+    此操作会：
+    1. 自动创建当前数据库的备份
+    2. 删除所有数据
+    3. 恢复到初始状态（默认用户、设置、8个系统）
+    """
+    data, status_code = DataService.reset_system(db)
+
+    if status_code >= 400:
+        raise HTTPException(
+            status_code=status_code,
+            detail=data
+        )
+
+    return success_response(
+        data=data,
+        message="系统重置成功"
     )

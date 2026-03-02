@@ -57,6 +57,8 @@ src/
 
 ```bash
 # Start development (Electron + Python HTTP mode)
+# - Electron renderer server: http://localhost:4927
+# - Python HTTP server: http://localhost:8000 (with /docs for API docs)
 pnpm dev
 
 # Format code (Biome)
@@ -74,6 +76,9 @@ python backend/main.py --dev
 
 # Run Python backend in production mode (IPC via stdin/stdout)
 python backend/main.py
+
+# Test database initialization (first startup scenario)
+python backend/tests/test_first_startup.py
 ```
 
 ### Building
@@ -143,5 +148,15 @@ The project is in early development (~7% complete). Implemented features:
 - AI insights (supports DeepSeek)
 - Diet system (baseline and deviation tracking)
 - Data export/import/backup
+- Timeline/audit trail functionality
+
+Backend API routes implemented:
+- `/api/auth/*` - Authentication (PIN code)
+- `/api/users/*` - User management
+- `/api/systems/*` - Eight-dimensional system data
+- `/api/journals/*` - Diary/journal entries
+- `/api/insights/*` - AI-generated insights
+- `/api/data/*` - Data export/import/backup
+- `/api/timeline/*` - Timeline/audit trail
 
 See [`README.md`](README.md) for detailed roadmap and feature list.

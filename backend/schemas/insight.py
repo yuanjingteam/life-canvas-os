@@ -47,8 +47,8 @@ class InsightResponse(InsightBase):
 
 # ============ 生成洞察 ============
 class InsightGenerateRequest(BaseModel):
-    """生成洞察请求"""
-    force: bool = Field(default=False, description="是否强制重新生成")
+    """生成洞察请求（无需参数，会自动检查今日生成次数）"""
+    pass
 
 
 class InsightGenerateResponse(BaseModel):
