@@ -123,8 +123,28 @@ async def save_ai_config(
     db: Session = Depends(get_db)
 ):
     """
-    保存 AI 配置
+    保存 AI 配置（自动验证 API Key 有效性）
+
+    流程：
+    1. 先验证 API Key 是否有效
+    2. 验证通过后才保存配置
+    3. 验证失败则返回错误，不保存配置
     """
+    # 步骤1：验证 API Key 有效性
+    verify_data, verify_status = await UserService.verify_api_key(
+        provider=request.provider,
+        api_key=request.api_key,
+        model=request.model_name
+    )
+
+    # 如果验证失败，直接返回错误（不保存配置）
+    if verify_status >= 400:
+        raise HTTPException(
+            status_code=verify_status,
+            detail=verify_data
+        )
+
+    # 步骤2：验证成功后才保存配置
     data, status_code = UserService.save_ai_config(
         db,
         request.provider,
@@ -142,7 +162,8 @@ async def save_ai_config(
         data={
             "provider": data.get("provider"),
             "model_name": data.get("model"),
-            "updated_at": data.get("updated_at") if isinstance(data, dict) else None
+            "updated_at": data.get("updated_at") if isinstance(data, dict) else None,
+            "verified": True  # 标识已验证过
         },
         message="AI 配置保存成功"
     )
