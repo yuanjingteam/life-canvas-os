@@ -43,6 +43,7 @@ import { pinApi } from "~/renderer/api";
 import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
 import { useAiApi, type AIConfigData } from "~/renderer/hooks/useAiApi";
 import { useDataApi, type ExportFormat } from "~/renderer/hooks/useDataApi";
+import { usePinStatus } from "~/renderer/hooks/usePinStatus";
 import { toast } from "sonner";
 
 export function SettingsPage() {
@@ -50,19 +51,24 @@ export function SettingsPage() {
   const { getUserProfile, updateUserProfile } = useUserApi();
   const { getAIConfig, saveAIConfig } = useAiApi();
   const { exportData, importData } = useDataApi();
+  const {
+    pinStatus,
+    isLoading: isPinStatusLoading,
+    fetchPinStatus,
+    updatePinStatusAfterOperation,
+  } = usePinStatus();
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "success" | "error"
   >("idle");
-  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingAI, setIsSavingAI] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
   const [isEditingAI, setIsEditingAI] = useState(false); // 是否处于编辑模式
   const [existingAIConfig, setExistingAIConfig] = useState<any>(null); // 已存在的 AI 配置
-  const isLoadingRef = useRef(false);
   const isLoadingProfileRef = useRef(false);
   const getUserProfileRef = useRef(getUserProfile);
 
@@ -120,69 +126,58 @@ export function SettingsPage() {
     loadUserProfile();
   }, []);
 
-  // 加载 AI 配置
-  useEffect(() => {
-    const loadAIConfig = async () => {
-      if (aiConfigLoaded) return;
-
-      try {
-        const config = await getAIConfig();
-        if (config) {
-          // 保存完整的配置信息
-          setExistingAIConfig(config);
-
-          setAiFormData({
-            provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
-            apiKey: '', // 不显示完整的 API Key
-            modelName: config.model_name || 'deepseek-chat',
-            frequencyLimit: state.aiConfig.frequencyLimit || 10,
-          });
-          // 更新全局状态
-          updateState({
-            aiConfig: {
-              ...state.aiConfig,
-              provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
-              modelName: config.model_name || 'deepseek-chat',
-              apiKey: state.aiConfig.apiKey, // 保留原有的 API Key
-            },
-          });
-        } else {
-          // 没有配置
-          setExistingAIConfig(null);
-        }
-        setAiConfigLoaded(true);
-      } catch (error) {
-        console.log('AI config not set yet');
-        setExistingAIConfig(null);
-        setAiConfigLoaded(true);
-      }
-    };
-
-    loadAIConfig();
-  }, [aiConfigLoaded]);
-
   const lifeProgress = calculateLifeProgress(formData.birthday, formData.lifespan);
 
-  // 检查 PIN 状态
+  // 按 Tab 加载对应的接口
   useEffect(() => {
-    const checkPinStatus = async () => {
-      if (isLoadingRef.current) return;
-      isLoadingRef.current = true;
+    const loadTabData = async () => {
+      // AI 配置 - 只在首次切换到该 tab 时加载
+      if (activeTab === 'ai' && !aiConfigLoaded) {
+        try {
+          const config = await getAIConfig();
+          if (config) {
+            // 保存完整的配置信息
+            setExistingAIConfig(config);
 
-      try {
-        const response = await pinApi.status();
-        const result = await response.json();
-        if (response.ok) {
-          setPinStatus(result.data);
+            setAiFormData({
+              provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+              apiKey: '', // 不显示完整的 API Key
+              modelName: config.model_name || 'deepseek-chat',
+              frequencyLimit: state.aiConfig.frequencyLimit || 10,
+            });
+            // 更新全局状态
+            updateState({
+              aiConfig: {
+                ...state.aiConfig,
+                provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+                modelName: config.model_name || 'deepseek-chat',
+                apiKey: state.aiConfig.apiKey, // 保留原有的 API Key
+              },
+            });
+          } else {
+            // 没有配置
+            setExistingAIConfig(null);
+          }
+          setAiConfigLoaded(true);
+        } catch (error) {
+          console.log('AI config not set yet');
+          setExistingAIConfig(null);
+          setAiConfigLoaded(true);
         }
-      } catch (error) {
-        console.error('Failed to check PIN status:', error);
-      } finally {
-        isLoadingRef.current = false;
+      }
+
+      // 数据管理 - 只在首次切换到该 tab 时加载 PIN 状态（使用缓存）
+      if (activeTab === 'security') {
+        try {
+          await fetchPinStatus();
+        } catch (error) {
+          console.error('Failed to load PIN status:', error);
+        }
       }
     };
-    checkPinStatus();
-  }, []);
+
+    loadTabData();
+  }, [activeTab, aiConfigLoaded]);
 
   const handleTestAI = async () => {
     if (!aiFormData.apiKey && !state.aiConfig.apiKey) {
@@ -369,7 +364,7 @@ export function SettingsPage() {
         </p>
       </header>
 
-      <Tabs defaultValue="profile" className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <TabsList className="bg-apple-bg2 dark:bg-white/5 border border-apple-border dark:border-white/10">
           <TabsTrigger value="profile">个人档案</TabsTrigger>
           <TabsTrigger value="ai">AI 配置</TabsTrigger>
@@ -721,7 +716,7 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 mt-4">
               <div className="flex items-center justify-between p-4 bg-apple-bg2 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/5">
                 <div className="space-y-0.5">
                   <div className="text-sm font-semibold text-apple-textMain dark:text-white">
@@ -744,7 +739,7 @@ export function SettingsPage() {
                 />
               </div>
 
-              <div className="space-y-4">
+              {/* <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-base font-semibold">
                     自动保存间隔
@@ -768,7 +763,7 @@ export function SettingsPage() {
                   step={30}
                   className="pt-2"
                 />
-              </div>
+              </div> */}
             </div>
           </GlassCard>
         </TabsContent>

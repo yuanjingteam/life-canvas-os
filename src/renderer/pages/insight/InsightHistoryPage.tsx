@@ -5,7 +5,7 @@ import { Button } from '~/renderer/components/ui/button';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { aiApi, InsightResponse } from '~/renderer/api/ai';
 import { toast } from 'sonner';
-import { DIMENSIONS } from '~/renderer/lib/constants';
+import { getSystemName } from '~/renderer/lib/insightUtils';
 
 export function InsightHistoryPage() {
   const navigate = useNavigate();
@@ -69,12 +69,6 @@ export function InsightHistoryPage() {
   useEffect(() => {
     loadInsights(currentPage);
   }, [currentPage]);
-
-  // 获取系统名称
-  const getSystemName = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.label || type;
-  };
 
   if (isLoading && insights.length === 0) {
     return (

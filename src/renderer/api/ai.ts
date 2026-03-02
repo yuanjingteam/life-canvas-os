@@ -36,6 +36,7 @@ export interface InsightResponse {
   generated_at_ts: number;
   created_at: string;
   created_at_ts: number;
+  _limit_reached?: boolean; // 是否达到每日限制
 }
 
 // 洞察列表响应

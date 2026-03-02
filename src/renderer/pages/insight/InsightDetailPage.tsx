@@ -5,35 +5,20 @@ import { Button } from '~/renderer/components/ui/button';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { aiApi, InsightResponse } from '~/renderer/api/ai';
 import { toast } from 'sonner';
-import { DIMENSIONS } from '~/renderer/lib/constants';
+import {
+  INSIGHT_CATEGORIES,
+  getSystemName,
+  getSystemColor,
+  getInsightCategory,
+  groupInsightsByCategory,
+} from '~/renderer/lib/insightUtils';
 
-// 洞察类别配置
-const INSIGHT_CATEGORIES = {
-  celebration: {
-    label: '值得庆祝',
-    icon: PartyPopper,
-    bgColor: 'bg-green-500/10',
-    borderColor: 'border-green-500/20',
-    textColor: 'text-green-600 dark:text-green-400',
-    cardBg: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
-  },
-  warning: {
-    label: '需要关注',
-    icon: AlertTriangle,
-    bgColor: 'bg-amber-500/10',
-    borderColor: 'border-amber-500/20',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    cardBg: 'bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
-  },
-  action: {
-    label: '行动建议',
-    icon: Target,
-    bgColor: 'bg-blue-500/10',
-    borderColor: 'border-blue-500/20',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    cardBg: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
-  },
-};
+// 图标映射
+const ICON_MAP = {
+  celebration: PartyPopper,
+  warning: AlertTriangle,
+  action: Target,
+} as const;
 
 export function InsightDetailPage() {
   const navigate = useNavigate();
@@ -103,6 +88,17 @@ export function InsightDetailPage() {
       }
 
       const result = await response.json();
+
+      // 检查是否达到每日限制
+      if (result.data._limit_reached === true) {
+        toast.warning('今日洞察次数已上限', {
+          id: 'generate-insight',
+          description: '每日只能生成 3 次洞察，请明天再来~',
+        });
+        return;
+      }
+
+      // 更新洞察数据
       setInsight(result.data);
 
       toast.success('洞察生成成功', {
@@ -123,34 +119,6 @@ export function InsightDetailPage() {
   useEffect(() => {
     loadLatestInsight();
   }, []);
-
-  // 获取系统名称
-  const getSystemName = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.label || type;
-  };
-
-  // 获取系统颜色
-  const getSystemColor = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.color || '#6B7280';
-  };
-
-  // 获取洞察类别
-  const getInsightCategory = (category: string): keyof typeof INSIGHT_CATEGORIES | null => {
-    const normalizedCategory = category.toLowerCase();
-    if (normalizedCategory.includes('庆祝') || normalizedCategory.includes('celebration')) {
-      return 'celebration';
-    }
-    if (normalizedCategory.includes('警告') || normalizedCategory.includes('warning') || normalizedCategory.includes('注意')) {
-      return 'warning';
-    }
-    if (normalizedCategory.includes('行动') || normalizedCategory.includes('action') || normalizedCategory.includes('建议')) {
-      return 'action';
-    }
-    // 默认归为 action
-    return 'action';
-  };
 
   if (isLoading) {
     return (
@@ -233,11 +201,7 @@ export function InsightDetailPage() {
   }
 
   // 按类别分组洞察内容
-  const groupedInsights = {
-    celebration: insight.content.filter(item => getInsightCategory(item.category) === 'celebration'),
-    warning: insight.content.filter(item => getInsightCategory(item.category) === 'warning'),
-    action: insight.content.filter(item => getInsightCategory(item.category) === 'action'),
-  };
+  const groupedInsights = groupInsightsByCategory(insight.content);
 
   // 有洞察数据
   return (
@@ -292,12 +256,26 @@ export function InsightDetailPage() {
       </header>
 
       {/* 洞察内容 */}
-      <div className="space-y-8">
+      <div className="space-y-8 relative">
+        {/* 生成中的加载遮罩 */}
+        {isGenerating && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-2xl">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-12 h-12 animate-spin text-apple-accent mx-auto" />
+              <p className="text-lg font-semibold text-apple-textMain dark:text-white">
+                AI 正在分析您的数据...
+              </p>
+              <p className="text-sm text-apple-textSec dark:text-white/60">
+                这可能需要 5-10 秒钟
+              </p>
+            </div>
+          </div>
+        )}
         {/* 三个类别横向排列 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {Object.entries(INSIGHT_CATEGORIES).map(([key, config]) => {
             const items = groupedInsights[key as keyof typeof groupedInsights];
-            const Icon = config.icon;
+            const Icon = ICON_MAP[key as keyof typeof ICON_MAP];
 
             return (
               <div key={key} className="space-y-4">

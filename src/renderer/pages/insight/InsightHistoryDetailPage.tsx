@@ -5,35 +5,20 @@ import { Button } from '~/renderer/components/ui/button';
 import { GlassCard } from '~/renderer/components/GlassCard';
 import { InsightResponse } from '~/renderer/api/ai';
 import { toast } from 'sonner';
-import { DIMENSIONS } from '~/renderer/lib/constants';
+import {
+  INSIGHT_CATEGORIES,
+  getSystemName,
+  getSystemColor,
+  getInsightCategory,
+  groupInsightsByCategory,
+} from '~/renderer/lib/insightUtils';
 
-// 洞察类别配置
-const INSIGHT_CATEGORIES = {
-  celebration: {
-    label: '值得庆祝',
-    icon: PartyPopper,
-    bgColor: 'bg-green-500/10',
-    borderColor: 'border-green-500/20',
-    textColor: 'text-green-600 dark:text-green-400',
-    cardBg: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
-  },
-  warning: {
-    label: '需要关注',
-    icon: AlertTriangle,
-    bgColor: 'bg-amber-500/10',
-    borderColor: 'border-amber-500/20',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    cardBg: 'bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
-  },
-  action: {
-    label: '行动建议',
-    icon: Target,
-    bgColor: 'bg-blue-500/10',
-    borderColor: 'border-blue-500/20',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    cardBg: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
-  },
-};
+// 图标映射
+const ICON_MAP = {
+  celebration: PartyPopper,
+  warning: AlertTriangle,
+  action: Target,
+} as const;
 
 export function InsightHistoryDetailPage() {
   const navigate = useNavigate();
@@ -53,34 +38,6 @@ export function InsightHistoryDetailPage() {
     setInsight(insightData);
   }, [location.state, navigate]);
 
-  // 获取系统名称
-  const getSystemName = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.label || type;
-  };
-
-  // 获取系统颜色
-  const getSystemColor = (type: string) => {
-    const dimension = DIMENSIONS.find((d) => d.type === type);
-    return dimension?.color || '#6B7280';
-  };
-
-  // 获取洞察类别
-  const getInsightCategory = (category: string): keyof typeof INSIGHT_CATEGORIES => {
-    const normalizedCategory = category.toLowerCase();
-    if (normalizedCategory.includes('庆祝') || normalizedCategory.includes('celebration')) {
-      return 'celebration';
-    }
-    if (normalizedCategory.includes('警告') || normalizedCategory.includes('warning') || normalizedCategory.includes('注意')) {
-      return 'warning';
-    }
-    if (normalizedCategory.includes('行动') || normalizedCategory.includes('action') || normalizedCategory.includes('建议')) {
-      return 'action';
-    }
-    // 默认归为 action
-    return 'action';
-  };
-
   if (!insight) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -90,11 +47,7 @@ export function InsightHistoryDetailPage() {
   }
 
   // 按类别分组洞察内容
-  const groupedInsights = {
-    celebration: insight.content.filter(item => getInsightCategory(item.category) === 'celebration'),
-    warning: insight.content.filter(item => getInsightCategory(item.category) === 'warning'),
-    action: insight.content.filter(item => getInsightCategory(item.category) === 'action'),
-  };
+  const groupedInsights = groupInsightsByCategory(insight.content);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -126,7 +79,7 @@ export function InsightHistoryDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {Object.entries(INSIGHT_CATEGORIES).map(([key, config]) => {
             const items = groupedInsights[key as keyof typeof groupedInsights];
-            const Icon = config.icon;
+            const Icon = ICON_MAP[key as keyof typeof ICON_MAP];
 
             return (
               <div key={key} className="space-y-4">
