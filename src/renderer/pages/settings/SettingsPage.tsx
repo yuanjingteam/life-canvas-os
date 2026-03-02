@@ -316,24 +316,15 @@ export function SettingsPage() {
     }
   };
 
-  const handleImportClick = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json,.zip";
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        setIsImporting(true);
-        try {
-          await importData(file);
-        } catch (error) {
-          console.error('Import failed:', error);
-        } finally {
-          setIsImporting(false);
-        }
-      }
-    };
-    input.click();
+  const handleImportClick = async () => {
+    setIsImporting(true);
+    try {
+      await importData();
+    } catch (error) {
+      console.error('Import failed:', error);
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (

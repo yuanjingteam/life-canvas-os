@@ -17,16 +17,17 @@ export const dataApi = {
   },
 
   /**
-   * 导入数据（通过文件上传）
+   * 导入数据（通过文件路径）
+   * 使用 Electron IPC 选择文件并获取路径
    */
-  importData(file: File, verify: boolean = true): Promise<Response> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('verify', verify.toString());
+  importData(backupPath: string, verify: boolean = true): Promise<Response> {
+    const params = new URLSearchParams();
+    params.append('backup_path', backupPath);
+    params.append('verify', verify.toString());
 
-    return fetch(`${API_BASE_URL}/api/data/import`, {
+    return fetch(`${API_BASE_URL}/api/data/import?${params.toString()}`, {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
     });
   },
 
