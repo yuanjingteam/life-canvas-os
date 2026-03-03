@@ -34,7 +34,6 @@ export function PinDeletePage() {
 
     try {
       await deleteWithErrorHandling(verifiedPin, toast);
-      localStorage.setItem('pin-setup-status', 'skipped');
 
       // 更新 PIN 状态缓存
       await updatePinStatusAfterOperation();

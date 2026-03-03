@@ -134,14 +134,12 @@ export function useDataApi() {
         description: '数据已成功恢复',
       });
 
-      // 提示用户刷新页面
+      // 清除 PIN 状态缓存（因为导入后 PIN 状态可能改变）
+      localStorage.removeItem('app_cache_pin_status');
+
+      // 自动刷新页面
       setTimeout(() => {
-        toast.info('建议刷新页面以查看最新数据', {
-          action: {
-            label: '刷新',
-            onClick: () => window.location.reload(),
-          },
-        });
+        window.location.reload();
       }, 1000);
     } catch (error) {
       console.error('Import failed:', error);

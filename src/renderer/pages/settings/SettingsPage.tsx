@@ -366,7 +366,6 @@ export function SettingsPage() {
       localStorage.removeItem('life-canvas-state');
       localStorage.removeItem('pin-setup-status');
       localStorage.removeItem('journal-draft');
-      localStorage.removeItem('app_cache_pin_status');
       sessionStorage.removeItem('pin-verified');
 
       // 重置成功后刷新页面

@@ -63,8 +63,8 @@ export function PinSetupPage() {
         return;
       }
 
-      // 标记 PIN 设置已完成
-      localStorage.setItem('pin-setup-status', 'completed');
+      // 标记为非首次启动
+      localStorage.setItem('life-canvas-first-launch', 'false');
 
       // 更新 PIN 状态缓存
       await updatePinStatusAfterOperation();
