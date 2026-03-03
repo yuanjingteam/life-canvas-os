@@ -304,6 +304,7 @@ def export_to_json(db_path: str, output_dir: str) -> str:
                 "values": user.values,
                 "life_expectancy": user.life_expectancy,
                 "preferences": user.preferences,
+                "ai_config": user.ai_config,  # 导出 AI 配置
                 "created_at": user.created_at.isoformat() if user.created_at else None
             })
 
@@ -316,6 +317,29 @@ def export_to_json(db_path: str, output_dir: str) -> str:
                 "score": system.score,
                 "details": system.details,
                 "created_at": system.created_at.isoformat() if system.created_at else None
+            })
+
+        # 导出日记
+        for diary in db.query(Diary).all():
+            data["diaries"].append({
+                "id": diary.id,
+                "user_id": diary.user_id,
+                "content": diary.content,
+                "date": diary.date.isoformat() if diary.date else None,
+                "mood": diary.mood,
+                "tags": diary.tags,
+                "created_at": diary.created_at.isoformat() if diary.created_at else None
+            })
+
+        # 导出洞察
+        for insight in db.query(Insight).all():
+            data["insights"].append({
+                "id": insight.id,
+                "user_id": insight.user_id,
+                "content": insight.content,
+                "system_scores": insight.system_scores,
+                "provider_used": insight.provider_used,
+                "generated_at": insight.generated_at.isoformat() if insight.generated_at else None
             })
 
         # 写入文件
@@ -375,6 +399,8 @@ def import_from_json(db_path: str, data: dict) -> dict:
                     existing.values = user_data.get("values")
                     existing.life_expectancy = user_data.get("life_expectancy")
                     existing.preferences = user_data.get("preferences")
+                    if user_data.get("ai_config"):
+                        existing.ai_config = user_data.get("ai_config")
                 else:
                     # 创建新用户
                     user = User(
@@ -385,7 +411,8 @@ def import_from_json(db_path: str, data: dict) -> dict:
                         mbti=user_data.get("mbti"),
                         values=user_data.get("values"),
                         life_expectancy=user_data.get("life_expectancy"),
-                        preferences=user_data.get("preferences")
+                        preferences=user_data.get("preferences"),
+                        ai_config=user_data.get("ai_config")
                     )
                     db.add(user)
                 stats["users"] += 1
@@ -439,15 +466,18 @@ def import_from_json(db_path: str, data: dict) -> dict:
                 if existing:
                     existing.user_id = insight_data.get("user_id")
                     existing.content = insight_data.get("content")
-                    existing.insight_type = insight_data.get("insight_type")
-                    existing.related_system = insight_data.get("related_system")
+                    existing.system_scores = insight_data.get("system_scores")
+                    existing.provider_used = insight_data.get("provider_used")
+                    if insight_data.get("generated_at"):
+                        existing.generated_at = dt.fromisoformat(insight_data["generated_at"])
                 else:
                     insight = Insight(
                         id=insight_data["id"],
                         user_id=insight_data.get("user_id"),
                         content=insight_data.get("content"),
-                        insight_type=insight_data.get("insight_type"),
-                        related_system=insight_data.get("related_system")
+                        system_scores=insight_data.get("system_scores"),
+                        provider_used=insight_data.get("provider_used"),
+                        generated_at=dt.fromisoformat(insight_data["generated_at"]) if insight_data.get("generated_at") else None
                     )
                     db.add(insight)
                 stats["insights"] += 1
