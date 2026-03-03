@@ -56,7 +56,7 @@ export function usePinStatus() {
       setIsLoading(true)
       setError(null)
 
-      const response = await pinApi.status()
+      const response = await pinApi.verifyRequirements()
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -64,15 +64,18 @@ export function usePinStatus() {
       }
 
       const result = await response.json()
-      const statusData = result.data as PinStatus
+      const statusData = result.data as { has_pin: boolean }
+
+      // 转换为 PinStatus 格式
+      const status: PinStatus = { has_pin_set: statusData.has_pin }
 
       // 更新状态
-      setPinStatus(statusData)
+      setPinStatus(status)
 
       // 保存到缓存（5分钟过期）
-      setCache(CACHE_KEYS.PIN_STATUS, statusData, 5)
+      setCache(CACHE_KEYS.PIN_STATUS, status, 5)
 
-      return statusData
+      return status
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : '获取 PIN 状态失败'
