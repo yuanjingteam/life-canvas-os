@@ -1,33 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
-import { ArrowLeft, Trash2, Edit, Calendar, LockKeyhole } from 'lucide-react';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
-import { Badge } from '~/renderer/components/ui/badge';
-import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen';
-import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
-import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
-import MDEditor from '@uiw/react-md-editor';
-import { useJournalApi } from '~/renderer/hooks/useJournalApi';
-import { usePinStatus } from '~/renderer/hooks/usePinStatus';
-import { usePinApi } from '~/renderer/hooks';
-import type { JournalEntry } from '~/shared/types';
+import React, { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+import { ArrowLeft, Trash2, Edit, Calendar, LockKeyhole } from 'lucide-react'
+import { useApp } from '~/renderer/contexts/AppContext'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Button } from '~/renderer/components/ui/button'
+import { Badge } from '~/renderer/components/ui/badge'
+import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
+import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants'
+import { formatDateTimeCN } from '~/renderer/lib/dateUtils'
+import MDEditor from '@uiw/react-md-editor'
+import { useJournalApi } from '~/renderer/hooks/useJournalApi'
+import { usePinStatus } from '~/renderer/hooks/usePinStatus'
+import { usePinApi } from '~/renderer/hooks'
+import type { JournalEntry } from '~/shared/types'
 
 export function JournalDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { getJournal, deleteJournal } = useJournalApi();
-  const { fetchPinStatus, pinStatus } = usePinStatus();
-  const { verifyPin } = usePinApi();
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [showPinDialog, setShowPinDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCheckingPin, setIsCheckingPin] = useState(false);
-  const [entry, setEntry] = useState<JournalEntry | null>(null);
-  const [unlockError, setUnlockError] = useState<string | undefined>(undefined);
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { getJournal, deleteJournal } = useJournalApi()
+  const { fetchPinStatus, pinStatus } = usePinStatus()
+  const { verifyPin } = usePinApi()
+  const [isPinVerified, setIsPinVerified] = useState(false)
+  const [showPinDialog, setShowPinDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCheckingPin, setIsCheckingPin] = useState(false)
+  const [entry, setEntry] = useState<JournalEntry | null>(null)
+  const [unlockError, setUnlockError] = useState<string | undefined>(undefined)
 
   // 从路由状态获取是否私密（如果有的话）
   const isPrivateFromList = location.state?.isPrivate || false
@@ -82,70 +82,70 @@ export function JournalDetailPage() {
     if (!isPrivateFromList || isPinVerified) {
       loadJournal()
     }
-  }, [id, isPinVerified]); // 依赖 isPinVerified 以便验证后加载
+  }, [id, isPinVerified]) // 依赖 isPinVerified 以便验证后加载
 
   // 检查 PIN 状态（优先从缓存获取）
   useEffect(() => {
     const checkPinStatus = async () => {
       // 只在私密日记且未验证 PIN 时检查
       if (isPrivateFromList && !isPinVerified && !isLoading) {
-        setIsCheckingPin(true);
+        setIsCheckingPin(true)
         try {
           // fetchPinStatus 会优先从缓存读取，如果缓存没有或过期才调用接口
-          const status = await fetchPinStatus();
-          setIsCheckingPin(false);
+          const status = await fetchPinStatus()
+          setIsCheckingPin(false)
 
           // 如果没有设置 PIN，则不允许查看私密日记
           if (!status?.has_pin_set) {
-            navigate('/journal');
+            navigate('/journal')
           }
         } catch (error) {
-          console.error('Failed to check PIN status:', error);
-          setIsCheckingPin(false);
+          console.error('Failed to check PIN status:', error)
+          setIsCheckingPin(false)
           // 出错时也返回列表页
-          navigate('/journal');
+          navigate('/journal')
         }
       }
-    };
+    }
 
-    checkPinStatus();
-  }, [isPrivateFromList, isPinVerified, isLoading]);
+    checkPinStatus()
+  }, [isPrivateFromList, isPinVerified, isLoading])
 
   // 私密日记，需要验证 PIN（使用从列表页传递的信息）
   // 这个判断要在加载中判断之前，因为私密日记未验证时 entry 为 null 是正常的
   if (isPrivateFromList && !isPinVerified && !isLoading && !isCheckingPin) {
     // 确认已设置 PIN 后才显示验证弹窗
     if (!pinStatus?.has_pin_set) {
-      return null; // 等待 PIN 状态加载
+      return null // 等待 PIN 状态加载
     }
 
     return (
       <PinLockScreen
-        title="查看私密日记"
-        description="请输入 PIN 码以查看此私密日记"
-        unlockButtonText="验证并查看"
-        unlockingText="验证中..."
-        showCancelButton={true}
         cancelButtonText="返回列表"
-        onCancel={() => navigate('/journal')}
+        description="请输入 PIN 码以查看此私密日记"
         error={unlockError}
-        onUnlock={async (pin) => {
-          setUnlockError(undefined);
+        onCancel={() => navigate('/journal')}
+        onUnlock={async pin => {
+          setUnlockError(undefined)
 
-          const result = await verifyPin(pin);
+          const result = await verifyPin(pin)
 
           if (!result.success) {
-            setUnlockError(result.error || 'PIN验证失败');
-            return;
+            setUnlockError(result.error || 'PIN验证失败')
+            return
           }
 
-          sessionStorage.setItem('pin-verified', 'true');
-          setIsPinVerified(true);
+          sessionStorage.setItem('pin-verified', 'true')
+          setIsPinVerified(true)
           // PIN 验证成功后，加载日记详情
-          await loadJournal();
+          await loadJournal()
         }}
+        showCancelButton={true}
+        title="查看私密日记"
+        unlockButtonText="验证并查看"
+        unlockingText="验证中..."
       />
-    );
+    )
   }
 
   // 加载中

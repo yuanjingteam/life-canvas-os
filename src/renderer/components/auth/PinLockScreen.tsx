@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, Unlock } from 'lucide-react';
-import { GlassCard } from '~/renderer/components/GlassCard';
+import { useState } from 'react'
+import { Lock, Unlock } from 'lucide-react'
+import { GlassCard } from '~/renderer/components/GlassCard'
 
 interface PinLockScreenProps {
-  onUnlock: (pin: string) => void | Promise<void>;
-  onCancel?: () => void;
-  error?: string;
-  title?: string;
-  description?: string;
-  unlockButtonText?: string;
-  unlockingText?: string;
-  showCancelButton?: boolean;
-  cancelButtonText?: string;
-  initialPin?: string;
+  onUnlock: (pin: string) => void | Promise<void>
+  onCancel?: () => void
+  error?: string
+  title?: string
+  description?: string
+  unlockButtonText?: string
+  unlockingText?: string
+  showCancelButton?: boolean
+  cancelButtonText?: string
+  initialPin?: string
 }
 
 export function PinLockScreen({
@@ -27,13 +27,13 @@ export function PinLockScreen({
   cancelButtonText = '取消',
   initialPin = '',
 }: PinLockScreenProps) {
-  const [pinInput, setPinInput] = useState('');
-  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [pinInput, setPinInput] = useState('')
+  const [isUnlocking, setIsUnlocking] = useState(false)
 
   // 当 initialPin 变化时更新输入框的值
   useEffect(() => {
-    setPinInput(initialPin || '');
-  }, [initialPin]);
+    setPinInput(initialPin || '')
+  }, [initialPin])
 
   const handleUnlock = async () => {
     if (pinInput.length === 6 && !isUnlocking) {
@@ -66,7 +66,9 @@ export function PinLockScreen({
             <Lock size={40} />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-apple-textMain dark:text-white">{title}</h2>
+            <h2 className="text-2xl font-bold text-apple-textMain dark:text-white">
+              {title}
+            </h2>
             <p className="text-apple-textSec dark:text-white/40 text-sm m-2">
               {description}
             </p>
@@ -89,24 +91,26 @@ export function PinLockScreen({
           />
 
           {error && (
-            <p className="text-sm text-apple-error dark:text-red-400">{error}</p>
+            <p className="text-sm text-apple-error dark:text-red-400">
+              {error}
+            </p>
           )}
 
           <div className="flex gap-3">
             {showCancelButton && onCancel && (
               <button
-                onClick={onCancel}
-                disabled={isUnlocking}
                 className="flex-1 py-4 text-apple-textSec dark:text-white/40 text-sm hover:text-apple-textMain dark:hover:text-white border border-apple-border dark:border-white/10 rounded-2xl transition-colors disabled:opacity-50"
+                disabled={isUnlocking}
+                onClick={onCancel}
               >
                 {cancelButtonText}
               </button>
             )}
 
             <button
-              onClick={handleUnlock}
-              disabled={pinInput.length !== 6 || isUnlocking}
               className="flex-1 py-4 bg-apple-accent text-white font-black rounded-2xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+              disabled={pinInput.length !== 6 || isUnlocking}
+              onClick={handleUnlock}
             >
               {isUnlocking ? (
                 <>

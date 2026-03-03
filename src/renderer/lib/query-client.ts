@@ -3,7 +3,7 @@
  * 为未来的服务端状态管理准备
  */
 
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query'
 
 /**
  * 创建 Query Client 实例
@@ -21,14 +21,14 @@ export const queryClient = new QueryClient({
       retry: (failureCount, error: any) => {
         // 不重试 4xx 错误
         if (error?.code >= 400 && error?.code < 500) {
-          return false;
+          return false
         }
         // 最多重试 3 次
-        return failureCount < 3;
+        return failureCount < 3
       },
 
       // 重试延迟（毫秒）
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
 
       // 窗口聚焦时重新验证
       refetchOnWindowFocus: false,
@@ -44,4 +44,4 @@ export const queryClient = new QueryClient({
       retry: false,
     },
   },
-});
+})

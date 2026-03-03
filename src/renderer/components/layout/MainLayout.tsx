@@ -1,33 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
-import { PinLockScreen } from '../auth/PinLockScreen';
-import { PinWelcomePage } from '../auth/PinWelcomePage';
-import { useApp } from '~/renderer/contexts/AppContext';
+import React, { useState, useEffect } from 'react'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Sidebar } from './Sidebar'
+import { PinLockScreen } from '../auth/PinLockScreen'
+import { PinWelcomePage } from '../auth/PinWelcomePage'
+import { useApp } from '~/renderer/contexts/AppContext'
 import { request } from '~/renderer/api/config'
-import { usePinApi } from '~/renderer/hooks';
-import { usePinStatus } from '~/renderer/hooks/usePinStatus';
+import { usePinApi } from '~/renderer/hooks'
+import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 
 /**
  * 首次启动标记
  * true = 首次使用（未设置过）
  * false = 已使用过（已设置过或已跳过）
  */
-const FIRST_LAUNCH_KEY = 'life-canvas-first-launch';
+const FIRST_LAUNCH_KEY = 'life-canvas-first-launch'
 
 export function MainLayout() {
-  const { state, unlock } = useApp();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { verifyPin } = usePinApi();
-  const { fetchPinStatus, pinStatus } = usePinStatus();
-  const [unlockError, setUnlockError] = useState<string>();
-  const [isVerifying, setIsVerifying] = useState(false);
+  const { state, unlock } = useApp()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { verifyPin } = usePinApi()
+  const { fetchPinStatus, pinStatus } = usePinStatus()
+  const [unlockError, setUnlockError] = useState<string>()
+  const [isVerifying, setIsVerifying] = useState(false)
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean>(() => {
-    const saved = localStorage.getItem(FIRST_LAUNCH_KEY);
+    const saved = localStorage.getItem(FIRST_LAUNCH_KEY)
     // null = 首次启动，false = 已使用过
-    return saved === null;
-  });
+    return saved === null
+  })
 
   // 根据当前路径确定 activeTab
   const getActiveTab = () => {
@@ -44,16 +44,16 @@ export function MainLayout() {
 
   // 更新 activeTab 当路由变化时
   React.useEffect(() => {
-    setActiveTab(getActiveTab());
-  }, [location.pathname]);
+    setActiveTab(getActiveTab())
+  }, [location.pathname])
 
   // 首次启动时检查 PIN 状态
   useEffect(() => {
     if (!isFirstLaunch) {
       // 非首次启动，检查 PIN 状态
-      fetchPinStatus().catch(console.error);
+      fetchPinStatus().catch(console.error)
     }
-  }, [isFirstLaunch]);
+  }, [isFirstLaunch])
 
   const handleUnlock = async (pin: string) => {
     // 验证格式
@@ -65,37 +65,42 @@ export function MainLayout() {
     setIsVerifying(true)
     setUnlockError(undefined)
 
-    const result = await verifyPin(pin);
+    const result = await verifyPin(pin)
 
     if (result.success) {
       // 验证成功
-      setUnlockError(undefined);
-      unlock();
+      setUnlockError(undefined)
+      unlock()
     } else {
       // 验证失败
-      setUnlockError(result.error || '验证失败');
+      setUnlockError(result.error || '验证失败')
     }
 
-    setIsVerifying(false);
-  };
+    setIsVerifying(false)
+  }
 
   const handleSetupNow = () => {
     // 标记为非首次启动
-    localStorage.setItem(FIRST_LAUNCH_KEY, 'false');
-    setIsFirstLaunch(false);
+    localStorage.setItem(FIRST_LAUNCH_KEY, 'false')
+    setIsFirstLaunch(false)
     // 导航到 PIN 设置页面
     navigate('/settings/pin')
   }
 
   const handleSetupLater = () => {
     // 标记为非首次启动
-    localStorage.setItem(FIRST_LAUNCH_KEY, 'false');
-    setIsFirstLaunch(false);
-  };
+    localStorage.setItem(FIRST_LAUNCH_KEY, 'false')
+    setIsFirstLaunch(false)
+  }
 
   // 首次启动，显示欢迎页
   if (isFirstLaunch) {
-    return <PinWelcomePage onSetupNow={handleSetupNow} onSetupLater={handleSetupLater} />;
+    return (
+      <PinWelcomePage
+        onSetupLater={handleSetupLater}
+        onSetupNow={handleSetupNow}
+      />
+    )
   }
 
   // 非首次启动，检查 PIN 状态
@@ -105,7 +110,7 @@ export function MainLayout() {
       <div className="min-h-screen bg-apple-bgMain dark:bg-black flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-apple-accent" />
       </div>
-    );
+    )
   }
 
   // 已设置 PIN，显示锁屏
@@ -121,10 +126,10 @@ export function MainLayout() {
             </div>
           </main>
         </div>
-      );
+      )
     }
     // 应用被锁定，显示 PIN 验证
-    return <PinLockScreen onUnlock={handleUnlock} error={unlockError} />;
+    return <PinLockScreen error={unlockError} onUnlock={handleUnlock} />
   }
 
   // 未设置 PIN，直接进入系统

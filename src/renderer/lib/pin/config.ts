@@ -14,7 +14,7 @@ export const PIN_CONFIG = {
 
   /** 最大尝试次数（参考） */
   MAX_ATTEMPTS: 5,
-} as const;
+} as const
 
 /**
  * PIN 相关的消息文本
@@ -33,4 +33,4 @@ export const PIN_MESSAGES = {
   PIN_SAME_AS_OLD: '新 PIN 不能与旧 PIN 相同',
   PIN_MATCH: 'PIN 码一致',
   PIN_NO_MATCH: 'PIN 码不一致',
-} as const;
+} as const

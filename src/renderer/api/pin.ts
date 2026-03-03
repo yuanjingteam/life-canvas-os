@@ -10,9 +10,30 @@ import type {
   PinSetupRequest,
 } from '../lib/pin/types'
 
+export interface PinVerifyRequirements {
+  has_pin: boolean
+  requirements: {
+    startup: boolean
+    private_journal: boolean
+    data_export: boolean
+    settings_change: boolean
+  }
+}
+
 export const pinApi = {
+  /**
+   * 获取 PIN 验证要求
+   * @deprecated 已废弃，请使用 verifyRequirements()
+   */
   status(): Promise<Response> {
     return apiRequest('/api/pin/status')
+  },
+
+  /**
+   * 获取 PIN 验证要求（新接口）
+   */
+  verifyRequirements(): Promise<Response> {
+    return apiRequest('/api/pin/verify-requirements')
   },
 
   setup(pin: string): Promise<Response> {
