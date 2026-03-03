@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 /**
  * 防抖 Hook
@@ -6,19 +6,19 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * @param delay 延迟时间（毫秒）
  */
 export function useDebounce<T>(value: T, delay: number = 500): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
+      setDebouncedValue(value)
+    }, delay)
 
     return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delay]);
+      clearTimeout(timer)
+    }
+  }, [value, delay])
 
-  return debouncedValue;
+  return debouncedValue
 }
 
 /**
@@ -32,20 +32,20 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   delay: number = 500,
   deps: React.DependencyList = []
 ): (...args: Parameters<T>) => void {
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   return useCallback(
     (...args: Parameters<T>) => {
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+        clearTimeout(timeoutRef.current)
       }
 
       timeoutRef.current = setTimeout(() => {
-        callback(...args);
-      }, delay);
+        callback(...args)
+      }, delay)
     },
     [callback, delay, ...deps]
-  );
+  )
 }
 
 /**
@@ -54,23 +54,26 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
  * @param limit 时间间隔（毫秒）
  */
 export function useThrottle<T>(value: T, limit: number = 500): T {
-  const [throttledValue, setThrottledValue] = useState<T>(value);
-  const lastRan = useRef<number>(Date.now());
+  const [throttledValue, setThrottledValue] = useState<T>(value)
+  const lastRan = useRef<number>(Date.now())
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      if (Date.now() - lastRan.current >= limit) {
-        setThrottledValue(value);
-        lastRan.current = Date.now();
-      }
-    }, limit - (Date.now() - lastRan.current));
+    const handler = setTimeout(
+      () => {
+        if (Date.now() - lastRan.current >= limit) {
+          setThrottledValue(value)
+          lastRan.current = Date.now()
+        }
+      },
+      limit - (Date.now() - lastRan.current)
+    )
 
     return () => {
-      clearTimeout(handler);
-    };
-  }, [value, limit]);
+      clearTimeout(handler)
+    }
+  }, [value, limit])
 
-  return throttledValue;
+  return throttledValue
 }
 
 /**
@@ -82,18 +85,18 @@ export function useThrottledCallback<T extends (...args: any[]) => any>(
   callback: T,
   limit: number = 500
 ): (...args: Parameters<T>) => void {
-  const lastRun = useRef<number>(Date.now());
+  const lastRun = useRef<number>(Date.now())
 
   return useCallback(
     (...args: Parameters<T>) => {
-      const now = Date.now();
+      const now = Date.now()
       if (now - lastRun.current >= limit) {
-        callback(...args);
-        lastRun.current = now;
+        callback(...args)
+        lastRun.current = now
       }
     },
     [callback, limit]
-  );
+  )
 }
 
 /**
@@ -105,19 +108,19 @@ export function useDebouncedInput(
   initialValue: string = '',
   delay: number = 500
 ) {
-  const [inputValue, setInputValue] = useState(initialValue);
-  const [debouncedValue, setDebouncedValue] = useState(initialValue);
+  const [inputValue, setInputValue] = useState(initialValue)
+  const [debouncedValue, setDebouncedValue] = useState(initialValue)
 
   // 防抖更新
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedValue(inputValue);
-    }, delay);
+      setDebouncedValue(inputValue)
+    }, delay)
 
     return () => {
-      clearTimeout(timer);
-    };
-  }, [inputValue, delay]);
+      clearTimeout(timer)
+    }
+  }, [inputValue, delay])
 
   return {
     inputValue,
@@ -125,5 +128,5 @@ export function useDebouncedInput(
     debouncedValue,
     // 检查是否正在等待防抖完成
     isDebouncing: inputValue !== debouncedValue,
-  };
+  }
 }

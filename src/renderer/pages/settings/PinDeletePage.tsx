@@ -7,36 +7,29 @@ import { toast } from '~/renderer/lib/toast'
 import { PIN_CONFIG, PIN_MESSAGES, type PinApiError } from '~/renderer/lib/pin'
 import { usePinApi, handlePinApiError } from '~/renderer/hooks'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
-import {
-  PIN_CONFIG,
-  PIN_MESSAGES,
-  type PinApiError,
-} from '~/renderer/lib/pin';
-import { usePinApi } from '~/renderer/hooks';
-import { usePinStatus } from '~/renderer/hooks/usePinStatus';
-import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen';
-import { LoadingSpinner } from '~/renderer/components/pin';
+import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
+import { LoadingSpinner } from '~/renderer/components/pin'
 
 export function PinDeletePage() {
   const navigate = useNavigate()
   const { verifyWithErrorHandling, deleteWithErrorHandling } = usePinApi()
   const { updatePinStatusAfterOperation } = usePinStatus()
 
-  const [verifiedPin, setVerifiedPin] = useState('');
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [verifiedPin, setVerifiedPin] = useState('')
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleVerifyPin = async (pin: string) => {
-    await verifyWithErrorHandling(pin, toast);
-    setVerifiedPin(pin);
-    setShowConfirmDialog(true);
-  };
+    await verifyWithErrorHandling(pin, toast)
+    setVerifiedPin(pin)
+    setShowConfirmDialog(true)
+  }
 
   const handleDelete = async () => {
     setIsDeleting(true)
 
     try {
-      await deleteWithErrorHandling(verifiedPin, toast);
+      await deleteWithErrorHandling(verifiedPin, toast)
 
       // 更新 PIN 状态缓存
       await updatePinStatusAfterOperation()
@@ -61,14 +54,14 @@ export function PinDeletePage() {
     <>
       {!showConfirmDialog ? (
         <PinLockScreen
-          title="删除密码"
-          description="请输入密码以验证身份并删除密码保护"
-          unlockButtonText="验证并继续"
-          unlockingText="验证中..."
-          showCancelButton={true}
           cancelButtonText="取消"
+          description="请输入密码以验证身份并删除密码保护"
           onCancel={() => navigate('/settings')}
           onUnlock={handleVerifyPin}
+          showCancelButton={true}
+          title="删除密码"
+          unlockButtonText="验证并继续"
+          unlockingText="验证中..."
         />
       ) : (
         <div className="flex-1 flex items-center justify-center p-6">
@@ -135,5 +128,5 @@ export function PinDeletePage() {
         </div>
       )}
     </>
-  );
+  )
 }

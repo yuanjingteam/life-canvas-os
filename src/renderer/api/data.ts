@@ -4,13 +4,12 @@
 
 import { apiRequest } from './client'
 
-export type ExportFormat = 'json' | 'zip';
+export type ExportFormat = 'json' | 'zip'
 
 export interface ResetDataResponse {
-  backup_path: string;
-  reset_at: string;
+  backup_path: string
+  reset_at: string
 }
-export type ExportFormat = 'json' | 'zip'
 
 export const dataApi = {
   /**
@@ -53,8 +52,7 @@ export const dataApi = {
     })
   },
 
-
-    /**
+  /**
    * 重置/删除所有数据
    */
   resetData(): Promise<Response> {

@@ -1,40 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Lock, Eye, EyeOff } from 'lucide-react';
-import MDEditor from '@uiw/react-md-editor';
-import { useApp } from '~/renderer/contexts/AppContext';
-import { GlassCard } from '~/renderer/components/GlassCard';
-import { Button } from '~/renderer/components/ui/button';
-import { Input } from '~/renderer/components/ui/input';
-import { Textarea } from '~/renderer/components/ui/textarea';
-import { Badge } from '~/renderer/components/ui/badge';
-import { Switch } from '~/renderer/components/ui/switch';
-import { MoodSelector } from '~/renderer/components/ui/mood-selector';
-import { TagInput } from '~/renderer/components/ui/tag-input';
-import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants';
-import type { DimensionType, JournalEntry } from '~/shared/types';
-import { toast } from '~/renderer/lib/toast';
-import { pinApi } from '~/renderer/api';
-import { useJournalApi } from '~/renderer/hooks/useJournalApi';
-import { usePinStatus } from '~/renderer/hooks/usePinStatus';
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Save, Lock, Eye, EyeOff } from 'lucide-react'
+import MDEditor from '@uiw/react-md-editor'
+import { useApp } from '~/renderer/contexts/AppContext'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Button } from '~/renderer/components/ui/button'
+import { Input } from '~/renderer/components/ui/input'
+import { Textarea } from '~/renderer/components/ui/textarea'
+import { Badge } from '~/renderer/components/ui/badge'
+import { Switch } from '~/renderer/components/ui/switch'
+import { MoodSelector } from '~/renderer/components/ui/mood-selector'
+import { TagInput } from '~/renderer/components/ui/tag-input'
+import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants'
+import type { DimensionType, JournalEntry } from '~/shared/types'
+import { toast } from '~/renderer/lib/toast'
+import { pinApi } from '~/renderer/api'
+import { useJournalApi } from '~/renderer/hooks/useJournalApi'
+import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 
 export function JournalEditorPage() {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const { state, updateState } = useApp();
-  const { createJournal, updateJournal, getJournal } = useJournalApi();
-  const { fetchPinStatus, pinStatus } = usePinStatus();
-  const isEditing = Boolean(id);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const { state, updateState } = useApp()
+  const { createJournal, updateJournal, getJournal } = useJournalApi()
+  const { fetchPinStatus, pinStatus } = usePinStatus()
+  const isEditing = Boolean(id)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(false)
 
-  const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [mood, setMood] = useState<MoodType>('good');
-  const [tags, setTags] = useState<string[]>([]);
-  const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>([]);
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [mood, setMood] = useState<MoodType>('good')
+  const [tags, setTags] = useState<string[]>([])
+  const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>([])
+  const [isPrivate, setIsPrivate] = useState(false)
 
   // 加载日记详情（编辑模式）
   useEffect(() => {
@@ -70,13 +70,13 @@ export function JournalEditorPage() {
     const checkPinStatus = async () => {
       try {
         // fetchPinStatus 会优先从缓存读取，如果缓存没有或过期才调用接口
-        await fetchPinStatus();
+        await fetchPinStatus()
       } catch (error) {
         console.error('Failed to check PIN status:', error)
       }
-    };
-    checkPinStatus();
-  }, [fetchPinStatus]);
+    }
+    checkPinStatus()
+  }, [fetchPinStatus])
 
   const handleToggleDimension = (dimType: DimensionType) => {
     setLinkedDimensions(prev =>
@@ -93,15 +93,15 @@ export function JournalEditorPage() {
       if (pinStatus === null) {
         toast.error('正在检查 PIN 状态...', {
           description: '请稍候',
-        });
-        return;
+        })
+        return
       }
 
       // 如果没有设置 PIN
       if (!pinStatus.has_pin_set) {
         toast.error('需要设置 PIN 码', {
           description: '私密日记功能需要先设置 PIN 码保护',
-        });
+        })
 
         // 保存当前草稿
         const draft = {
@@ -111,14 +111,14 @@ export function JournalEditorPage() {
           tags,
           linkedDimensions,
           isPrivate: false, // 暂时设为 false
-        };
-        localStorage.setItem('journal-draft', JSON.stringify(draft));
+        }
+        localStorage.setItem('journal-draft', JSON.stringify(draft))
 
         // 跳转到 PIN 设置页
         setTimeout(() => {
-          navigate('/settings/pin', { state: { returnUrl: '/journal/new' } });
-        }, 500);
-        return;
+          navigate('/settings/pin', { state: { returnUrl: '/journal/new' } })
+        }, 500)
+        return
       }
     }
 
@@ -126,14 +126,14 @@ export function JournalEditorPage() {
   }
 
   const handleSave = async () => {
-    if (!content.trim()) return;
+    if (!content.trim()) return
 
     // 安全检查：如果要保存为私密日记，必须有 PIN
     if (isPrivate && !pinStatus?.has_pin_set) {
       toast.error('无法保存私密日记', {
         description: '私密日记功能需要先设置 PIN 码保护',
-      });
-      return;
+      })
+      return
     }
 
     setIsLoading(true)
@@ -297,18 +297,22 @@ export function JournalEditorPage() {
                     {pinStatus === null
                       ? '正在检查 PIN 状态...'
                       : isPrivate
-                      ? '需要 PIN 码才能查看此日记'
-                      : pinStatus?.has_pin_set
-                        ? '开启后需要 PIN 码才能查看'
-                        : '需要先设置 PIN 码'}
+                        ? '需要 PIN 码才能查看此日记'
+                        : pinStatus?.has_pin_set
+                          ? '开启后需要 PIN 码才能查看'
+                          : '需要先设置 PIN 码'}
                   </div>
                 </div>
               </div>
               <Switch
                 checked={isPrivate}
+                className={
+                  isPrivate ? 'data-[state=checked]:bg-purple-500' : ''
+                }
+                disabled={
+                  pinStatus === null || (!pinStatus?.has_pin_set && !isPrivate)
+                }
                 onCheckedChange={handlePrivateToggle}
-                disabled={pinStatus === null || (!pinStatus?.has_pin_set && !isPrivate)}
-                className={isPrivate ? 'data-[state=checked]:bg-purple-500' : ''}
               />
             </div>
           </div>
