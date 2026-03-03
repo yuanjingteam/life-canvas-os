@@ -35,12 +35,12 @@ export async function apiRequest(
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
-    } else {
-      return new Response(JSON.stringify({ error: result.error }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      })
     }
+
+    return new Response(JSON.stringify({ error: result.error }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   // 开发模式：使用 HTTP

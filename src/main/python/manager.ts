@@ -29,7 +29,8 @@ export class PythonManager {
       // 生产环境：使用打包的 Python 可执行文件
       // electron-builder extraResources 配置:
       // from: 'backend/dist/backend' -> to: 'python-runtime/backend'
-      const backendName = process.platform === 'win32' ? 'backend.exe' : 'backend'
+      const backendName =
+        process.platform === 'win32' ? 'backend.exe' : 'backend'
       pythonPath = path.join(
         process.resourcesPath,
         'python-runtime',

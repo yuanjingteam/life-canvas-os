@@ -10,6 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false  # 一个平台失败不影响其他平台
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
@@ -32,7 +33,7 @@ jobs:
           path: |
             ~/.cache/electron
             ~/.cache/electron-builder
-          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-electron-
 
@@ -73,9 +74,15 @@ jobs:
       - name: 安装前端依赖
         run: pnpm install
 
+      - name: 构建前端应用
+        run: pnpm compile:app
+
       - name: 发布 Electron 应用
-        uses: daltonmenezes/action-electron-builder@v1.0.1
+        uses: samuelmeuli/action-electron-builder@v1
         with:
-          package_manager: "pnpm"
           github_token: ${{ secrets.github_token }}
           release: true
+          max_attempts: 3
+        env:
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+          ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
