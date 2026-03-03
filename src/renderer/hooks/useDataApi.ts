@@ -4,7 +4,7 @@
 
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { dataApi, ExportFormat } from '~/renderer/api/data';
+import { dataApi, ExportFormat, type ResetDataResponse } from '~/renderer/api/data';
 
 export type { ExportFormat } from '~/renderer/api/data';
 
@@ -153,8 +153,52 @@ export function useDataApi() {
     }
   }, []);
 
+  /**
+   * 重置/删除所有数据
+   */
+  const resetData = useCallback(async (): Promise<ResetDataResponse> => {
+    try {
+      // 显示加载提示
+      toast.loading('正在重置数据...', {
+        id: 'reset-progress',
+        description: '正在删除所有数据并创建备份...',
+      });
+
+      // 调用后端 API 重置数据
+      const response = await dataApi.resetData();
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast.error('重置失败', {
+          id: 'reset-progress',
+          description: error.detail?.message || '请稍后重试',
+        });
+        throw error;
+      }
+
+      const result = await response.json();
+      const data = result.data as ResetDataResponse;
+
+      // 重置成功
+      toast.success('数据重置成功', {
+        id: 'reset-progress',
+        description: `备份已保存至: ${data.backup_path}`,
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Reset failed:', error);
+      toast.error('重置失败', {
+        id: 'reset-progress',
+        description: error instanceof Error ? error.message : '请稍后重试',
+      });
+      throw error;
+    }
+  }, []);
+
   return {
     exportData,
     importData,
+    resetData,
   };
 }

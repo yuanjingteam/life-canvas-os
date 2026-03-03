@@ -16,12 +16,14 @@ import type { DimensionType, JournalEntry } from '~/shared/types';
 import { toast } from '~/renderer/lib/toast';
 import { pinApi } from '~/renderer/api';
 import { useJournalApi } from '~/renderer/hooks/useJournalApi';
+import { usePinStatus } from '~/renderer/hooks/usePinStatus';
 
 export function JournalEditorPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { state, updateState } = useApp();
   const { createJournal, updateJournal, getJournal } = useJournalApi();
+  const { fetchPinStatus, pinStatus } = usePinStatus();
   const isEditing = Boolean(id);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -33,7 +35,6 @@ export function JournalEditorPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [linkedDimensions, setLinkedDimensions] = useState<DimensionType[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [pinStatus, setPinStatus] = useState<{ has_pin_set: boolean } | null>(null);
 
   // 加载日记详情（编辑模式）
   useEffect(() => {
@@ -64,22 +65,18 @@ export function JournalEditorPage() {
     loadJournal();
   }, [isEditing, id, getJournal, navigate]);
 
-  // 检查 PIN 状态
+  // 检查 PIN 状态（优先从缓存获取）
   useEffect(() => {
     const checkPinStatus = async () => {
       try {
-        const response = await pinApi.status();
-
-        if (response.ok) {
-          const result = await response.json();
-          setPinStatus(result);
-        }
+        // fetchPinStatus 会优先从缓存读取，如果缓存没有或过期才调用接口
+        await fetchPinStatus();
       } catch (error) {
         console.error('Failed to check PIN status:', error);
       }
     };
     checkPinStatus();
-  }, []);
+  }, [fetchPinStatus]);
 
   const handleToggleDimension = (dimType: DimensionType) => {
     setLinkedDimensions((prev) =>

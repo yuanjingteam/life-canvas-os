@@ -31,10 +31,10 @@ export function PinLockScreen({ onUnlock, error }: PinLockScreenProps) {
   return (
     <div className="fixed inset-0 bg-apple-bgMain dark:bg-black flex items-center justify-center p-6">
       {/* 背景装饰 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30 dark:opacity-100">
+      {/* <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30 dark:opacity-100">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-apple-accent/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px]" />
-      </div>
+      </div> */}
 
       <GlassCard className="w-full max-w-sm text-center space-y-8 animate-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center gap-4">

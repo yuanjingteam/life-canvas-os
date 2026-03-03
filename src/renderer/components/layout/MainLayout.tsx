@@ -66,10 +66,10 @@ export function MainLayout() {
         // 验证失败
         if (result.code === 401) {
           const attempts = result.data?.attempts_remaining || 0;
-          setUnlockError(`密码验证失败，剩余尝试次数：${attempts}`);
+          setUnlockError(`密码错误，剩余尝试次数：${attempts}`);
         } else if (result.code === 429) {
           const seconds = result.data?.remaining_seconds || '30';
-          setUnlockError(`系统已锁定，请 ${seconds} 秒后重试`);
+          setUnlockError(`您的操作过于频繁，请 ${seconds} 秒后重试`);
         } else if (result.code === 424) {
           // PIN 未设置，直接解锁
           setUnlockError(undefined);

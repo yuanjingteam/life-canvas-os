@@ -6,6 +6,11 @@ import { API_BASE_URL } from './config';
 
 export type ExportFormat = 'json' | 'zip';
 
+export interface ResetDataResponse {
+  backup_path: string;
+  reset_at: string;
+}
+
 export const dataApi = {
   /**
    * 导出数据
@@ -44,6 +49,16 @@ export const dataApi = {
   createBackup(): Promise<Response> {
     return fetch(`${API_BASE_URL}/api/data/backup/create`, {
       method: 'POST',
+    });
+  },
+
+  /**
+   * 重置/删除所有数据
+   */
+  resetData(): Promise<Response> {
+    return fetch(`${API_BASE_URL}/api/data/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
     });
   },
 

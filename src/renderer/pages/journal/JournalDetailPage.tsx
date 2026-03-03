@@ -11,6 +11,7 @@ import { formatDateTimeCN } from '~/renderer/lib/dateUtils';
 import MDEditor from '@uiw/react-md-editor';
 import { pinApi } from '~/renderer/api';
 import { useJournalApi } from '~/renderer/hooks/useJournalApi';
+import { usePinStatus } from '~/renderer/hooks/usePinStatus';
 import type { JournalEntry } from '~/shared/types';
 
 export function JournalDetailPage() {
@@ -18,10 +19,12 @@ export function JournalDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { getJournal, deleteJournal } = useJournalApi();
+  const { fetchPinStatus, pinStatus } = usePinStatus();
   const [isPinVerified, setIsPinVerified] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingPin, setIsCheckingPin] = useState(false);
   const [entry, setEntry] = useState<JournalEntry | null>(null);
 
   // 从路由状态获取是否私密（如果有的话）
@@ -79,9 +82,41 @@ export function JournalDetailPage() {
     }
   }, [id, isPinVerified]); // 依赖 isPinVerified 以便验证后加载
 
+  // 检查 PIN 状态（优先从缓存获取）
+  useEffect(() => {
+    const checkPinStatus = async () => {
+      // 只在私密日记且未验证 PIN 时检查
+      if (isPrivateFromList && !isPinVerified && !isLoading) {
+        setIsCheckingPin(true);
+        try {
+          // fetchPinStatus 会优先从缓存读取，如果缓存没有或过期才调用接口
+          const status = await fetchPinStatus();
+          setIsCheckingPin(false);
+
+          // 如果没有设置 PIN，则不允许查看私密日记
+          if (!status?.has_pin_set) {
+            navigate('/journal');
+          }
+        } catch (error) {
+          console.error('Failed to check PIN status:', error);
+          setIsCheckingPin(false);
+          // 出错时也返回列表页
+          navigate('/journal');
+        }
+      }
+    };
+
+    checkPinStatus();
+  }, [isPrivateFromList, isPinVerified, isLoading]);
+
   // 私密日记，需要验证 PIN（使用从列表页传递的信息）
   // 这个判断要在加载中判断之前，因为私密日记未验证时 entry 为 null 是正常的
-  if (isPrivateFromList && !isPinVerified && !isLoading) {
+  if (isPrivateFromList && !isPinVerified && !isLoading && !isCheckingPin) {
+    // 确认已设置 PIN 后才显示验证弹窗
+    if (!pinStatus?.has_pin_set) {
+      return null; // 等待 PIN 状态加载
+    }
+
     // 自动显示 PIN 验证弹窗
     if (!showPinDialog) {
       setTimeout(() => setShowPinDialog(true), 100);

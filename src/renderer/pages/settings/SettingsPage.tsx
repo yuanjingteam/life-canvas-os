@@ -21,6 +21,7 @@ import {
   KeyRound,
   AlertTriangle,
   Loader2,
+  Info,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useApp } from "~/renderer/contexts/AppContext";
@@ -38,6 +39,7 @@ import {
   TabsTrigger,
 } from "~/renderer/components/ui/tabs";
 import { Label } from "~/renderer/components/ui/label";
+import { PinVerifyDialog } from "~/renderer/components/auth/PinVerifyDialog";
 import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
 import { pinApi } from "~/renderer/api";
 import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
@@ -50,7 +52,7 @@ export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
   const { getUserProfile, updateUserProfile } = useUserApi();
   const { getAIConfig, saveAIConfig } = useAiApi();
-  const { exportData, importData } = useDataApi();
+  const { exportData, importData, resetData } = useDataApi();
   const {
     pinStatus,
     isLoading: isPinStatusLoading,
@@ -64,7 +66,10 @@ export function SettingsPage() {
   const [isSavingAI, setIsSavingAI] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
   const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditingAI, setIsEditingAI] = useState(false); // 是否处于编辑模式
@@ -318,9 +323,28 @@ export function SettingsPage() {
   };
 
   const handleClearData = () => {
-    if (confirm("确定要清除所有数据吗？此操作不可恢复！")) {
-      localStorage.removeItem("life-canvas-state");
-      window.location.reload();
+    setShowPinDialog(true);
+  };
+
+  const handlePinVerifySuccess = () => {
+    setShowPinDialog(false);
+    setShowResetConfirmDialog(true);
+  };
+
+  const handleConfirmReset = async () => {
+    setShowResetConfirmDialog(false);
+    setIsResetting(true);
+
+    try {
+      await resetData();
+      // 重置成功后刷新页面
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('Reset failed:', error);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -997,6 +1021,104 @@ export function SettingsPage() {
               >
                 取消
               </Button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* PIN 验证对话框 */}
+      <PinVerifyDialog
+        isOpen={showPinDialog}
+        onClose={() => setShowPinDialog(false)}
+        onVerify={async (pin) => {
+          try {
+            const response = await pinApi.verify(pin);
+            if (response.ok) {
+              handlePinVerifySuccess();
+              return true;
+            }
+            return false;
+          } catch {
+            return false;
+          }
+        }}
+      />
+
+      {/* 确认重置对话框 */}
+      {showResetConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <GlassCard className="!p-8 max-w-md w-full space-y-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center">
+                <AlertTriangle className="text-red-500" size={40} />
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-bold text-apple-textMain dark:text-white mb-2">
+                  确认删除所有数据
+                </h3>
+                <p className="text-sm text-apple-textSec dark:text-white/60">
+                  此操作将删除所有本地数据并重置系统
+                </p>
+              </div>
+
+              {/* 警示信息 */}
+              <div className="w-full bg-red-500/5 dark:bg-red-500/5 border border-red-500/20 dark:border-red-500/10 rounded-xl p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={16} />
+                  <div className="text-left space-y-1">
+                    <p className="text-xs font-semibold text-red-500 dark:text-red-400">
+                      不可恢复的操作
+                    </p>
+                    <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
+                      <p>• 所有日记记录将被永久删除</p>
+                      <p>• 八维系统评分数据将被清空</p>
+                      <p>• 用户配置和个人信息将被重置</p>
+                      <p>• AI 洞察历史将被清除</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 备份提示 */}
+              {/* <div className="w-full bg-blue-500/5 dark:bg-blue-500/5 border border-blue-500/20 dark:border-blue-500/10 rounded-xl p-4">
+                <div className="flex items-start gap-2">
+                  <Info className="text-blue-500 shrink-0 mt-0.5" size={16} />
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 mb-1">
+                      自动备份
+                    </p>
+                    <p className="text-xs text-apple-textSec dark:text-white/60">
+                      系统将在删除前自动创建备份，备份文件将保存至本地
+                    </p>
+                  </div>
+                </div>
+              </div> */}
+
+              <div className="flex gap-3 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowResetConfirmDialog(false)}
+                  className="flex-1"
+                  disabled={isResetting}
+                >
+                  取消
+                </Button>
+                <Button
+                  onClick={handleConfirmReset}
+                  className="flex-1 bg-red-500 hover:bg-red-600"
+                  disabled={isResetting}
+                >
+                  {isResetting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      删除中...
+                    </>
+                  ) : (
+                    '确认删除'
+                  )}
+                </Button>
+              </div>
             </div>
           </GlassCard>
         </div>
