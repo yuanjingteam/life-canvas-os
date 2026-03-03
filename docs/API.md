@@ -1,6 +1,6 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.4.0
+> 版本：v1.5.0
 > 最后更新：2026-03-03
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
@@ -8,7 +8,10 @@
 
 ## 📝 更新日志
 
-### v1.4.0 (2026-03-03)
+### v1.5.0 (2026-03-03)
+- ✨ **数据导入**：新增 JSON 数据直接导入功能，无需 ZIP 文件
+- ✨ **数据导入**：支持 `data` 字段传入 JSON 格式数据
+- 📝 **文档**：更新导入数据接口文档，添加 JSON 导入示例
 - ✨ **PIN验证**：新增独立的PIN验证开关功能，支持按功能模块分别控制PIN验证
 - ✨ **PIN验证**：新增 `GET /api/pin/verify-requirements` 接口，获取PIN验证要求配置
 - 🔧 **用户设置**：用户设置新增4个PIN验证开关字段
@@ -1818,6 +1821,10 @@ GET /api/timeline?page=2&page_size=10
 
 **接口地址**：`POST /api/data/import`
 
+**描述**：支持两种导入方式：ZIP 备份文件导入和 JSON 数据直接导入
+
+**方式一：ZIP 备份文件导入**
+
 **请求参数**：
 ```json
 {
@@ -1827,8 +1834,8 @@ GET /api/timeline?page=2&page_size=10
 ```
 
 **参数说明**：
-- `backup_path`: 必填，备份文件的完整路径
-- `verify`: 可选，是否验证备份文件完整性，默认为 `true`
+- `backup_path`: ZIP 备份文件的完整路径
+- `verify`: 是否验证备份文件完整性，默认为 `true`
 
 **成功响应（200）**：
 ```json
@@ -1836,6 +1843,7 @@ GET /api/timeline?page=2&page_size=10
   "code": 200,
   "message": "数据导入成功",
   "data": {
+    "import_type": "zip",
     "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_104334.zip",
     "imported_at": "2026-03-02T10:47:45.698477"
   },
@@ -1843,10 +1851,92 @@ GET /api/timeline?page=2&page_size=10
 }
 ```
 
+**方式二：JSON 数据直接导入**
+
+**请求参数**：
+```json
+{
+  "data": {
+    "version": "1.0.0",
+    "users": [
+      {
+        "id": 1,
+        "username": "user",
+        "display_name": "User",
+        "birthday": "1990-01-01",
+        "mbti": "INTJ",
+        "values": "[\"成长\",\"自由\"]",
+        "life_expectancy": 85
+      }
+    ],
+    "systems": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "type": "FUEL",
+        "score": 75,
+        "details": {}
+      }
+    ],
+    "diaries": [],
+    "insights": []
+  }
+}
+```
+
+**JSON 数据格式说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| version | String | 数据版本，当前为 "1.0.0" |
+| users | Array | 用户数据数组 |
+| systems | Array | 八维系统数据数组 |
+| diaries | Array | 日记数据数组（可选） |
+| insights | Array | 洞察数据数组（可选） |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "数据导入成功",
+  "data": {
+    "import_type": "json",
+    "stats": {
+      "users": 1,
+      "user_settings": 0,
+      "systems": 8,
+      "diaries": 0,
+      "insights": 0
+    },
+    "imported_at": "2026-03-03T17:12:26.614026"
+  },
+  "timestamp": 1772529146615
+}
+```
+
+**错误响应（400 - 参数缺失）**：
+```json
+{
+  "code": 400,
+  "message": "必须提供 backup_path 或 data 参数",
+  "timestamp": 1772529146615
+}
+```
+
+**错误响应（400 - 数据格式错误）**：
+```json
+{
+  "code": 400,
+  "message": "数据格式错误：缺少 version 字段",
+  "timestamp": 1772529146615
+}
+```
+
 **注意事项**：
-- 导入操作会覆盖当前数据库所有数据
-- 导入前会自动关闭所有数据库连接
-- 导入过程中后端服务会暂时停止响应其他请求
+- `backup_path` 和 `data` 参数二选一，不能同时提供
+- ZIP 导入会完全覆盖当前数据库
+- JSON 导入采用 upsert 策略：存在相同 ID 则更新，否则创建
+- JSON 导入不会删除现有数据，只会更新或新增
 - 建议在导入前先创建当前数据的备份
 
 ---
