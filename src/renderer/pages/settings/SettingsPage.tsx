@@ -442,7 +442,7 @@ export function SettingsPage() {
         <TabsList className="bg-apple-bg2 dark:bg-white/5 border border-apple-border dark:border-white/10">
           <TabsTrigger value="profile">个人档案</TabsTrigger>
           <TabsTrigger value="ai">AI 配置</TabsTrigger>
-          <TabsTrigger value="appearance">外观设置</TabsTrigger>
+          <TabsTrigger value="appearance">系统设置</TabsTrigger>
           <TabsTrigger value="security">数据管理</TabsTrigger>
         </TabsList>
 
