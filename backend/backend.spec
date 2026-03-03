@@ -5,15 +5,14 @@ PyInstaller 配置文件
 import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-# 收集数据文件 - 使用 backend 目录作为根目录
+# 收集数据文件 - 打包到 backend/ 子目录下
 datas = [
-    ('backend/api', 'backend/api'),
-    ('backend/core', 'backend/core'),
-    ('backend/models', 'backend/models'),
-    ('backend/schemas', 'backend/schemas'),
-    ('backend/services', 'backend/services'),
-    ('backend/db', 'backend/db'),
-    ('backend/utils', 'backend/utils'),
+    ('api', 'backend/api'),
+    ('core', 'backend/core'),
+    ('models', 'backend/models'),
+    ('schemas', 'backend/schemas'),
+    ('services', 'backend/services'),
+    ('db', 'backend/db'),
 ]
 
 # 隐藏导入
@@ -85,7 +84,7 @@ block_cipher = None
 
 a = Analysis(
     ['main.py'],
-    pathex=['.'],
+    pathex=[],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
