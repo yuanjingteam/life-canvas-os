@@ -37,6 +37,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-electron-
 
+      - name: 清理 electron-builder 缓存 (避免 app-builder 问题)
+        run: |
+          rm -rf ~/.cache/electron-builder/node_modules
+          rm -rf node_modules/app-builder-bin
+
       - name: 安装 Python
         uses: actions/setup-python@v5
         with:
