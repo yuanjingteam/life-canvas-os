@@ -65,9 +65,9 @@ jobs:
         run: |
           ls -la backend/dist/
           if [ "$RUNNER_OS" == "Windows" ]; then
-            test -f backend/dist/backend/backend.exe || exit 1
+            test -f backend/dist/backend.exe || exit 1
           else
-            test -f backend/dist/backend/backend || exit 1
+            test -f backend/dist/backend || exit 1
           fi
         shell: bash
 

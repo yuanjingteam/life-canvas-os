@@ -7,6 +7,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # 收集数据文件 - 打包到 backend/ 子目录下
 datas = [
+    ('__init__.py', 'backend/__init__.py'),
     ('api', 'backend/api'),
     ('core', 'backend/core'),
     ('models', 'backend/models'),
@@ -15,7 +16,7 @@ datas = [
     ('db', 'backend/db'),
 ]
 
-# 隐藏导入
+# 隐藏导入 - 使用 collect_submodules 自动收集
 hiddenimports = [
     'fastapi',
     'uvicorn',
@@ -50,35 +51,15 @@ hiddenimports = [
     'email.mime.audio',
     'email.mime.video',
     'pkg_resources.py2_warn',
-    # 收集 backend 子模块
-    'backend',
-    'backend.api',
-    'backend.api.auth',
-    'backend.api.users',
-    'backend.api.journals',
-    'backend.api.insights',
-    'backend.api.systems',
-    'backend.api.data',
-    'backend.core',
-    'backend.core.config',
-    'backend.core.exceptions',
-    'backend.core.logging',
-    'backend.db',
-    'backend.db.base',
-    'backend.db.session',
-    'backend.db.init_db',
-    'backend.models',
-    'backend.models.user',
-    'backend.models.dimension',
-    'backend.models.diary',
-    'backend.models.insight',
-    'backend.services',
-    'backend.services.auth_service',
-    'backend.services.user_service',
-    'backend.services.journal_service',
-    'backend.services.insight_service',
-    'backend.services.system_service',
 ]
+
+# 自动收集 backend 所有子模块
+hiddenimports.extend(collect_submodules('backend.api'))
+hiddenimports.extend(collect_submodules('backend.core'))
+hiddenimports.extend(collect_submodules('backend.db'))
+hiddenimports.extend(collect_submodules('backend.models'))
+hiddenimports.extend(collect_submodules('backend.schemas'))
+hiddenimports.extend(collect_submodules('backend.services'))
 
 block_cipher = None
 

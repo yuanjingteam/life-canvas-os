@@ -25,12 +25,12 @@ export default {
 
   // ✅ 关键配置：打包 Python 可执行文件
   // PyInstaller 输出：backend/dist/backend (单个可执行文件)
-  // 打包后路径：Resources/python-runtime/backend
+  // 打包后路径：Resources/python-runtime/backend (或 backend.exe on Windows)
   extraResources: [
     {
-      from: 'backend/dist/backend',
-      to: 'python-runtime/backend',
-      filter: ['**/*']
+      from: 'backend/dist/',
+      to: 'python-runtime/',
+      filter: ['backend*']
     },
   ],
 
