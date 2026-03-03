@@ -8,7 +8,7 @@ import type {
   PinChangeRequest,
   PinDeleteRequest,
   PinSetupRequest,
-} from '~/renderer/lib/pin/types';
+} from '../lib/pin/types';
 
 export const pinApi = {
   status(): Promise<Response> {
