@@ -6,71 +6,142 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
 
+class TokenBucket:
+    """令牌桶数据结构"""
+
+    def __init__(self, capacity: int, refill_rate: float):
+        """
+        初始化令牌桶
+
+        Args:
+            capacity: 桶容量（最大令牌数）
+            refill_rate: 补充速率（每秒补充的令牌数）
+        """
+        self.capacity = capacity
+        self.tokens = capacity  # 初始满桶
+        self.refill_rate = refill_rate
+        self.last_update = time.time()
+
+    def refill(self):
+        """补充令牌（基于时间流逝）"""
+        now = time.time()
+        elapsed = now - self.last_update
+        tokens_to_add = elapsed * self.refill_rate
+        self.tokens = min(self.capacity, self.tokens + tokens_to_add)
+        self.last_update = now
+
+    def consume(self, tokens: int = 1) -> bool:
+        """
+        消费令牌
+
+        Args:
+            tokens: 需要消费的令牌数
+
+        Returns:
+            是否成功消费
+        """
+        self.refill()
+        if self.tokens >= tokens:
+            self.tokens -= tokens
+            return True
+        return False
+
+    def get_remaining(self) -> int:
+        """获取剩余令牌数"""
+        self.refill()
+        return int(self.tokens)
+
+    def get_wait_time(self, tokens: int = 1) -> float:
+        """获取需要等待的时间（秒）"""
+        self.refill()
+        if self.tokens >= tokens:
+            return 0.0
+        tokens_needed = tokens - self.tokens
+        return tokens_needed / self.refill_rate
+
+
 class RateLimiter:
-    """请求限流器"""
+    """基于令牌桶的限流器"""
 
     def __init__(self):
-        # 存储每个 IP 的请求记录 {ip: [timestamp, ...]}
-        self.requests: Dict[str, list] = defaultdict(list)
+        # 存储每个 IP 的令牌桶 {ip: {endpoint_type: TokenBucket}}
+        self.buckets: Dict[str, Dict[str, TokenBucket]] = defaultdict(dict)
 
-        # 限流配置（每分钟请求数）
-        # 考虑到这是本地 Electron 应用，限流主要用于防止异常请求
+        # 限流配置（容量和补充速率）
+        # 容量 = 最大突发请求数，refill_rate = 每秒补充的令牌数
         self.rate_limits = {
-            "default": 120,  # 默认 120 次/分钟（本地应用放宽）
-            "auth": 30,      # 认证接口 30 次/分钟（允许输错几次）
-            "sensitive": 30  # 敏感操作 30 次/分钟
+            "default": {"capacity": 120, "refill_rate": 2.0},   # 120 突发，平均 120 次/分钟
+            "auth": {"capacity": 30, "refill_rate": 0.5},       # 30 突发，平均 30 次/分钟
+            "sensitive": {"capacity": 30, "refill_rate": 0.5},  # 30 突发，平均 30 次/分钟
         }
 
-    def is_allowed(self, ip: str, endpoint_type: str = "default") -> tuple[bool, dict]:
+    def is_allowed(self, ip: str, endpoint_type: str = "default", tokens: int = 1) -> tuple[bool, dict]:
         """
-        检查是否允许请求
+        检查是否允许请求（令牌桶算法）
 
         Args:
             ip: 客户端 IP
             endpoint_type: 端点类型
+            tokens: 需要消费的令牌数（默认 1）
 
         Returns:
-            (是否允许, 限制信息)
+            (是否允许，限制信息)
         """
-        now = datetime.now()
-        minute_ago = now - timedelta(minutes=1)
-
         # 获取限流配置
-        limit = self.rate_limits.get(endpoint_type, self.rate_limits["default"])
+        config = self.rate_limits.get(endpoint_type, self.rate_limits["default"])
+        capacity = config["capacity"]
+        refill_rate = config["refill_rate"]
 
-        # 清理超过 1 分钟的记录（防止内存累积）
-        self.requests[ip] = [
-            req_time for req_time in self.requests[ip]
-            if req_time > minute_ago
-        ]
+        # 获取或创建令牌桶
+        if endpoint_type not in self.buckets[ip]:
+            self.buckets[ip][endpoint_type] = TokenBucket(capacity, refill_rate)
 
-        # 检查是否超过限制
-        request_count = len(self.requests[ip])
-        is_allowed = request_count < limit
+        bucket = self.buckets[ip][endpoint_type]
 
-        # 只允许时才添加当前请求记录
-        if is_allowed:
-            self.requests[ip].append(now)
+        # 尝试消费令牌
+        is_allowed = bucket.consume(tokens)
 
-        # 定期清理空闲 IP 记录（防止内存泄漏）
-        if len(self.requests) > 100:
-            # 清理所有空记录
-            empty_keys = [k for k, v in self.requests.items() if not v]
-            for k in empty_keys[:50]:
-                del self.requests[k]
+        # 计算重置时间（桶满所需时间）
+        wait_time = bucket.get_wait_time(capacity)
+        reset_time = datetime.now() + timedelta(seconds=wait_time)
+
+        # 定期清理空闲记录（防止内存泄漏）
+        self._cleanup_idle_buckets(ip)
 
         # 返回限制信息
         limit_info = {
-            "limit": limit,
-            "remaining": max(0, limit - request_count - 1),
-            "reset": (now + timedelta(seconds=60)).isoformat()
+            "limit": capacity,
+            "remaining": bucket.get_remaining(),
+            "reset": reset_time.isoformat()
         }
 
         return is_allowed, limit_info
+
+    def _cleanup_idle_buckets(self, ip: str):
+        """清理空闲的令牌桶（当 IP 超过 100 个时触发）"""
+        if len(self.buckets) <= 100:
+            return
+
+        # 清理空记录或超过 5 分钟未活动的 IP
+        now = time.time()
+        keys_to_remove = []
+        for ip_key, buckets in self.buckets.items():
+            # 检查所有桶是否都满（表示长时间未使用）
+            all_full = all(b.tokens >= b.capacity for b in buckets.values())
+            # 或者检查最后更新时间是否超过 5 分钟
+            all_old = all(now - b.last_update > 300 for b in buckets.values())
+
+            if all_full or all_old:
+                keys_to_remove.append(ip_key)
+
+        # 删除空闲记录
+        for k in keys_to_remove[:50]:
+            del self.buckets[k]
 
 
 # 全局限流器实例
