@@ -14,14 +14,15 @@ class RateLimiter:
     """请求限流器"""
 
     def __init__(self):
-        # 存储每个 IP 的请求记录 {ip: [(timestamp, timestamp), ...]}
+        # 存储每个 IP 的请求记录 {ip: [timestamp, ...]}
         self.requests: Dict[str, list] = defaultdict(list)
 
         # 限流配置（每分钟请求数）
+        # 考虑到这是本地 Electron 应用，限流主要用于防止异常请求
         self.rate_limits = {
-            "default": 60,  # 默认 60 次/分钟
-            "auth": 10,  # 认证接口 5 次/分钟
-            "sensitive": 15  # 敏感操作 10 次/分钟
+            "default": 120,  # 默认 120 次/分钟（本地应用放宽）
+            "auth": 30,      # 认证接口 30 次/分钟（允许输错几次）
+            "sensitive": 30  # 敏感操作 30 次/分钟
         }
 
     def is_allowed(self, ip: str, endpoint_type: str = "default") -> tuple[bool, dict]:
@@ -41,7 +42,7 @@ class RateLimiter:
         # 获取限流配置
         limit = self.rate_limits.get(endpoint_type, self.rate_limits["default"])
 
-        # 清理超过 1 分钟的记录
+        # 清理超过 1 分钟的记录（防止内存累积）
         self.requests[ip] = [
             req_time for req_time in self.requests[ip]
             if req_time > minute_ago
@@ -51,8 +52,16 @@ class RateLimiter:
         request_count = len(self.requests[ip])
         is_allowed = request_count < limit
 
-        # 添加当前请求记录
-        self.requests[ip].append(now)
+        # 只允许时才添加当前请求记录
+        if is_allowed:
+            self.requests[ip].append(now)
+
+        # 定期清理空闲 IP 记录（防止内存泄漏）
+        if len(self.requests) > 100:
+            # 清理所有空记录
+            empty_keys = [k for k, v in self.requests.items() if not v]
+            for k in empty_keys[:50]:
+                del self.requests[k]
 
         # 返回限制信息
         limit_info = {
@@ -120,9 +129,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _get_endpoint_type(self, path: str) -> str:
         """根据路径确定端点类型"""
-        if "/pin/" in path:
+        # 认证类：PIN 验证、PIN 设置
+        if "/pin/" in path or "/auth/" in path:
             return "auth"
-        if "/backup/" in path or "/import" in path:
+        # 敏感操作：数据备份、导入、删除
+        if "/backup/" in path or "/import" in path or "/delete" in path:
+            return "sensitive"
+        # AI 洞察生成：限制频率
+        if "/insights/generate" in path:
             return "sensitive"
         return "default"
 
