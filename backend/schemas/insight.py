@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 # AI 提供商类型
-AIProvider = Literal["deepseek", "doubao", "openai"]
+AIProvider = Literal["deepseek", "doubao"]
 
 
 # ============ 洞察 ============

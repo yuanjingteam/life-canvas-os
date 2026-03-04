@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/user", tags=["user"])
 
 class APIKeyVerifyRequest(BaseModel):
     """API Key 验证请求"""
-    provider: str = Field(..., description="AI 提供商 (deepseek, openai, doubao)")
+    provider: str = Field(..., description="AI 提供商 (deepseek, doubao)")
     api_key: str = Field(..., description="API Key")
     model: Optional[str] = Field(None, description="可选的模型名称")
 
@@ -201,7 +201,7 @@ async def verify_api_key(
     验证 API Key 有效性
 
     在保存前验证 API Key 是否有效，避免保存无效的 Key。
-    支持 DeepSeek、OpenAI、豆包等提供商。
+    仅支持 DeepSeek 和豆包两个提供商。
     """
     data, status_code = await UserService.verify_api_key(
         provider=request.provider,

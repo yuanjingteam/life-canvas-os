@@ -460,7 +460,7 @@ def enhance_for_apifox(schema: dict, output_path: Path):
         "AIConfigResponse": {
             "type": "object",
             "properties": {
-                "provider": {"type": "string", "enum": ["deepseek", "doubao", "openai"]},
+                "provider": {"type": "string", "enum": ["deepseek", "doubao"]},
                 "model_name": {"type": "string"},
                 "api_key_masked": {"type": "string"},
                 "updated_at": {"type": "string", "format": "date-time"}

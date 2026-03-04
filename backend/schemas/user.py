@@ -119,7 +119,7 @@ class UserSettingsResponse(UserSettingsBase):
 
 
 # ============ AI 配置 ============
-AIProvider = Literal["deepseek", "doubao", "openai"]
+AIProvider = Literal["deepseek", "doubao"]
 
 
 class AIConfigBase(BaseModel):

@@ -40,7 +40,7 @@ async def test_verify_deepseek_key():
     # 测试不支持的提供商
     print("\n3. 测试不支持的提供商...")
     data, code = await UserService.verify_api_key(
-        provider="unknown_provider",
+        provider="openai",
         api_key="test-key"
     )
 
@@ -48,25 +48,6 @@ async def test_verify_deepseek_key():
     print(f"响应: {data}")
     assert code == 400, "不支持的提供商应该返回 400"
     print("[OK] 不支持的提供商测试通过")
-
-
-async def test_verify_openai_key():
-    """测试 OpenAI API Key 验证"""
-    print("\n" + "=" * 60)
-    print("测试 OpenAI API Key 验证")
-    print("=" * 60)
-
-    print("\n1. 测试无效的 API Key...")
-    data, code = await UserService.verify_api_key(
-        provider="openai",
-        api_key="sk-invalid-key-12345"
-    )
-
-    print(f"状态码: {code}")
-    print(f"响应: {data}")
-    # OpenAI 可能返回 401 或其他错误码
-    assert code >= 400, "无效的 Key 应该返回错误"
-    print("[OK] OpenAI 测试完成")
 
 
 async def test_verify_doubao_key():
@@ -94,7 +75,6 @@ def print_summary():
     print("测试总结")
     print("=" * 60)
     print("[OK] DeepSeek API Key 验证: 正常工作")
-    print("[OK] OpenAI API Key 验证: 正常工作")
     print("[OK] 豆包 API Key 验证: 待完善")
     print("\n注意事项:")
     print("1. 验证接口会实际调用 AI 服务商的 API")
@@ -102,6 +82,7 @@ def print_summary():
     print("3. 401 错误表示 API Key 无效或已过期")
     print("4. 429 错误表示请求频率超限")
     print("5. 504 错误表示请求超时")
+    print("6. 仅支持 DeepSeek 和豆包两个提供商")
     print("=" * 60)
 
 
@@ -109,7 +90,6 @@ async def main():
     """主测试函数"""
     try:
         await test_verify_deepseek_key()
-        await test_verify_openai_key()
         await test_verify_doubao_key()
         print_summary()
         print("\n[SUCCESS] 所有测试通过！")

@@ -1,0 +1,12 @@
+curl https://ark.cn-beijing.volces.com/api/v3/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer 0a637e0a-f968-43bb-a9e0-7d717e6ff9f3" \
+  -d $'{
+    "messages": [
+        {
+            "content": "天空为什么是蓝色的？",
+            "role": "user"
+        }
+    ],
+    "model": "doubao-seed-2-0-lite-260215"
+}'
