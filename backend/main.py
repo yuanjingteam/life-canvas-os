@@ -255,13 +255,18 @@ else:
     def handle_generic_action(action: str, params: dict):
         """通用 action 处理器 - 将 action 映射到 API 调用"""
         # action 格式：get_api_user_profile -> GET /api/user/profile
-        # action 格式：create_api_journals -> POST /api/journals
+        # action 格式：post_api_journals -> POST /api/journals
+        # action 格式：create_api_journals -> POST /api/journals (alias)
         # action 格式：patch_api_dimensions_123 -> PATCH /api/dimensions/123
+        # action 格式：delete_api_journals_123 -> DELETE /api/journals/123
 
+        # 支持两种命名方式：HTTP 方法名 (post/put) 和语义名 (create/update)
         method_map = {
             'get': 'GET',
             'create': 'POST',
+            'post': 'POST',  # 别名
             'update': 'PUT',
+            'put': 'PUT',  # 别名
             'patch': 'PATCH',
             'delete': 'DELETE',
         }
@@ -277,10 +282,14 @@ else:
             return {'error': f'Unknown method: {method_prefix}'}
 
         # 转换路径：api_user_profile -> /api/user/profile
-        path_parts = path_part.split('_')
-        path = '/' + '/'.join(path_parts)
+        # 保留连字符：api_pin_verify-requirements -> /api/pin/verify-requirements
+        path = '/' + path_part.replace('_', '/')
 
-        return api_call_wrapper(method, path, params, params)
+        # 对于 POST/PUT/PATCH 请求，params 作为 body 传递；对于 GET/DELETE，作为查询参数
+        if method in ['POST', 'PUT', 'PATCH']:
+            return api_call_wrapper(method, path, None, params)
+        else:
+            return api_call_wrapper(method, path, params, None)
 
     def ipc_loop():
         """IPC 通信循环"""
@@ -296,15 +305,32 @@ else:
             'api_call': lambda params: handle_generic_action(params.get('action', ''), params),
         }
 
-        for line in sys.stdin:
+        # 使用二进制模式读取 stdin
+        while True:
             try:
-                # 解析长度前缀格式
-                line = line.strip()
-                if not line:
+                # 读取长度前缀（直到换行符）
+                length_bytes = b''
+                while True:
+                    byte = sys.stdin.buffer.read(1)
+                    if not byte:
+                        return  # EOF
+                    if byte == b'\n':
+                        break
+                    length_bytes += byte
+                
+                if not length_bytes:
                     continue
-
-                length = int(line)
-                json_data = sys.stdin.read(length)
+                
+                length_str = length_bytes.decode('utf-8')
+                length = int(length_str)
+                
+                # 读取指定长度的 JSON 数据
+                json_bytes = sys.stdin.buffer.read(length)
+                if len(json_bytes) < length:
+                    print(f"[IPC] Incomplete data: expected {length}, got {len(json_bytes)}", file=sys.stderr, flush=True)
+                    continue
+                
+                json_data = json_bytes.decode('utf-8')
                 request = json.loads(json_data)
 
                 # 路由到对应的处理器
@@ -330,10 +356,15 @@ else:
                 # 发送响应（长度前缀格式）
                 response_str = json.dumps(response, ensure_ascii=False)
                 response_bytes = response_str.encode('utf-8')
-                sys.stdout.write(f'{len(response_bytes)}\n{response_str}')
-                sys.stdout.flush()
+                # 使用字节长度，并发送字节数据
+                sys.stdout.buffer.write(f'{len(response_bytes)}\n'.encode('utf-8'))
+                sys.stdout.buffer.write(response_bytes)
+                sys.stdout.buffer.flush()
 
             except Exception as e:
+                print(f"[IPC] Error processing request: {e}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
                 error_response = {
                     'id': request.get('id', '') if 'request' in locals() else '',
                     'success': False,
@@ -341,8 +372,10 @@ else:
                 }
                 error_str = json.dumps(error_response, ensure_ascii=False)
                 error_bytes = error_str.encode('utf-8')
-                sys.stdout.write(f'{len(error_bytes)}\n{error_str}')
-                sys.stdout.flush()
+                # 使用字节长度，并发送字节数据
+                sys.stdout.buffer.write(f'{len(error_bytes)}\n'.encode('utf-8'))
+                sys.stdout.buffer.write(error_bytes)
+                sys.stdout.buffer.flush()
 
     if __name__ == "__main__":
         # 在单独线程中启动 IPC 循环

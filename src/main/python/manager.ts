@@ -8,7 +8,7 @@ import path from 'node:path'
 export class PythonManager {
   private process: ChildProcess | null = null
   private responseCallbacks = new Map<string, (response: any) => void>()
-  private stdoutBuffer = ''
+  private stdoutBuffer = Buffer.alloc(0) // 改用 Buffer
   public isReady = false
 
   /**
@@ -22,9 +22,20 @@ export class PythonManager {
 
     if (isDev) {
       // 开发环境：使用虚拟环境中的 Python
+      // __dirname 在开发模式下指向 node_modules/.dev/main
+      // 需要回到项目根目录
       const projectRoot = path.resolve(__dirname, '../../..')
       pythonPath = path.join(projectRoot, 'venv', 'bin', 'python3')
-      args = ['backend/main.py', '--dev']
+      const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
+      // 注意：不传递 --dev 参数，让 Python 后端以 IPC 模式启动
+      // 这样可以在开发环境测试生产模式的 IPC 通信
+      args = [mainPyPath]
+      
+      console.log('[Python Manager] Dev paths:', {
+        projectRoot,
+        pythonPath,
+        mainPyPath,
+      })
     } else {
       // 生产环境：使用打包的 Python 可执行文件
       // electron-builder extraResources 配置:
@@ -54,7 +65,7 @@ export class PythonManager {
 
     // 监听 stdout（使用长度前缀协议）
     this.process.stdout?.on('data', data => {
-      this.stdoutBuffer += data.toString()
+      this.stdoutBuffer = Buffer.concat([this.stdoutBuffer, data])
       this.processBuffer()
     })
 
@@ -96,12 +107,13 @@ export class PythonManager {
       const newlineIndex = this.stdoutBuffer.indexOf('\n')
       if (newlineIndex === -1) break
 
-      const lengthStr = this.stdoutBuffer.slice(0, newlineIndex)
+      const lengthStr = this.stdoutBuffer.subarray(0, newlineIndex).toString('utf-8')
       const length = parseInt(lengthStr, 10)
 
       if (Number.isNaN(length)) {
         // 不是长度前缀格式，可能是日志，跳过
-        this.stdoutBuffer = this.stdoutBuffer.slice(newlineIndex + 1)
+        console.warn('[Python Manager] Skipping non-length line:', lengthStr)
+        this.stdoutBuffer = this.stdoutBuffer.subarray(newlineIndex + 1)
         continue
       }
 
@@ -110,14 +122,19 @@ export class PythonManager {
 
       if (this.stdoutBuffer.length < jsonEnd) break // 数据不完整
 
-      const jsonStr = this.stdoutBuffer.slice(jsonStart, jsonEnd)
-      this.stdoutBuffer = this.stdoutBuffer.slice(jsonEnd)
+      const jsonBytes = this.stdoutBuffer.subarray(jsonStart, jsonEnd)
+      const jsonStr = jsonBytes.toString('utf-8')
+      this.stdoutBuffer = this.stdoutBuffer.subarray(jsonEnd)
 
       try {
         const response = JSON.parse(jsonStr)
         this.handleResponse(response)
       } catch (e) {
         console.error('[Python Manager] Failed to parse response:', e)
+        console.error('[Python Manager] Length:', length)
+        console.error('[Python Manager] JSON bytes length:', jsonBytes.length)
+        console.error('[Python Manager] JSON string (first 500 chars):', jsonStr.substring(0, 500))
+        console.error('[Python Manager] JSON string (last 100 chars):', jsonStr.substring(Math.max(0, jsonStr.length - 100)))
       }
     }
   }
@@ -171,7 +188,9 @@ export class PythonManager {
 
       // 发送请求（长度前缀格式）
       const jsonStr = JSON.stringify(request)
-      const message = `${Buffer.byteLength(jsonStr)}\n${jsonStr}`
+      const jsonBytes = Buffer.from(jsonStr, 'utf-8')
+      const lengthPrefix = Buffer.from(`${jsonBytes.length}\n`, 'utf-8')
+      const message = Buffer.concat([lengthPrefix, jsonBytes])
 
       const process = this.process
       if (process?.stdin?.writable) {

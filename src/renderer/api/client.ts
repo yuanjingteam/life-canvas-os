@@ -4,7 +4,7 @@
  * - 生产模式：通过 Electron IPC 调用 Python 后端
  */
 
-const IS_DEV = process.env.NODE_ENV === 'development'
+const IS_DEV = false // 临时设置为 false 以测试生产模式的 IPC 通信
 
 // HTTP 模式下的基础 URL
 const HTTP_BASE_URL = 'http://127.0.0.1:8000'
@@ -24,15 +24,18 @@ export async function apiRequest(
     const body = options?.body ? JSON.parse(options.body as string) : {}
 
     // 使用通用 api_call action
+    const action = `${method.toLowerCase()}_${endpoint.replace(/^\//, '').replace(/\//g, '_')}`
+
     const result = await window.App.request('api_call', {
-      action: `${method.toLowerCase()}_${endpoint.replace(/^\//, '').replace(/\//g, '_')}`,
+      action,
       ...body,
     })
 
     if (result.success) {
-      // 创建一个假的 Response 对象
+      // result.data 包含后端 API 响应 {code, message, data, timestamp}
+      // 保持完整的响应格式，让前端代码自己解析
       return new Response(JSON.stringify(result.data), {
-        status: 200,
+        status: result.data?.code || 200,
         headers: { 'Content-Type': 'application/json' },
       })
     }
