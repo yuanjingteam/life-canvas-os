@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import { ArrowLeft, Trash2, Edit, Calendar, LockKeyhole } from 'lucide-react'
-import { useApp } from '~/renderer/contexts/AppContext'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import { Button } from '~/renderer/components/ui/button'
 import { Badge } from '~/renderer/components/ui/badge'
 import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
-import { DIMENSIONS, MOODS, type MoodType } from '~/renderer/lib/constants'
+import { DIMENSIONS, MOODS } from '~/renderer/lib/constants'
 import { formatDateTimeCN } from '~/renderer/lib/dateUtils'
 import MDEditor from '@uiw/react-md-editor'
 import { useJournalApi } from '~/renderer/hooks/useJournalApi'
@@ -21,6 +20,8 @@ export function JournalDetailPage() {
   const { getJournal, deleteJournal } = useJournalApi()
   const { fetchPinStatus, pinStatus, setPinStatusManually } = usePinStatus()
   const { verifyPin } = usePinApi()
+
+  const isPrivateFromState = (location.state as { isPrivate?: boolean })?.isPrivate
   const [isPinVerified, setIsPinVerified] = useState(false)
   const [isCheckingPinStatus, setIsCheckingPinStatus] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -28,24 +29,18 @@ export function JournalDetailPage() {
   const [entry, setEntry] = useState<JournalEntry | null>(null)
   const [unlockError, setUnlockError] = useState<string | undefined>(undefined)
 
-  // 从路由状态获取 isPrivate（从日记列表页传递过来）
-  const isPrivateFromState = (location.state as { isPrivate?: boolean })?.isPrivate
-
-  // 使用 ref 避免重复调用
   const isLoadingRef = useRef(false)
   const getJournalRef = useRef(getJournal)
 
-  // 更新 ref
   useEffect(() => {
     getJournalRef.current = getJournal
   }, [getJournal])
 
-  // 每次切换日记时重置 PIN 验证状态
   useEffect(() => {
     setIsPinVerified(false)
   }, [id])
 
-  // 检查 PIN 状态和是否需要验证（只在进入页面时检查一次）
+  // 检查 PIN 状态和验证要求
   useEffect(() => {
     const checkPinStatus = async () => {
       if (isCheckingPinStatus) return
@@ -56,22 +51,14 @@ export function JournalDetailPage() {
           setPinStatusManually(status)
         }
 
-        // 判断是否需要 PIN 验证
-        // 1. 如果没有设置 PIN，不需要验证
-        // 2. 如果 private_journal = false，不需要验证
-        // 3. 如果日记不是私密的，不需要验证
-        // 4. 其他情况需要验证
-        const needsPinVerification =
+        const needsVerification =
           status?.has_pin &&
           status?.requirements?.private_journal &&
           isPrivateFromState === true
 
-        if (!needsPinVerification) {
-          // 不需要验证，直接加载日记
-          
+        if (!needsVerification) {
           setIsPinVerified(true)
         }
-        // 如果需要验证，isPinVerified 保持 false，等待用户验证
       } catch (error) {
         console.error('Failed to check PIN status:', error)
         navigate('/journal')
@@ -83,7 +70,7 @@ export function JournalDetailPage() {
     checkPinStatus()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 加载日记详情（只有在 PIN 验证通过后才调用接口）
+  // 加载日记详情
   useEffect(() => {
     if (!id || isLoadingRef.current || !isPinVerified) return
 
@@ -91,9 +78,7 @@ export function JournalDetailPage() {
     setIsLoading(true)
 
     getJournalRef.current(id)
-      .then(journalData => {
-        setEntry(journalData)
-      })
+      .then(setEntry)
       .catch(error => {
         console.error('Failed to load journal:', error)
         setEntry(null)
@@ -104,8 +89,7 @@ export function JournalDetailPage() {
       })
   }, [id, isPinVerified])
 
-  // 需要 PIN 验证（在进入页面时已经判断过，这里只显示验证界面）
-  // 注意：这个判断要在"加载中"判断之前，因为私密日记在验证前不会加载
+  // PIN 验证界面
   const needsVerification = !isPinVerified && isPrivateFromState && pinStatus?.has_pin && pinStatus?.requirements?.private_journal
   if (needsVerification && !isCheckingPinStatus) {
     return (
@@ -116,14 +100,11 @@ export function JournalDetailPage() {
         onCancel={() => navigate('/journal')}
         onUnlock={async pin => {
           setUnlockError(undefined)
-
           const result = await verifyPin(pin)
-
           if (!result.success) {
             setUnlockError(result.error || 'PIN 验证失败')
             return
           }
-          // 验证成功后，isPinVerified 变为 true，触发日记加载
           setIsPinVerified(true)
         }}
         showCancelButton={true}
@@ -167,7 +148,6 @@ export function JournalDetailPage() {
     if (!confirm('确定要删除这篇日记吗？')) return
 
     setIsDeleting(true)
-
     try {
       await deleteJournal(id!)
       navigate('/journal')
@@ -198,12 +178,7 @@ export function JournalDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={handleEdit}
-            size="icon"
-            title="编辑"
-            variant="outline"
-          >
+          <Button onClick={handleEdit} size="icon" title="编辑" variant="outline">
             <Edit size={18} />
           </Button>
           <Button
@@ -260,7 +235,7 @@ export function JournalDetailPage() {
 
           {entry.tags && entry.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-4 border-t border-apple-border dark:border-white/5">
-              {entry.tags.map((tag: string) => (
+              {entry.tags.map(tag => (
                 <Badge key={tag} variant="secondary">
                   {tag}
                 </Badge>
