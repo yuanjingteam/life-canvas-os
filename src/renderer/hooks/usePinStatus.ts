@@ -58,12 +58,20 @@ export function usePinStatus() {
 
       const response = await pinApi.verifyRequirements()
 
+      console.log(
+        '[usePinStatus] Response status:',
+        response.status,
+        response.ok
+      )
+
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('[usePinStatus] Error response:', errorData)
         throw new Error(errorData.detail?.message || '获取 PIN 状态失败')
       }
 
       const result = await response.json()
+      console.log('[usePinStatus] Success response:', result)
       const statusData = result.data as { has_pin: boolean }
 
       // 转换为 PinStatus 格式
