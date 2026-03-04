@@ -4,7 +4,7 @@
  * - 生产模式：通过 Electron IPC 调用 Python 后端
  */
 
-const IS_DEV = false // 临时设置为 false 以测试生产模式的 IPC 通信
+const IS_DEV = process.env.NODE_ENV === 'development'
 
 // HTTP 模式下的基础 URL
 const HTTP_BASE_URL = 'http://127.0.0.1:8000'
