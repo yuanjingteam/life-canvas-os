@@ -24,15 +24,18 @@ export async function apiRequest(
     const body = options?.body ? JSON.parse(options.body as string) : {}
 
     // 使用通用 api_call action
+    const action = `${method.toLowerCase()}_${endpoint.replace(/^\//, '').replace(/\//g, '_')}`
+
     const result = await window.App.request('api_call', {
-      action: `${method.toLowerCase()}_${endpoint.replace(/^\//, '').replace(/\//g, '_')}`,
+      action,
       ...body,
     })
 
     if (result.success) {
-      // 创建一个假的 Response 对象
+      // result.data 包含后端 API 响应 {code, message, data, timestamp}
+      // 保持完整的响应格式，让前端代码自己解析
       return new Response(JSON.stringify(result.data), {
-        status: 200,
+        status: result.data?.code || 200,
         headers: { 'Content-Type': 'application/json' },
       })
     }

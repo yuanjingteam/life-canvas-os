@@ -32,6 +32,10 @@ export interface JournalApiError {
  * 转换后端响应到前端格式
  */
 function transformJournalToEntry(journal: JournalResponse): JournalEntry {
+  if (!journal) {
+    throw new Error('Journal response is null or undefined')
+  }
+
   return {
     id: journal.id.toString(),
     timestamp: new Date(journal.created_at).getTime(),
@@ -160,6 +164,11 @@ export function useJournalApi() {
       }
 
       const result = (await response.json()) as { data: JournalResponse }
+
+      if (!result.data) {
+        throw new Error('Journal response data is missing')
+      }
+
       toast.success('日记创建成功')
 
       return transformJournalToEntry(result.data)

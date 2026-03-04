@@ -111,28 +111,29 @@ class InsightService:
     @staticmethod
     async def call_doubao_api(api_key: str, system_scores: dict) -> List[Dict[str, Any]]:
         """调用豆包 API 生成洞察"""
-        # 豆包 API 实现类似
-        # TODO: 实现豆包 API 调用
-        raise NotImplementedError("豆包 API 尚未实现")
+        url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
 
-    @staticmethod
-    async def call_openai_api(api_key: str, system_scores: dict) -> List[Dict[str, Any]]:
-        """调用 OpenAI API 生成洞察"""
-        url = "https://api.openai.com/v1/chat/completions"
-
+        # 构建 prompt
         scores_text = "\n".join([f"{k}: {v}" for k, v in system_scores.items()])
 
-        prompt = f"""Based on the following system scores, generate 3 insights:
+        prompt = f"""基于以下八维系统评分，生成 3 条洞察建议：
 
-System Scores:
+系统评分：
 {scores_text}
 
-Return a JSON array with 3 insights, each containing 'category' and 'insight':
-1. celebration: for the highest score
-2. warning: for the lowest score
-3. action: specific improvement suggestion
+请返回 JSON 格式，包含 3 条洞察，每条包含 category（类别）和 insight（洞察内容）：
+1. celebration（庆祝）：针对得分最高的维度
+2. warning（警告）：针对得分最低的维度
+3. action（行动）：提供具体的改进建议
 
-Return only JSON array, no other content."""
+返回格式：
+[
+  {{"category": "饮食", "insight": "最近饮食一致性较高，继续保持"}},
+  {{"category": "运动", "insight": "运动量偏低，建议增加有氧运动"}},
+  {{"category": "行动建议", "insight": "每天运动 30 分钟可显著改善体质"}}
+]
+
+只返回 JSON 数组，不要有其他内容。"""
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -140,7 +141,7 @@ Return only JSON array, no other content."""
         }
 
         payload = {
-            "model": "gpt-3.5-turbo",
+            "model": "doubao-seed-2-0-lite-260215",
             "messages": [
                 {"role": "user", "content": prompt}
             ],
@@ -153,14 +154,16 @@ Return only JSON array, no other content."""
             response.raise_for_status()
             result = response.json()
 
+        # 解析响应
         content = result["choices"][0]["message"]["content"]
 
+        # 尝试解析 JSON
         try:
             insights = json.loads(content)
             if not isinstance(insights, list):
-                insights = [{"category": "General", "insight": content}]
+                insights = [{"category": "综合", "insight": content}]
         except json.JSONDecodeError:
-            insights = [{"category": "General", "insight": content}]
+            insights = [{"category": "综合", "insight": content}]
 
         return insights
 
@@ -243,11 +246,9 @@ Return only JSON array, no other content."""
                 insights = await InsightService.call_deepseek_api(api_key, system_scores)
             elif provider == "doubao":
                 insights = await InsightService.call_doubao_api(api_key, system_scores)
-            elif provider == "openai":
-                insights = await InsightService.call_openai_api(api_key, system_scores)
             else:
                 return error_response(
-                    message=f"未知的 AI 提供商: {provider}",
+                    message=f"不支持的 AI 提供商: {provider}，仅支持 deepseek 和 doubao",
                     code=400
                 ), 400
         except httpx.HTTPStatusError as e:

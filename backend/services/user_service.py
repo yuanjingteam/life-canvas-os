@@ -18,6 +18,16 @@ ENCRYPTION_KEY = b'7ZmylayOdbwxCp_Lh_aU7OxsE5SGWRb1KV_Z0HygzXY='
 cipher = Fernet(ENCRYPTION_KEY)
 
 
+# 支持的 AI 提供商
+SUPPORTED_PROVIDERS = ["deepseek", "doubao"]
+
+# 提供商默认模型配置
+PROVIDER_DEFAULT_MODELS = {
+    "deepseek": "deepseek-chat",
+    "doubao": "doubao-seed-2-0-lite-260215",
+}
+
+
 class UserService:
     """用户服务类"""
 
@@ -127,6 +137,13 @@ class UserService:
         """
         保存 AI 配置
 
+        仅支持 DeepSeek 和豆包两个提供商
+
+        Args:
+            provider: AI 提供商 (deepseek, doubao)
+            api_key: API Key
+            model: 可选的模型名称
+
         Returns:
             (response_data, status_code)
         """
@@ -138,18 +155,24 @@ class UserService:
                 code=404
             ), 404
 
+        # 验证提供商是否支持
+        provider_lower = provider.lower()
+        if provider_lower not in SUPPORTED_PROVIDERS:
+            return error_response(
+                message=f"不支持的 AI 提供商: {provider}，仅支持 deepseek 和 doubao",
+                code=400
+            ), 400
+
         # 加密 API Key
         encrypted_key = UserService.encrypt_api_key(api_key)
 
+        # 设置默认模型
         if not model:
-            if provider.lower() == "deepseek":
-                model = "deepseek-chat"
-            elif provider.lower() == "doubao":
-                model = "doubao-seed-2-0-lite-260215"
+            model = PROVIDER_DEFAULT_MODELS.get(provider_lower)
 
         # 保存配置
         ai_config = {
-            "provider": provider,
+            "provider": provider_lower,
             "api_key": encrypted_key,
             "model": model
         }
@@ -157,7 +180,11 @@ class UserService:
         user.ai_config = ai_config
         db.commit()
 
-        return ai_config, 200
+        return {
+            "provider": provider_lower,
+            "model": model,
+            "verified": True
+        }, 200
 
     @staticmethod
     def get_ai_config(db: Session) -> Tuple[Optional[Dict[str, Any]], int]:
@@ -303,26 +330,29 @@ class UserService:
         """
         验证 API Key 有效性
 
+        仅支持 DeepSeek 和豆包两个提供商
+
         Args:
-            provider: AI 提供商 (deepseek, openai, doubao)
+            provider: AI 提供商 (deepseek, doubao)
             api_key: API Key
             model: 可选的模型名称
 
         Returns:
             (response_data, status_code)
         """
+        # 验证提供商是否支持
+        provider_lower = provider.lower()
+        if provider_lower not in SUPPORTED_PROVIDERS:
+            return error_response(
+                message=f"不支持的 AI 提供商: {provider}，仅支持 deepseek 和 doubao",
+                code=400
+            ), 400
+
         try:
-            if provider.lower() == "deepseek":
+            if provider_lower == "deepseek":
                 return await UserService._verify_deepseek_key(api_key, model)
-            elif provider.lower() == "openai":
-                return await UserService._verify_openai_key(api_key, model)
-            elif provider.lower() == "doubao":
+            elif provider_lower == "doubao":
                 return await UserService._verify_doubao_key(api_key, model)
-            else:
-                return error_response(
-                    message=f"不支持的 AI 提供商: {provider}",
-                    code=400
-                ), 400
 
         except httpx.TimeoutException:
             return error_response(
@@ -334,7 +364,7 @@ class UserService:
                 return error_response(
                     message="API Key 无效或已过期",
                     code=401,
-                    data={"provider": provider}
+                    data={"provider": provider_lower}
                 ), 401
             elif e.response.status_code == 429:
                 return error_response(
@@ -345,7 +375,7 @@ class UserService:
                 return error_response(
                     message=f"API 验证失败 (HTTP {e.response.status_code})",
                     code=502,
-                    data={"provider": provider, "status_code": e.response.status_code}
+                    data={"provider": provider_lower, "status_code": e.response.status_code}
                 ), 502
         except Exception as e:
             return error_response(
@@ -382,9 +412,9 @@ class UserService:
         }, 200
 
     @staticmethod
-    async def _verify_openai_key(api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
-        """验证 OpenAI API Key"""
-        url = "https://api.openai.com/v1/chat/completions"
+    async def _verify_doubao_key(api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
+        """验证豆包 API Key"""
+        url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -392,7 +422,7 @@ class UserService:
         }
 
         payload = {
-            "model": model or "gpt-3.5-turbo",
+            "model": model or "doubao-seed-2-0-lite-260215",
             "messages": [
                 {"role": "user", "content": "Hi"}
             ],
@@ -405,18 +435,6 @@ class UserService:
 
         return {
             "valid": True,
-            "provider": "openai",
-            "model": model or "gpt-3.5-turbo"
-        }, 200
-
-    @staticmethod
-    async def _verify_doubao_key(api_key: str, model: Optional[str] = None) -> Tuple[dict, int]:
-        """验证豆包 API Key"""
-        # 豆包 API 验证逻辑（需要根据实际 API 文档实现）
-        # 这里暂时返回成功，实际使用时需要完善
-        return {
-            "valid": True,
             "provider": "doubao",
-            "model": model or "doubao-seed-2-0-lite-260215",
-            "note": "豆包 API 验证尚未完全实现"
+            "model": model or "doubao-seed-2-0-lite-260215"
         }, 200

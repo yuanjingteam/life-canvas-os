@@ -12,7 +12,8 @@ jobs:
     strategy:
       fail-fast: false  # 一个平台失败不影响其他平台
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        # ✅ 暂时只构建 macOS 和 Windows，Linux 存在 app-builder 问题
+        os: [macos-latest, windows-latest]
 
     steps:
       - name: 检出代码
@@ -40,26 +41,14 @@ jobs:
       - name: 清理 electron-builder 缓存 (避免 app-builder 问题)
         shell: bash
         run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            rm -rf ~/.cache/electron-builder/node_modules || true
-            rm -rf node_modules/app-builder-bin || true
-          else
-            rm -rf ~/.cache/electron-builder/node_modules
-            rm -rf node_modules/app-builder-bin
-          fi
+          rm -rf ~/.cache/electron-builder/node_modules || true
+          rm -rf node_modules/app-builder-bin || true
 
       - name: 安装 Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
-
-      - name: Linux 系统更新
-        if: startsWith(matrix.os, 'ubuntu-latest')
-        run: |
-          sudo apt-get update
-          sudo apt autoremove
-          sudo apt-get install -y libarchive-tools rpm
 
       - name: 安装 Python 依赖
         run: |

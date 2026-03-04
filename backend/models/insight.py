@@ -20,11 +20,11 @@ class Insight(Base):
     system_scores = Column(JSON, nullable=False)
 
     # 使用的 AI 提供商
-    provider_used = Column(String, nullable=False)  # deepseek, doubao, openai
+    provider_used = Column(String, nullable=False)  # deepseek, doubao
 
     generated_at = Column(DateTime, server_default=localnow_func())
     created_at = Column(DateTime, server_default=localnow_func())
 
 
 # AI 提供商枚举
-AI_PROVIDERS = ["deepseek", "doubao", "openai"]
+AI_PROVIDERS = ["deepseek", "doubao"]
