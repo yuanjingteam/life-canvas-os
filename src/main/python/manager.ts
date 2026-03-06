@@ -5,6 +5,8 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 
+import { app } from 'electron'
+
 export class PythonManager {
   private process: ChildProcess | null = null
   private responseCallbacks = new Map<string, (response: any) => void>()
@@ -19,6 +21,7 @@ export class PythonManager {
 
     let pythonPath: string
     let args: string[]
+    const userDataPath = app.getPath('userData')
 
     if (isDev) {
       // 开发环境：使用虚拟环境中的 Python
@@ -28,13 +31,14 @@ export class PythonManager {
       pythonPath = path.join(projectRoot, 'venv', 'bin', 'python3')
       const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
       // 注意：不传递 --dev 参数，让 Python 后端以 IPC 模式启动
-      // 这样可以在开发环境测试生产模式的 IPC 通信
-      args = [mainPyPath]
+      // 传递 --data-dir 参数指定数据存储目录
+      args = [mainPyPath, '--data-dir', userDataPath]
 
       console.log('[Python Manager] Dev paths:', {
         projectRoot,
         pythonPath,
         mainPyPath,
+        userDataPath,
       })
     } else {
       // 生产环境：使用打包的 Python 可执行文件
@@ -47,7 +51,8 @@ export class PythonManager {
         'python-runtime',
         backendName
       )
-      args = []
+      // 传递 --data-dir 参数指定数据存储目录
+      args = ['--data-dir', userDataPath]
 
       console.log('[Python Manager] Production mode, executable:', pythonPath)
     }

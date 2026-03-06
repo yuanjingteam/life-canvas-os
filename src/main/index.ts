@@ -113,8 +113,10 @@ makeAppWithSingleInstanceLock(async () => {
   ipcMain.handle(
     'api:request',
     async (_event, action: string, params: any = {}) => {
+      console.log('[IPC] API request received:', action, params)
       try {
         const result = await pythonManager.sendRequest(action, params)
+        console.log('[IPC] API request success:', action, result?.code)
         return { success: true, data: result }
       } catch (error) {
         console.error('[IPC] API request failed:', action, error)

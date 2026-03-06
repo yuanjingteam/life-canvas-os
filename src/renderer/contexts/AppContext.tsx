@@ -71,7 +71,7 @@ export function AppProvider({ children }: AppProviderProps) {
         }
       } catch (_error) {
         // 用户还未设置信息，忽略错误
-        console.log('User profile not set yet')
+        console.log('User profile not set yet1')
       } finally {
         isLoadingRef.current = false
       }

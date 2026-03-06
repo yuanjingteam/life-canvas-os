@@ -7,7 +7,21 @@ Life Canvas OS - Python Backend
 import sys
 import json
 import threading
+import os
+import argparse
 from pathlib import Path
+
+# ============ 早期参数解析（必须在所有业务模块导入之前）============
+# 解析命令行参数以获取数据目录
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument("--data-dir", help="Application data directory")
+parser.add_argument("--dev", action="store_true", help="Run in development mode")
+args, unknown = parser.parse_known_args()
+
+if args.data_dir:
+    os.environ["APP_DATA_DIR"] = args.data_dir
+    # 确保存储目录存在
+    Path(args.data_dir).mkdir(parents=True, exist_ok=True)
 
 # ============ 路径处理（必须在所有导入之前）============
 # 获取项目根目录
@@ -296,6 +310,18 @@ else:
 
     def ipc_loop():
         """IPC 通信循环"""
+        # 确保数据库已初始化
+        from backend.db.session import SessionLocal
+        from backend.db.init_db import ensure_database_initialized
+
+        try:
+            db = SessionLocal()
+            ensure_database_initialized(db)
+            db.close()
+            print("[INFO] Database initialized successfully in IPC mode", file=sys.stderr)
+        except Exception as e:
+            print(f"[ERROR] Database initialization failed: {e}", file=sys.stderr)
+
         # 导入认证处理器
         from backend.api.auth import handle_auth_action
 
@@ -320,19 +346,19 @@ else:
                     if byte == b'\n':
                         break
                     length_bytes += byte
-                
+
                 if not length_bytes:
                     continue
-                
+
                 length_str = length_bytes.decode('utf-8')
                 length = int(length_str)
-                
+
                 # 读取指定长度的 JSON 数据
                 json_bytes = sys.stdin.buffer.read(length)
                 if len(json_bytes) < length:
                     print(f"[IPC] Incomplete data: expected {length}, got {len(json_bytes)}", file=sys.stderr, flush=True)
                     continue
-                
+
                 json_data = json_bytes.decode('utf-8')
                 request = json.loads(json_data)
 

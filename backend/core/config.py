@@ -10,8 +10,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # 数据库配置
-    # 默认使用 SQLite，文件存储在根目录下
-    SQLITE_URL: str = f"sqlite:///{BASE_DIR}/life_canvas.db"
+    # 优先使用 APP_DATA_DIR 环境变量（Electron 传入的 userData 目录）
+    # 否则默认存储在项目根目录下（仅开发模式）
+    DATA_DIR: Path = Path(os.getenv("APP_DATA_DIR", BASE_DIR))
+    SQLITE_URL: str = f"sqlite:///{DATA_DIR}/life_canvas.db"
 
     # 如果将来想换 PostgreSQL，只需修改环境变量即可覆盖
     DATABASE_URL: str = os.getenv("DATABASE_URL", SQLITE_URL)

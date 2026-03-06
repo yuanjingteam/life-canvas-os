@@ -8,7 +8,7 @@ declare global {
 
 const API = {
   sayHelloFromBridge: () => console.log('\nHello from bridgeAPI! 👋\n\n'),
-  username: process.env.USER,
+
   // 文件操作 API
   fileOps: {
     // 选择文件并复制到后端可访问目录
