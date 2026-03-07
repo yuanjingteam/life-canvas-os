@@ -8,6 +8,7 @@ Life Canvas OS is an Electron desktop application for personal life management b
 
 - **Frontend**: Electron + React 19 + TypeScript + Vite + TailwindCSS + shadcn/ui
 - **Backend**: Python 3.12 + FastAPI + SQLAlchemy + SQLite
+- **Build Tool**: PyInstaller (required for building Python backend)
 - **Communication**: Dual-mode Python backend (IPC for production, HTTP for development)
 - **Package Manager**: pnpm (required, version 10.0.0)
 
@@ -89,13 +90,15 @@ python backend/main.py --dev
 python backend/main.py
 ```
 
+**Note**: On Windows, use `python` or `python3` depending on your PATH configuration.
+
 ### Building
 
 ```bash
 # Build Electron app
 pnpm build
 
-# Build Python backend with PyInstaller
+# Build Python backend with PyInstaller (requires: pip install pyinstaller)
 pnpm build:python
 
 # Build both
@@ -111,8 +114,15 @@ python3 -m venv venv
 # Activate virtual environment (macOS/Linux)
 source venv/bin/activate
 
-# Install Python dependencies
+# Activate virtual environment (Windows)
+# cmd.exe
+venv\Scripts\activate.bat
+# PowerShell
+venv\Scripts\Activate.ps1
+
+# Install Python dependencies (requires PyInstaller for building)
 pip install -r backend/requirements.txt
+pip install pyinstaller
 ```
 
 ## Code Style & Quality Standards
