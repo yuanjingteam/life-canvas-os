@@ -17,6 +17,7 @@
     "start": "electron-vite preview",
     "predev": "run-s clean:dev",
     "dev": "cross-env NODE_ENV=development electron-vite dev --watch",
+    "prod": "cross-env NODE_ENV=production electron-vite dev --watch",
     "compile:app": "electron-vite build",
     "compile:packageJSON": "tsx ./src/lib/electron-app/release/modules/prebuild.ts",
     "prebuild": "run-s clean:dev compile:app compile:packageJSON",

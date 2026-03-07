@@ -30,9 +30,7 @@ export class PythonManager {
       const projectRoot = path.resolve(__dirname, '../../..')
       pythonPath = path.join(projectRoot, 'venv', 'bin', 'python3')
       const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
-      // 注意：不传递 --dev 参数，让 Python 后端以 IPC 模式启动
-      // 传递 --data-dir 参数指定数据存储目录
-      args = [mainPyPath, '--data-dir', userDataPath]
+      args = [mainPyPath, '--dev', userDataPath]
 
       console.log('[Python Manager] Dev paths:', {
         projectRoot,

@@ -64,7 +64,7 @@ export function usePinApi() {
       } catch (err) {
         return {
           success: false,
-          error: '网络错误，请检查后端服务',
+          error: '网络错误，请稍后重试',
         }
       }
     },
