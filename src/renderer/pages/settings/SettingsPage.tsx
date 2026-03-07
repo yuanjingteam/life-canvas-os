@@ -52,19 +52,14 @@ export function SettingsPage() {
     pinStatus,
     isLoading: isPinStatusLoading,
     fetchPinStatus,
-    updatePinStatusAfterOperation,
   } = usePinStatus()
   const { verifyPin } = usePinApi()
   const {
     settings: userSettings,
     fetchSettings,
-    updateSettings,
     getPinVerifySwitch,
     updatePinVerifySwitch,
   } = useUserSettings()
-  const [testStatus, setTestStatus] = useState<
-    'idle' | 'testing' | 'success' | 'error'
-  >('idle')
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingAI, setIsSavingAI] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -196,31 +191,6 @@ export function SettingsPage() {
     loadTabData()
   }, [activeTab, aiConfigLoaded])
 
-  const handleTestAI = async () => {
-    if (!aiFormData.apiKey && !state.aiConfig.apiKey) {
-      toast.error('请先输入 API 密钥')
-      return
-    }
-
-    setTestStatus('testing')
-
-    try {
-      // 模拟测试，实际应该调用 AI API
-      setTimeout(() => {
-        const apiKeyToTest = aiFormData.apiKey || state.aiConfig.apiKey
-        setTestStatus(apiKeyToTest ? 'success' : 'error')
-        if (apiKeyToTest) {
-          toast.success('AI 配置测试成功')
-        } else {
-          toast.error('AI 配置测试失败，请检查 API Key')
-        }
-        setTimeout(() => setTestStatus('idle'), 3000)
-      }, 1500)
-    } catch (_error) {
-      setTestStatus('error')
-      setTimeout(() => setTestStatus('idle'), 3000)
-    }
-  }
 
   const handleSaveAIConfig = async () => {
     // 表单校验 - 检查 API Key 是否为空
@@ -658,28 +628,6 @@ export function SettingsPage() {
                       type="password"
                       value={aiFormData.apiKey}
                     />
-                    {(isEditingAI || !existingAIConfig) && (
-                      <Button
-                        className="shrink-0 h-11 w-11"
-                        disabled={
-                          testStatus === 'testing' || !aiFormData.apiKey
-                        }
-                        onClick={handleTestAI}
-                        size="icon"
-                        variant="outline"
-                      >
-                        {testStatus === 'idle' && <RefreshCw size={18} />}
-                        {testStatus === 'testing' && (
-                          <RefreshCw className="animate-spin" size={18} />
-                        )}
-                        {testStatus === 'success' && (
-                          <CheckCircle2 className="text-green-500" size={18} />
-                        )}
-                        {testStatus === 'error' && (
-                          <X className="text-destructive" size={18} />
-                        )}
-                      </Button>
-                    )}
                   </div>
                 </div>
 
