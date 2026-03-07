@@ -30,7 +30,7 @@ export class PythonManager {
       const projectRoot = path.resolve(__dirname, '../../..')
       pythonPath = path.join(projectRoot, 'venv', 'bin', 'python3')
       const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
-      args = [mainPyPath, '--dev', userDataPath]
+      args = [mainPyPath, '--dev', '--data-dir', userDataPath]
 
       console.log('[Python Manager] Dev paths:', {
         projectRoot,

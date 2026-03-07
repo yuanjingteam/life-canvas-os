@@ -261,6 +261,11 @@ export function SettingsPage() {
       return
     }
 
+    if (formData.name.length > 10) {
+      toast.error('显示名称最多 10 个字')
+      return
+    }
+
     if (!formData.birthday || formData.birthday.trim() === '') {
       toast.error('请选择出生日期')
       return
@@ -271,7 +276,7 @@ export function SettingsPage() {
       return
     }
 
-    if (formData.mbti.length !== 4) {
+    if (!/^[A-Za-z]{4}$/.test(formData.mbti)) {
       toast.error('MBTI 类型必须为 4 个字母（例如：INTJ）')
       return
     }
