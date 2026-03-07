@@ -406,7 +406,7 @@ export function SettingsPage() {
     try {
       await exportData(format)
     } catch (error) {
-      console.error('Export failed:', error)
+      console.error('Export failed2:', error)
     } finally {
       setIsExporting(false)
     }
