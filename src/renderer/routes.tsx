@@ -3,8 +3,6 @@ import { MainLayout } from '~/renderer/components/layout/MainLayout'
 import { DashboardPage } from '~/renderer/pages/dashboard/DashboardPage'
 import { FuelSystemPage } from '~/renderer/pages/systems/FuelSystemPage'
 import { JournalPage } from '~/renderer/pages/journal/JournalPage'
-import { JournalDetailPage } from '~/renderer/pages/journal/JournalDetailPage'
-import { JournalEditorPage } from '~/renderer/pages/journal/JournalEditorPage'
 import { TimelinePage } from '~/renderer/pages/timeline/TimelinePage'
 import { SettingsPage } from '~/renderer/pages/settings/SettingsPage'
 import { PinSetupPage } from '~/renderer/pages/settings/PinSetupPage'
@@ -48,9 +46,6 @@ export function AppRoutes() {
           <Route element={<DashboardPage />} path="/dashboard" />
           <Route element={<FuelSystemPage />} path="/system/fuel" />
           <Route element={<JournalPage />} path="/journal" />
-          <Route element={<JournalEditorPage />} path="/journal/new" />
-          <Route element={<JournalDetailPage />} path="/journal/:id" />
-          <Route element={<JournalEditorPage />} path="/journal/:id/edit" />
           <Route element={<TimelinePage />} path="/timeline" />
           <Route element={<SettingsPage />} path="/settings" />
           <Route element={<PinSetupPage />} path="/settings/pin" />

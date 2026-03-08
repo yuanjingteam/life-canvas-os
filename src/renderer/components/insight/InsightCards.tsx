@@ -123,10 +123,10 @@ export function InsightCard({
               {avgScore}
             </span>
             {trend === 'up' && (
-              <TrendingUp size={16} className="text-emerald-500" />
+              <TrendingUp className="text-emerald-500" size={16} />
             )}
             {trend === 'down' && (
-              <TrendingDown size={16} className="text-red-500" />
+              <TrendingDown className="text-red-500" size={16} />
             )}
           </div>
         )}
@@ -141,11 +141,14 @@ export function InsightCard({
         ) : (
           displayItems.map((item, index) => (
             <div
-              key={index}
               className="flex items-start gap-2 text-xs text-apple-textMain dark:text-white/80"
+              key={index}
             >
               <div
-                className={cn('w-1.5 h-1.5 rounded-full mt-1 shrink-0', config.dotColor)}
+                className={cn(
+                  'w-1.5 h-1.5 rounded-full mt-1 shrink-0',
+                  config.dotColor
+                )}
               />
               <span className="flex-1">{item.insight}</span>
             </div>
@@ -155,31 +158,34 @@ export function InsightCard({
 
       {/* 底部评分条 */}
       <div className={cn('space-y-2 pt-3 border-t', config.border)}>
-        {displayItems
-          .slice(0, maxItems)
-          .map((item, index) => {
-            const systemType = item.category.toLowerCase()
-            const score = Number(systemScores[systemType]) || 0
-            return (
-              <div key={index} className="flex items-center gap-2">
-                <span className="text-[10px] text-apple-textSec dark:text-white/40 w-12 shrink-0">
-                  {getSystemName(systemType).split(' ')[0]}
-                </span>
-                <div className="flex-1 h-2 bg-apple-bg2 dark:bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-all duration-500',
-                      `bg-gradient-to-r ${config.barGradient}`
-                    )}
-                    style={{ width: `${score}%` }}
-                  />
-                </div>
-                <span className={cn('text-[10px] font-bold w-6 text-right', config.textColor)}>
-                  {score}
-                </span>
+        {displayItems.slice(0, maxItems).map((item, index) => {
+          const systemType = item.category.toLowerCase()
+          const score = Number(systemScores[systemType]) || 0
+          return (
+            <div className="flex items-center gap-2" key={index}>
+              <span className="text-[10px] text-apple-textSec dark:text-white/40 w-12 shrink-0">
+                {getSystemName(systemType).split(' ')[0]}
+              </span>
+              <div className="flex-1 h-2 bg-apple-bg2 dark:bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-500',
+                    `bg-gradient-to-r ${config.barGradient}`
+                  )}
+                  style={{ width: `${score}%` }}
+                />
               </div>
-            )
-          })}
+              <span
+                className={cn(
+                  'text-[10px] font-bold w-6 text-right',
+                  config.textColor
+                )}
+              >
+                {score}
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -191,10 +197,7 @@ interface SystemScoreChartProps {
   title?: string
 }
 
-export function SystemScoreChart({
-  systemScores,
-  title = '系统评分快照',
-}: SystemScoreChartProps) {
+export function SystemScoreChart({ systemScores }: SystemScoreChartProps) {
   return (
     <div className="space-y-4">
       {/* Y 轴和柱形图区域 */}
@@ -213,10 +216,10 @@ export function SystemScoreChart({
         <div className="flex-1 relative flex items-end justify-around gap-2">
           {/* 网格线 */}
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-            {[100, 80, 60, 40, 20, 0].map((level) => (
+            {[100, 80, 60, 40, 20, 0].map(level => (
               <div
-                key={level}
                 className="border-t border-apple-border dark:border-white/5 w-full"
+                key={level}
               />
             ))}
           </div>
@@ -225,7 +228,10 @@ export function SystemScoreChart({
           {Object.entries(systemScores).map(([type, score]) => {
             const scoreNum = Number(score) || 0
             return (
-              <div key={type} className="flex flex-col items-center flex-1 max-w-[60px] z-10">
+              <div
+                className="flex flex-col items-center flex-1 max-w-[60px] z-10"
+                key={type}
+              >
                 {/* 柱形 */}
                 <div className="relative w-full flex items-end justify-center h-[200px]">
                   <div
@@ -249,8 +255,8 @@ export function SystemScoreChart({
           const scoreNum = Number(score) || 0
           return (
             <div
-              key={type}
               className="flex flex-col items-center flex-1 max-w-[60px]"
+              key={type}
             >
               <div
                 className="text-xs font-bold px-2 py-1 rounded"
@@ -271,8 +277,13 @@ export function SystemScoreChart({
       {/* 图例 */}
       <div className="flex items-center justify-center gap-4 pt-4 border-t border-apple-border dark:border-white/5">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm opacity-75" style={{ backgroundColor: '#10b981' }} />
-          <span className="text-xs text-apple-textSec dark:text-white/40">系统评分</span>
+          <div
+            className="w-3 h-3 rounded-sm opacity-75"
+            style={{ backgroundColor: '#10b981' }}
+          />
+          <span className="text-xs text-apple-textSec dark:text-white/40">
+            系统评分
+          </span>
         </div>
       </div>
     </div>

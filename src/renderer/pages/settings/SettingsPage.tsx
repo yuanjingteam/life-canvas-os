@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from 'react'
 import {
   Database,
   X,
@@ -21,202 +21,199 @@ import {
   Palette,
   Settings,
   FileText,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { useApp } from "~/renderer/contexts/AppContext";
-import { GlassCard } from "~/renderer/components/GlassCard";
-import { Input } from "~/renderer/components/ui/input";
-import { Button } from "~/renderer/components/ui/button";
-import { Switch } from "~/renderer/components/ui/switch";
-import { Slider } from "~/renderer/components/ui/slider";
-import { Badge } from "~/renderer/components/ui/badge";
-import { TagInput } from "~/renderer/components/ui/tag-input";
-import { Label } from "~/renderer/components/ui/label";
-import { PinLockScreen } from "~/renderer/components/auth/PinLockScreen";
-import { calculateLifeProgress } from "~/renderer/lib/lifeUtils";
-import { useUserApi, type UserProfile } from "~/renderer/hooks/useUserApi";
-import { useAiApi, type AIConfigData } from "~/renderer/hooks/useAiApi";
-import { useDataApi, type ExportFormat } from "~/renderer/hooks/useDataApi";
-import { usePinStatus } from "~/renderer/hooks/usePinStatus";
-import { usePinApi } from "~/renderer/hooks";
-import { useUserSettings } from "~/renderer/hooks/useUserSettings";
-import { toast } from "sonner";
-import { ScrollArea } from "~/renderer/components/ui/scroll-area";
-import { Separator } from "~/renderer/components/ui/separator";
-import {
-  removeCache,
-  CACHE_KEYS,
-} from "~/renderer/lib/cacheUtils";
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useApp } from '~/renderer/contexts/AppContext'
+import { GlassCard } from '~/renderer/components/GlassCard'
+import { Input } from '~/renderer/components/ui/input'
+import { Button } from '~/renderer/components/ui/button'
+import { Switch } from '~/renderer/components/ui/switch'
+import { Slider } from '~/renderer/components/ui/slider'
+import { Badge } from '~/renderer/components/ui/badge'
+import { TagInput } from '~/renderer/components/ui/tag-input'
+import { Label } from '~/renderer/components/ui/label'
+import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
+import { calculateLifeProgress } from '~/renderer/lib/lifeUtils'
+import { useUserApi, type UserProfile } from '~/renderer/hooks/useUserApi'
+import { useAiApi, type AIConfigData } from '~/renderer/hooks/useAiApi'
+import { useDataApi, type ExportFormat } from '~/renderer/hooks/useDataApi'
+import { usePinStatus } from '~/renderer/hooks/usePinStatus'
+import { usePinApi } from '~/renderer/hooks'
+import { useUserSettings } from '~/renderer/hooks/useUserSettings'
+import { toast } from 'sonner'
+import { ScrollArea } from '~/renderer/components/ui/scroll-area'
+import { Separator } from '~/renderer/components/ui/separator'
+import { removeCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 
 export function SettingsPage() {
-  const { state, updateState, setTheme } = useApp();
-  const { getUserProfile, updateUserProfile } = useUserApi();
-  const { getAIConfig, saveAIConfig } = useAiApi();
-  const { exportData, importData, resetData } = useDataApi();
+  const { state, updateState, setTheme } = useApp()
+  const { getUserProfile, updateUserProfile } = useUserApi()
+  const { getAIConfig, saveAIConfig } = useAiApi()
+  const { exportData, importData, resetData } = useDataApi()
   const {
     pinStatus,
     isLoading: isPinStatusLoading,
     fetchPinStatus,
-  } = usePinStatus();
-  const { verifyPin } = usePinApi();
+  } = usePinStatus()
+  const { verifyPin } = usePinApi()
   const {
     settings: userSettings,
     fetchSettings,
     getPinVerifySwitch,
     updatePinVerifySwitch,
-  } = useUserSettings();
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSavingAI, setIsSavingAI] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showPinDialog, setShowPinDialog] = useState(false);
-  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
+  } = useUserSettings()
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSavingAI, setIsSavingAI] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const [showPinDialog, setShowPinDialog] = useState(false)
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
   const [pinVerifyAction, setPinVerifyAction] = useState<
-    "export" | "reset" | null
-  >(null);
-  const [unlockError, setUnlockError] = useState<string | undefined>(undefined);
-  const [aiConfigLoaded, setAiConfigLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
-  const [isEditingAI, setIsEditingAI] = useState(false); // 是否处于编辑模式
-  const [existingAIConfig, setExistingAIConfig] = useState<any>(null); // 已存在的 AI 配置
-  const isLoadingProfileRef = useRef(false);
-  const getUserProfileRef = useRef(getUserProfile);
+    'export' | 'reset' | null
+  >(null)
+  const [unlockError, setUnlockError] = useState<string | undefined>(undefined)
+  const [aiConfigLoaded, setAiConfigLoaded] = useState(false)
+  const [activeTab, setActiveTab] = useState('profile')
+  const [isEditingAI, setIsEditingAI] = useState(false) // 是否处于编辑模式
+  const [existingAIConfig, setExistingAIConfig] = useState<any>(null) // 已存在的 AI 配置
+  const isLoadingProfileRef = useRef(false)
+  const getUserProfileRef = useRef(getUserProfile)
 
   // AI 配置本地状态
   const [aiFormData, setAiFormData] = useState<{
-    provider: "DeepSeek" | "Doubao";
-    apiKey: string;
-    modelName: string;
-    frequencyLimit: number;
+    provider: 'DeepSeek' | 'Doubao'
+    apiKey: string
+    modelName: string
+    frequencyLimit: number
   }>({
-    provider: "DeepSeek",
-    apiKey: "",
-    modelName: "deepseek-chat",
+    provider: 'DeepSeek',
+    apiKey: '',
+    modelName: 'deepseek-chat',
     frequencyLimit: 10,
-  });
+  })
 
   // 更新 ref
   useEffect(() => {
-    getUserProfileRef.current = getUserProfile;
-  }, [getUserProfile]);
+    getUserProfileRef.current = getUserProfile
+  }, [getUserProfile])
 
   // 表单本地状态
   const [formData, setFormData] = useState({
-    name: "",
-    birthday: "",
-    mbti: "",
+    name: '',
+    birthday: '',
+    mbti: '',
     values: [] as string[],
     lifespan: 0,
-  });
+  })
 
   // 进入设置页面时加载用户信息
   useEffect(() => {
     const loadUserProfile = async () => {
-      if (isLoadingProfileRef.current) return;
-      isLoadingProfileRef.current = true;
+      if (isLoadingProfileRef.current) return
+      isLoadingProfileRef.current = true
 
       try {
-        const profile = await getUserProfileRef.current();
+        const profile = await getUserProfileRef.current()
         if (profile) {
           setFormData({
-            name: profile.name || "",
-            birthday: profile.birthday || "",
-            mbti: profile.mbti || "",
+            name: profile.name || '',
+            birthday: profile.birthday || '',
+            mbti: profile.mbti || '',
             values: profile.values || [],
             lifespan: profile.lifespan || 0,
-          });
+          })
         }
       } catch (_error) {
-        console.log("User profile not set yet");
+        console.log('User profile not set yet')
       } finally {
-        isLoadingProfileRef.current = false;
+        isLoadingProfileRef.current = false
       }
-    };
+    }
 
-    loadUserProfile();
-  }, []);
+    loadUserProfile()
+  }, [])
 
   const lifeProgress = calculateLifeProgress(
     formData.birthday,
-    formData.lifespan,
-  );
+    formData.lifespan
+  )
 
   // 按 Tab 加载对应的接口
   useEffect(() => {
     const loadTabData = async () => {
       // AI 配置 - 只在首次切换到该 tab 时加载
-      if (activeTab === "ai" && !aiConfigLoaded) {
+      if (activeTab === 'ai' && !aiConfigLoaded) {
         try {
-          const config = await getAIConfig();
+          const config = await getAIConfig()
           if (config) {
             // 保存完整的配置信息
-            setExistingAIConfig(config);
+            setExistingAIConfig(config)
 
             setAiFormData({
-              provider: config.provider === "deepseek" ? "DeepSeek" : "Doubao",
-              apiKey: "", // 不显示完整的 API Key
-              modelName: config.model_name || "deepseek-chat",
+              provider: config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+              apiKey: '', // 不显示完整的 API Key
+              modelName: config.model_name || 'deepseek-chat',
               frequencyLimit: state.aiConfig.frequencyLimit || 10,
-            });
+            })
             // 更新全局状态
             updateState({
               aiConfig: {
                 ...state.aiConfig,
                 provider:
-                  config.provider === "deepseek" ? "DeepSeek" : "Doubao",
-                modelName: config.model_name || "deepseek-chat",
+                  config.provider === 'deepseek' ? 'DeepSeek' : 'Doubao',
+                modelName: config.model_name || 'deepseek-chat',
                 apiKey: state.aiConfig.apiKey, // 保留原有的 API Key
               },
-            });
+            })
           } else {
             // 没有配置
-            setExistingAIConfig(null);
+            setExistingAIConfig(null)
           }
-          setAiConfigLoaded(true);
+          setAiConfigLoaded(true)
         } catch (_error) {
-          console.log("AI config not set yet");
-          setExistingAIConfig(null);
-          setAiConfigLoaded(true);
+          console.log('AI config not set yet')
+          setExistingAIConfig(null)
+          setAiConfigLoaded(true)
         }
       }
 
       // 数据管理 - 只在首次切换到该 tab 时加载 PIN 状态和用户设置
-      if (activeTab === "security") {
+      if (activeTab === 'security') {
         try {
-          await fetchPinStatus();
-          await fetchSettings();
+          await fetchPinStatus()
+          await fetchSettings()
         } catch (error) {
-          console.error("Failed to load PIN status or user settings:", error);
+          console.error('Failed to load PIN status or user settings:', error)
         }
       }
-    };
+    }
 
-    loadTabData();
-  }, [activeTab, aiConfigLoaded]);
+    loadTabData()
+  }, [activeTab, aiConfigLoaded])
 
   const handleSaveAIConfig = async () => {
     // 表单校验 - 检查 API Key 是否为空
-    if (!aiFormData.apiKey || aiFormData.apiKey.trim() === "") {
-      toast.error("请输入 API 密钥");
-      return;
+    if (!aiFormData.apiKey || aiFormData.apiKey.trim() === '') {
+      toast.error('请输入 API 密钥')
+      return
     }
 
-    setIsSavingAI(true);
+    setIsSavingAI(true)
 
     try {
       const configData: AIConfigData = {
         provider: aiFormData.provider,
         apiKey: aiFormData.apiKey,
         modelName: aiFormData.modelName,
-      };
+      }
 
-      const result = await saveAIConfig(configData);
+      const result = await saveAIConfig(configData)
 
       // 保存成功后，重新加载配置
-      const updatedConfig = await getAIConfig();
-      setExistingAIConfig(updatedConfig);
+      const updatedConfig = await getAIConfig()
+      setExistingAIConfig(updatedConfig)
 
       // 更新全局状态
       updateState({
@@ -227,75 +224,75 @@ export function SettingsPage() {
           apiKey: configData.apiKey,
           frequencyLimit: aiFormData.frequencyLimit,
         },
-      });
+      })
 
       // 清空 API Key 输入框（因为已保存）
       setAiFormData({
         ...aiFormData,
-        apiKey: "",
-      });
+        apiKey: '',
+      })
 
       // 退出编辑模式
-      setIsEditingAI(false);
+      setIsEditingAI(false)
     } catch (error) {
-      console.error("Failed to save AI config:", error);
+      console.error('Failed to save AI config:', error)
     } finally {
-      setIsSavingAI(false);
+      setIsSavingAI(false)
     }
-  };
+  }
 
   // 进入编辑模式
   const handleEditAI = () => {
-    setIsEditingAI(true);
-  };
+    setIsEditingAI(true)
+  }
 
   // 取消编辑
   const handleCancelEditAI = () => {
-    setIsEditingAI(false);
+    setIsEditingAI(false)
     setAiFormData({
       ...aiFormData,
-      apiKey: "",
-    });
-  };
+      apiKey: '',
+    })
+  }
 
   const handleSaveProfile = async () => {
     // 表单校验
-    if (!formData.name || formData.name.trim() === "") {
-      toast.error("请输入显示名称");
-      return;
+    if (!formData.name || formData.name.trim() === '') {
+      toast.error('请输入显示名称')
+      return
     }
 
     if (formData.name.length > 10) {
-      toast.error("显示名称最多 10 个字");
-      return;
+      toast.error('显示名称最多 10 个字')
+      return
     }
 
-    if (!formData.birthday || formData.birthday.trim() === "") {
-      toast.error("请选择出生日期");
-      return;
+    if (!formData.birthday || formData.birthday.trim() === '') {
+      toast.error('请选择出生日期')
+      return
     }
 
-    if (!formData.mbti || formData.mbti.trim() === "") {
-      toast.error("请输入 MBTI 类型");
-      return;
+    if (!formData.mbti || formData.mbti.trim() === '') {
+      toast.error('请输入 MBTI 类型')
+      return
     }
 
     if (!/^[A-Za-z]{4}$/.test(formData.mbti)) {
-      toast.error("MBTI 类型必须为 4 个字母（例如：INTJ）");
-      return;
+      toast.error('MBTI 类型必须为 4 个字母（例如：INTJ）')
+      return
     }
 
     if (!formData.lifespan) {
-      toast.error("请输入预期寿命");
-      return;
+      toast.error('请输入预期寿命')
+      return
     }
 
     if (formData.lifespan < 50 || formData.lifespan > 120) {
-      toast.error("预期寿命必须在 50-120 岁之间");
-      return;
+      toast.error('预期寿命必须在 50-120 岁之间')
+      return
     }
 
-    setIsSaving(true);
+    setIsSaving(true)
     try {
       const profileData: UserProfile = {
         name: formData.name,
@@ -303,142 +300,142 @@ export function SettingsPage() {
         mbti: formData.mbti,
         values: formData.values,
         lifespan: formData.lifespan,
-      };
+      }
 
-      const result = await updateUserProfile(profileData);
+      const result = await updateUserProfile(profileData)
 
       // 保存成功后，更新全局 state
       updateState({
         user: {
-          name: result.name || "",
-          birthday: result.birthday || "",
-          mbti: result.mbti || "",
+          name: result.name || '',
+          birthday: result.birthday || '',
+          mbti: result.mbti || '',
           values: result.values || [],
           lifespan: result.lifespan || 0,
         },
-      });
+      })
     } catch (error) {
-      console.error("Failed to save profile:", error);
+      console.error('Failed to save profile:', error)
     } finally {
-      setIsSaving(false);
+      setIsSaving(false)
     }
-  };
+  }
 
   const handleClearData = async () => {
     // 检查 PIN 是否已设置以及是否需要验证
     try {
-      const status = await fetchPinStatus();
+      const status = await fetchPinStatus()
       // 检查是否有 PIN 且设置了修改设置时需要验证
       const needVerify =
-        status?.has_pin && getPinVerifySwitch("pin_verify_for_settings_change");
+        status?.has_pin && getPinVerifySwitch('pin_verify_for_settings_change')
 
       if (needVerify) {
         // 需要验证 PIN
-        setPinVerifyAction("reset");
-        setShowPinDialog(true);
+        setPinVerifyAction('reset')
+        setShowPinDialog(true)
       } else {
         // 不需要验证 PIN，直接显示确认对话框
-        setShowResetConfirmDialog(true);
+        setShowResetConfirmDialog(true)
       }
     } catch (error) {
-      console.error("Failed to check PIN status:", error);
+      console.error('Failed to check PIN status:', error)
       // 如果检查失败，直接显示确认对话框
-      setShowResetConfirmDialog(true);
+      setShowResetConfirmDialog(true)
     }
-  };
+  }
 
   const handlePinVerifySuccess = async () => {
-    setShowPinDialog(false);
+    setShowPinDialog(false)
     // 根据验证后的操作执行不同的逻辑
-    if (pinVerifyAction === "reset") {
-      setShowResetConfirmDialog(true);
-    } else if (pinVerifyAction === "export") {
-      setShowExportDialog(true);
+    if (pinVerifyAction === 'reset') {
+      setShowResetConfirmDialog(true)
+    } else if (pinVerifyAction === 'export') {
+      setShowExportDialog(true)
     }
-    setPinVerifyAction(null);
-  };
+    setPinVerifyAction(null)
+  }
 
   const handleConfirmReset = async () => {
-    setShowResetConfirmDialog(false);
-    setIsResetting(true);
+    setShowResetConfirmDialog(false)
+    setIsResetting(true)
 
     try {
-      await resetData();
+      await resetData()
 
       // 清空本地所有数据（但保留首次启动标记）
-      removeCache(CACHE_KEYS.LIFE_CANVAS_STATE);
-      removeCache(CACHE_KEYS.JOURNAL_DRAFT);
-      removeCache(CACHE_KEYS.PIN_STATUS);
+      removeCache(CACHE_KEYS.LIFE_CANVAS_STATE)
+      removeCache(CACHE_KEYS.JOURNAL_DRAFT)
+      removeCache(CACHE_KEYS.PIN_STATUS)
 
       // 重置成功后刷新页面
       setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+        window.location.reload()
+      }, 2000)
     } catch (error) {
-      console.error("Reset failed:", error);
+      console.error('Reset failed:', error)
     } finally {
-      setIsResetting(false);
+      setIsResetting(false)
     }
-  };
+  }
 
   const handleExportClick = async () => {
     // 检查 PIN 是否已设置以及是否需要验证
     try {
-      const status = await fetchPinStatus();
+      const status = await fetchPinStatus()
       // 检查是否有 PIN 且设置了导出数据时需要验证
       const needVerify =
-        status?.has_pin && getPinVerifySwitch("pin_verify_for_data_export");
+        status?.has_pin && getPinVerifySwitch('pin_verify_for_data_export')
 
       if (needVerify) {
         // 需要验证 PIN
-        setPinVerifyAction("export");
-        setShowPinDialog(true);
+        setPinVerifyAction('export')
+        setShowPinDialog(true)
       } else {
         // 不需要验证 PIN，直接显示导出对话框
-        setShowExportDialog(true);
+        setShowExportDialog(true)
       }
     } catch (error) {
-      console.error("Failed to check PIN status:", error);
+      console.error('Failed to check PIN status:', error)
       // 如果检查失败，直接显示导出对话框
-      setShowExportDialog(true);
+      setShowExportDialog(true)
     }
-  };
+  }
 
   const handleExportFormatSelect = async (format: ExportFormat) => {
-    setIsExporting(true);
-    setShowExportDialog(false);
+    setIsExporting(true)
+    setShowExportDialog(false)
 
     try {
-      await exportData(format);
+      await exportData(format)
     } catch (error) {
-      console.error("Export failed2:", error);
+      console.error('Export failed2:', error)
     } finally {
-      setIsExporting(false);
+      setIsExporting(false)
     }
-  };
+  }
 
   const handleImportClick = async () => {
-    setIsImporting(true);
+    setIsImporting(true)
     try {
-      await importData();
+      await importData()
     } catch (error) {
-      console.error("Import failed:", error);
+      console.error('Import failed:', error)
     } finally {
-      setIsImporting(false);
+      setIsImporting(false)
     }
-  };
+  }
 
   // 左侧导航配置
   const navItems = [
-    { id: "profile", label: "个人档案", icon: User },
-    { id: "ai", label: "AI 配置", icon: Brain },
-    { id: "appearance", label: "外观", icon: Palette },
-    { id: "security", label: "隐私与安全", icon: Shield },
-  ];
+    { id: 'profile', label: '个人档案', icon: User },
+    { id: 'ai', label: 'AI 配置', icon: Brain },
+    { id: 'appearance', label: '外观', icon: Palette },
+    { id: 'security', label: '隐私与安全', icon: Shield },
+  ]
 
   const renderContent = () => {
     switch (activeTab) {
-      case "profile":
+      case 'profile':
         return (
           <div className="space-y-6">
             <div className="space-y-1">
@@ -456,7 +453,7 @@ export function SettingsPage() {
                   <Label htmlFor="display-name">显示名称</Label>
                   <Input
                     id="display-name"
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
                     placeholder="您的姓名"
@@ -468,7 +465,7 @@ export function SettingsPage() {
                   <Label htmlFor="birthday">出生日期</Label>
                   <Input
                     id="birthday"
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, birthday: e.target.value })
                     }
                     type="date"
@@ -483,7 +480,7 @@ export function SettingsPage() {
                   <Input
                     id="mbti"
                     maxLength={4}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({
                         ...formData,
                         mbti: e.target.value.toUpperCase(),
@@ -500,20 +497,20 @@ export function SettingsPage() {
                     id="lifespan"
                     max={120}
                     min={50}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      if (e.target.value === "") {
-                        setFormData({ ...formData, lifespan: 0 });
+                    onChange={e => {
+                      const value = parseInt(e.target.value, 10)
+                      if (e.target.value === '') {
+                        setFormData({ ...formData, lifespan: 0 })
                       } else if (Number.isNaN(value)) {
-                        return;
+                        return
                       } else {
-                        setFormData({ ...formData, lifespan: value });
+                        setFormData({ ...formData, lifespan: value })
                       }
                     }}
                     placeholder="请输入预期寿命（50-120 岁）"
                     step={1}
                     type="number"
-                    value={formData.lifespan || ""}
+                    value={formData.lifespan || ''}
                   />
                 </div>
               </div>
@@ -521,7 +518,7 @@ export function SettingsPage() {
               <div className="space-y-2">
                 <Label>核心价值观</Label>
                 <TagInput
-                  onChange={(values) => setFormData({ ...formData, values })}
+                  onChange={values => setFormData({ ...formData, values })}
                   placeholder="按回车添加..."
                   value={formData.values}
                 />
@@ -565,9 +562,9 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
-        );
+        )
 
-      case "ai":
+      case 'ai':
         return (
           <div className="space-y-6">
             <div className="space-y-1">
@@ -584,19 +581,19 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label>模型供应商</Label>
                   <div className="grid grid-cols-2 gap-3">
-                    {(["DeepSeek", "Doubao"] as const).map((p) => (
+                    {(['DeepSeek', 'Doubao'] as const).map(p => (
                       <Button
                         className={
                           aiFormData.provider === p
-                            ? "bg-apple-accent hover:bg-apple-accent/90"
-                            : ""
+                            ? 'bg-apple-accent hover:bg-apple-accent/90'
+                            : ''
                         }
                         key={p}
                         onClick={() =>
                           setAiFormData({ ...aiFormData, provider: p })
                         }
                         variant={
-                          aiFormData.provider === p ? "default" : "outline"
+                          aiFormData.provider === p ? 'default' : 'outline'
                         }
                       >
                         {p}
@@ -609,7 +606,7 @@ export function SettingsPage() {
                   <Label htmlFor="api-key">API 密钥</Label>
                   <Input
                     id="api-key"
-                    onChange={(e) =>
+                    onChange={e =>
                       setAiFormData({ ...aiFormData, apiKey: e.target.value })
                     }
                     placeholder="请输入您的 API Key"
@@ -622,7 +619,7 @@ export function SettingsPage() {
                   <Label htmlFor="model-name">模型名称</Label>
                   <Input
                     id="model-name"
-                    onChange={(e) =>
+                    onChange={e =>
                       setAiFormData({
                         ...aiFormData,
                         modelName: e.target.value,
@@ -693,9 +690,9 @@ export function SettingsPage() {
                     </div>
                     <div className="flex-1">
                       <div className="text-sm text-apple-textSec dark:text-white/60">
-                        {existingAIConfig.provider === "deepseek"
-                          ? "DeepSeek"
-                          : "Doubao"}{" "}
+                        {existingAIConfig.provider === 'deepseek'
+                          ? 'DeepSeek'
+                          : 'Doubao'}{' '}
                         · {existingAIConfig.model_name}
                       </div>
                       <div className="text-sm font-mono text-apple-textMain dark:text-white">
@@ -735,9 +732,9 @@ export function SettingsPage() {
               </div>
             )}
           </div>
-        );
+        )
 
-      case "appearance":
+      case 'appearance':
         return (
           <div className="space-y-6">
             <div className="space-y-1">
@@ -754,19 +751,19 @@ export function SettingsPage() {
                 <Label>主题模式</Label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { id: "light" as const, label: "浅色", icon: Sun },
-                    { id: "dark" as const, label: "深色", icon: Moon },
+                    { id: 'light' as const, label: '浅色', icon: Sun },
+                    { id: 'dark' as const, label: '深色', icon: Moon },
                     {
-                      id: "auto" as const,
-                      label: "跟随系统",
+                      id: 'auto' as const,
+                      label: '跟随系统',
                       icon: Smartphone,
                     },
-                  ].map((t) => (
+                  ].map(t => (
                     <Button
-                      className={`flex flex-col gap-2 h-24 ${state.theme === t.id ? "bg-apple-accent hover:bg-apple-accent/90" : ""}`}
+                      className={`flex flex-col gap-2 h-24 ${state.theme === t.id ? 'bg-apple-accent hover:bg-apple-accent/90' : ''}`}
                       key={t.id}
                       onClick={() => setTheme(t.id)}
-                      variant={state.theme === t.id ? "default" : "outline"}
+                      variant={state.theme === t.id ? 'default' : 'outline'}
                     >
                       <t.icon size={24} />
                       <span className="text-sm">{t.label}</span>
@@ -788,7 +785,7 @@ export function SettingsPage() {
                 </div>
                 <Switch
                   checked={state.systemConfig.notificationsEnabled}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={checked =>
                     updateState({
                       systemConfig: {
                         ...state.systemConfig,
@@ -800,9 +797,9 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
-        );
+        )
 
-      case "security":
+      case 'security':
         return (
           <div className="space-y-6">
             <div className="space-y-1">
@@ -844,7 +841,7 @@ export function SettingsPage() {
               <>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-apple-textMain dark:text-white font-medium">
-                    <KeyRound size={16} className="text-blue-500" />
+                    <KeyRound className="text-blue-500" size={16} />
                     PIN 验证开关
                   </div>
                   <div className="space-y-1">
@@ -858,11 +855,11 @@ export function SettingsPage() {
                         </div>
                       </div>
                       <Switch
-                        checked={getPinVerifySwitch("pin_verify_on_startup")}
-                        onCheckedChange={(checked) =>
+                        checked={getPinVerifySwitch('pin_verify_on_startup')}
+                        onCheckedChange={checked =>
                           updatePinVerifySwitch(
-                            "pin_verify_on_startup",
-                            checked,
+                            'pin_verify_on_startup',
+                            checked
                           )
                         }
                       />
@@ -881,12 +878,12 @@ export function SettingsPage() {
                       </div>
                       <Switch
                         checked={getPinVerifySwitch(
-                          "pin_verify_for_private_journal",
+                          'pin_verify_for_private_journal'
                         )}
-                        onCheckedChange={(checked) =>
+                        onCheckedChange={checked =>
                           updatePinVerifySwitch(
-                            "pin_verify_for_private_journal",
-                            checked,
+                            'pin_verify_for_private_journal',
+                            checked
                           )
                         }
                       />
@@ -905,12 +902,12 @@ export function SettingsPage() {
                       </div>
                       <Switch
                         checked={getPinVerifySwitch(
-                          "pin_verify_for_data_export",
+                          'pin_verify_for_data_export'
                         )}
-                        onCheckedChange={(checked) =>
+                        onCheckedChange={checked =>
                           updatePinVerifySwitch(
-                            "pin_verify_for_data_export",
-                            checked,
+                            'pin_verify_for_data_export',
+                            checked
                           )
                         }
                       />
@@ -929,12 +926,12 @@ export function SettingsPage() {
                       </div>
                       <Switch
                         checked={getPinVerifySwitch(
-                          "pin_verify_for_settings_change",
+                          'pin_verify_for_settings_change'
                         )}
-                        onCheckedChange={(checked) =>
+                        onCheckedChange={checked =>
                           updatePinVerifySwitch(
-                            "pin_verify_for_settings_change",
-                            checked,
+                            'pin_verify_for_settings_change',
+                            checked
                           )
                         }
                       />
@@ -944,7 +941,7 @@ export function SettingsPage() {
                 <Separator />
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-apple-textMain dark:text-white font-medium">
-                    <Shield size={16} className="text-purple-500" />
+                    <Shield className="text-purple-500" size={16} />
                     PIN 码管理
                   </div>
                   <div className="space-y-2">
@@ -954,7 +951,7 @@ export function SettingsPage() {
                         variant="outline"
                       >
                         <div className="flex items-center gap-3">
-                          <KeyRound size={16} className="text-purple-500" />
+                          <KeyRound className="text-purple-500" size={16} />
                           <span>修改 PIN 码</span>
                         </div>
                         <ChevronRight size={16} />
@@ -963,14 +960,14 @@ export function SettingsPage() {
                     <Button
                       className="w-full justify-between"
                       onClick={() =>
-                        toast.info("该功能暂不开放", {
-                          description: "删除 PIN 码功能将在后续版本中提供",
+                        toast.info('该功能暂不开放', {
+                          description: '删除 PIN 码功能将在后续版本中提供',
                         })
                       }
                       variant="outline"
                     >
                       <div className="flex items-center gap-3">
-                        <AlertTriangle size={16} className="text-destructive" />
+                        <AlertTriangle className="text-destructive" size={16} />
                         <span>删除 PIN 码</span>
                       </div>
                       <ChevronRight size={16} />
@@ -984,7 +981,7 @@ export function SettingsPage() {
 
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-apple-textMain dark:text-white font-medium">
-                <Database size={16} className="text-green-500" />
+                <Database className="text-green-500" size={16} />
                 数据管理
               </div>
               <div className="space-y-2">
@@ -995,7 +992,7 @@ export function SettingsPage() {
                   variant="outline"
                 >
                   <div className="flex items-center gap-3">
-                    <Download size={16} className="text-apple-accent" />
+                    <Download className="text-apple-accent" size={16} />
                     <span>导出备份数据</span>
                   </div>
                   <ChevronRight size={16} />
@@ -1008,7 +1005,7 @@ export function SettingsPage() {
                   variant="outline"
                 >
                   <div className="flex items-center gap-3">
-                    <Upload size={16} className="text-green-500" />
+                    <Upload className="text-green-500" size={16} />
                     <span>导入历史数据</span>
                   </div>
                   <ChevronRight size={16} />
@@ -1020,7 +1017,7 @@ export function SettingsPage() {
                   variant="outline"
                 >
                   <div className="flex items-center gap-3">
-                    <Trash2 size={16} className="text-destructive" />
+                    <Trash2 className="text-destructive" size={16} />
                     <span>清除系统数据</span>
                   </div>
                   <ChevronRight size={16} />
@@ -1028,12 +1025,12 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
-        );
+        )
 
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   return (
     <div className="h-screen flex">
@@ -1046,14 +1043,14 @@ export function SettingsPage() {
           </h1>
         </div>
         <nav className="space-y-1">
-          {navItems.map((item) => (
+          {navItems.map(item => (
             <button
-              key={item.id}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 activeTab === item.id
-                  ? "bg-apple-accent/10 text-apple-accent dark:bg-white/10 dark:text-white font-medium"
-                  : "text-apple-textSec dark:text-white/60 hover:text-apple-textMain dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+                  ? 'bg-apple-accent/10 text-apple-accent dark:bg-white/10 dark:text-white font-medium'
+                  : 'text-apple-textSec dark:text-white/60 hover:text-apple-textMain dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
               }`}
+              key={item.id}
               onClick={() => setActiveTab(item.id)}
             >
               <item.icon size={18} />
@@ -1098,7 +1095,7 @@ export function SettingsPage() {
             <div className="space-y-3">
               <Button
                 className="w-full justify-between"
-                onClick={() => handleExportFormatSelect("json")}
+                onClick={() => handleExportFormatSelect('json')}
                 variant="outline"
               >
                 <div className="flex items-center gap-3">
@@ -1116,7 +1113,7 @@ export function SettingsPage() {
 
               <Button
                 className="w-full justify-between"
-                onClick={() => handleExportFormatSelect("zip")}
+                onClick={() => handleExportFormatSelect('zip')}
                 variant="outline"
               >
                 <div className="flex items-center gap-3">
@@ -1150,27 +1147,27 @@ export function SettingsPage() {
         <PinLockScreen
           cancelButtonText="取消"
           description={
-            pinVerifyAction === "export"
-              ? "请输入 PIN 码以确认导出数据操作"
-              : "请输入 PIN 码以确认删除数据操作"
+            pinVerifyAction === 'export'
+              ? '请输入 PIN 码以确认导出数据操作'
+              : '请输入 PIN 码以确认删除数据操作'
           }
           error={unlockError}
           onCancel={() => {
-            setShowPinDialog(false);
-            setPinVerifyAction(null);
-            setUnlockError(undefined);
+            setShowPinDialog(false)
+            setPinVerifyAction(null)
+            setUnlockError(undefined)
           }}
-          onUnlock={async (pin) => {
-            setUnlockError(undefined);
-            const result = await verifyPin(pin);
+          onUnlock={async pin => {
+            setUnlockError(undefined)
+            const result = await verifyPin(pin)
             if (!result.success) {
-              setUnlockError(result.error || "PIN 验证失败");
-              return;
+              setUnlockError(result.error || 'PIN 验证失败')
+              return
             }
-            handlePinVerifySuccess();
+            handlePinVerifySuccess()
           }}
           showCancelButton={true}
-          title={pinVerifyAction === "export" ? "导出数据验证" : "删除数据验证"}
+          title={pinVerifyAction === 'export' ? '导出数据验证' : '删除数据验证'}
           unlockButtonText="验证并继续"
           unlockingText="验证中..."
         />
@@ -1233,7 +1230,7 @@ export function SettingsPage() {
                       删除中...
                     </>
                   ) : (
-                    "确认删除"
+                    '确认删除'
                   )}
                 </Button>
               </div>
@@ -1242,5 +1239,5 @@ export function SettingsPage() {
         </div>
       )}
     </div>
-  );
+  )
 }

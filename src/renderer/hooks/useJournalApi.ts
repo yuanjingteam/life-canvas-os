@@ -209,7 +209,6 @@ export function useJournalApi() {
       }
 
       const result = (await response.json()) as { data: JournalResponse }
-      toast.success('日记更新成功')
 
       return transformJournalToEntry(result.data)
     },

@@ -7,11 +7,7 @@ import { useApp } from '~/renderer/contexts/AppContext'
 import { request } from '~/renderer/api/config'
 import { usePinApi } from '~/renderer/hooks'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
-import {
-  getCache,
-  setCache,
-  CACHE_KEYS,
-} from '~/renderer/lib/cacheUtils'
+import { getCache, setCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 
 export function MainLayout() {
   const { state, unlock } = useApp()
@@ -130,8 +126,8 @@ export function MainLayout() {
         <div className="min-h-screen bg-apple-bgMain dark:bg-black text-apple-textMain dark:text-white flex overflow-hidden">
           <Sidebar
             activeTab={activeTab}
-            onTabChange={setActiveTab}
             isCollapsed={isSidebarCollapsed}
+            onTabChange={setActiveTab}
             onToggleCollapse={toggleSidebarCollapse}
           />
           <main className="flex-1 h-screen overflow-y-auto">
@@ -158,8 +154,8 @@ export function MainLayout() {
       {/* 侧边栏 */}
       <Sidebar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
         isCollapsed={isSidebarCollapsed}
+        onTabChange={setActiveTab}
         onToggleCollapse={toggleSidebarCollapse}
       />
 

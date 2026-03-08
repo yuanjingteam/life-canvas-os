@@ -54,7 +54,7 @@ export function InsightHistoryDetailPage() {
     const items = groupedInsights[category]
     if (items.length === 0) return { avgScore: 0, trend: 'stable' as const }
 
-    const scores = items.map((item) => {
+    const scores = items.map(item => {
       const systemType = item.category.toLowerCase()
       const score = insight.system_scores[systemType] || 0
       return score
@@ -89,8 +89,7 @@ export function InsightHistoryDetailPage() {
               洞察详情
             </h1>
             <p className="text-apple-textSec dark:text-white/40 mt-1">
-              生成于{' '}
-              {new Date(insight.generated_at_ts).toLocaleString('zh-CN')}
+              生成于 {new Date(insight.generated_at_ts).toLocaleString('zh-CN')}
             </p>
           </div>
         </div>
@@ -101,31 +100,31 @@ export function InsightHistoryDetailPage() {
         {/* 三个卡片横向排列 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <InsightCard
-            category="celebration"
-            items={groupedInsights.celebration}
-            systemScores={insight.system_scores}
             avgScore={getCategoryStats('celebration').avgScore}
-            trend={getCategoryStats('celebration').trend}
+            category="celebration"
             isHovered={hoveredCard === 'celebration'}
+            items={groupedInsights.celebration}
             onHover={setHoveredCard}
+            systemScores={insight.system_scores}
+            trend={getCategoryStats('celebration').trend}
           />
           <InsightCard
-            category="warning"
-            items={groupedInsights.warning}
-            systemScores={insight.system_scores}
             avgScore={getCategoryStats('warning').avgScore}
-            trend={getCategoryStats('warning').trend}
+            category="warning"
             isHovered={hoveredCard === 'warning'}
+            items={groupedInsights.warning}
             onHover={setHoveredCard}
+            systemScores={insight.system_scores}
+            trend={getCategoryStats('warning').trend}
           />
           <InsightCard
-            category="action"
-            items={groupedInsights.action}
-            systemScores={insight.system_scores}
             avgScore={0}
-            trend="stable"
+            category="action"
             isHovered={hoveredCard === 'action'}
+            items={groupedInsights.action}
             onHover={setHoveredCard}
+            systemScores={insight.system_scores}
+            trend="stable"
           />
         </div>
 
