@@ -43,6 +43,10 @@ import { useUserSettings } from "~/renderer/hooks/useUserSettings";
 import { toast } from "sonner";
 import { ScrollArea } from "~/renderer/components/ui/scroll-area";
 import { Separator } from "~/renderer/components/ui/separator";
+import {
+  removeCache,
+  CACHE_KEYS,
+} from "~/renderer/lib/cacheUtils";
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp();
@@ -362,9 +366,9 @@ export function SettingsPage() {
       await resetData();
 
       // 清空本地所有数据（但保留首次启动标记）
-      localStorage.removeItem("life-canvas-state");
-      localStorage.removeItem("journal-draft");
-      localStorage.removeItem("pin_status");
+      removeCache(CACHE_KEYS.LIFE_CANVAS_STATE);
+      removeCache(CACHE_KEYS.JOURNAL_DRAFT);
+      removeCache(CACHE_KEYS.PIN_STATUS);
 
       // 重置成功后刷新页面
       setTimeout(() => {

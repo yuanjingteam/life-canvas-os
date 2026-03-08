@@ -9,6 +9,7 @@ import {
 import type { AppState, DimensionType } from '~/shared/types'
 import { INITIAL_STATE } from '~/renderer/lib/constants'
 import { useUserApi } from '~/renderer/hooks/useUserApi'
+import { getCache, setCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 
 interface AppContextType {
   state: AppState
@@ -38,9 +39,9 @@ export function AppProvider({ children }: AppProviderProps) {
   // 从 localStorage 加载初始状态
   const [state, setState] = useState<AppState>(() => {
     try {
-      const saved = localStorage.getItem('life-canvas-state')
+      const saved = getCache<AppState>(CACHE_KEYS.LIFE_CANVAS_STATE)
       if (saved) {
-        return { ...INITIAL_STATE, ...JSON.parse(saved) }
+        return { ...INITIAL_STATE, ...saved }
       }
     } catch (_error) {
       // localStorage 访问失败（隐私模式或配额超满），使用初始状态
@@ -107,6 +108,15 @@ export function AppProvider({ children }: AppProviderProps) {
 
     return () => clearTimeout(timeout)
   }, [state.theme])
+
+  // 保存状态到 localStorage
+  useEffect(() => {
+    try {
+      setCache(CACHE_KEYS.LIFE_CANVAS_STATE, state)
+    } catch (_error) {
+      // localStorage 保存失败，忽略错误
+    }
+  }, [state])
 
   // 更新状态
   const updateState = (updates: Partial<AppState>) => {

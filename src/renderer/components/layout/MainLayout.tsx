@@ -7,13 +7,11 @@ import { useApp } from '~/renderer/contexts/AppContext'
 import { request } from '~/renderer/api/config'
 import { usePinApi } from '~/renderer/hooks'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
-
-/**
- * 首次启动标记
- * true = 首次使用（未设置过）
- * false = 已使用过（已设置过或已跳过）
- */
-const FIRST_LAUNCH_KEY = 'life-canvas-first-launch'
+import {
+  getCache,
+  setCache,
+  CACHE_KEYS,
+} from '~/renderer/lib/cacheUtils'
 
 export function MainLayout() {
   const { state, unlock } = useApp()
@@ -24,10 +22,21 @@ export function MainLayout() {
   const [unlockError, setUnlockError] = useState<string>()
   const [isVerifying, setIsVerifying] = useState(false)
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean>(() => {
-    const saved = localStorage.getItem(FIRST_LAUNCH_KEY)
+    const saved = getCache<string>(CACHE_KEYS.FIRST_LAUNCH)
     // null = 首次启动，false = 已使用过
     return saved === null
   })
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    const saved = getCache<string>(CACHE_KEYS.SIDEBAR_COLLAPSED)
+    return saved === 'true'
+  })
+
+  // 切换侧边栏伸缩状态
+  const toggleSidebarCollapse = () => {
+    const newState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newState)
+    setCache(CACHE_KEYS.SIDEBAR_COLLAPSED, String(newState))
+  }
 
   // 根据当前路径确定 activeTab
   const getActiveTab = () => {
@@ -81,7 +90,7 @@ export function MainLayout() {
 
   const handleSetupNow = () => {
     // 标记为非首次启动
-    localStorage.setItem(FIRST_LAUNCH_KEY, 'false')
+    setCache(CACHE_KEYS.FIRST_LAUNCH, 'false')
     setIsFirstLaunch(false)
     // 导航到 PIN 设置页面
     navigate('/settings/pin')
@@ -89,7 +98,7 @@ export function MainLayout() {
 
   const handleSetupLater = () => {
     // 标记为非首次启动
-    localStorage.setItem(FIRST_LAUNCH_KEY, 'false')
+    setCache(CACHE_KEYS.FIRST_LAUNCH, 'false')
     setIsFirstLaunch(false)
   }
 
@@ -119,7 +128,12 @@ export function MainLayout() {
     if (!state.isLocked) {
       return (
         <div className="min-h-screen bg-apple-bgMain dark:bg-black text-apple-textMain dark:text-white flex overflow-hidden">
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+          <Sidebar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={toggleSidebarCollapse}
+          />
           <main className="flex-1 h-screen overflow-y-auto">
             <div className="min-h-full max-w-7xl mx-auto px-10 py-12 flex flex-col">
               <Outlet />
@@ -142,7 +156,12 @@ export function MainLayout() {
       </div>
 
       {/* 侧边栏 */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
+      />
 
       {/* 主内容区域 */}
       <main className="flex-1 h-screen overflow-y-auto">

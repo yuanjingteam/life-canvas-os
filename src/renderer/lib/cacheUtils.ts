@@ -12,6 +12,10 @@ export const CACHE_KEYS = {
   DIMENSION_SCORES: 'dimension_scores',
   FUEL_BASELINE: 'fuel_baseline',
   AI_INSIGHTS: 'ai_insights',
+  FIRST_LAUNCH: 'life-canvas-first-launch',
+  SIDEBAR_COLLAPSED: 'life-canvas-sidebar-collapsed',
+  LIFE_CANVAS_STATE: 'life-canvas-state',
+  JOURNAL_DRAFT: 'journal-draft',
 } as const
 
 /**
@@ -20,7 +24,7 @@ export const CACHE_KEYS = {
 interface CacheItem<T> {
   data: T
   timestamp: number
-  expiresAt: number
+  expiresAt: number | null
 }
 
 /**
@@ -37,13 +41,13 @@ const DEFAULT_CACHE_EXPIRY_MINUTES = 5
 export function setCache<T>(
   key: string,
   data: T,
-  expiryMinutes: number = DEFAULT_CACHE_EXPIRY_MINUTES
+  expiryMinutes?: number
 ): void {
   try {
     const item: CacheItem<T> = {
       data,
       timestamp: Date.now(),
-      expiresAt: Date.now() + expiryMinutes * 60 * 1000,
+      expiresAt: expiryMinutes ? Date.now() + expiryMinutes * 60 * 1000 : null,
     }
     localStorage.setItem(key, JSON.stringify(item))
   } catch (error) {
@@ -66,7 +70,7 @@ export function getCache<T>(key: string): T | null {
     const item: CacheItem<T> = JSON.parse(itemStr)
 
     // 检查是否过期
-    if (Date.now() > item.expiresAt) {
+    if (item.expiresAt && Date.now() > item.expiresAt) {
       localStorage.removeItem(key)
       return null
     }
@@ -116,7 +120,7 @@ export function hasCache(key: string): boolean {
     const item: CacheItem<any> = JSON.parse(itemStr)
 
     // 检查是否过期
-    if (Date.now() > item.expiresAt) {
+    if (item.expiresAt && Date.now() > item.expiresAt) {
       localStorage.removeItem(key)
       return false
     }

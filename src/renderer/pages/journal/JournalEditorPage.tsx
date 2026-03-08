@@ -17,6 +17,7 @@ import { toast } from '~/renderer/lib/toast'
 import { pinApi } from '~/renderer/api'
 import { useJournalApi } from '~/renderer/hooks/useJournalApi'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
+import { setCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 
 export function JournalEditorPage() {
   const navigate = useNavigate()
@@ -112,7 +113,7 @@ export function JournalEditorPage() {
           linkedDimensions,
           isPrivate: false, // 暂时设为 false
         }
-        localStorage.setItem('journal-draft', JSON.stringify(draft))
+        setCache(CACHE_KEYS.JOURNAL_DRAFT, draft)
 
         // 跳转到 PIN 设置页
         setTimeout(() => {

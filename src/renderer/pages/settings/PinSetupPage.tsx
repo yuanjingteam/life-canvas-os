@@ -9,6 +9,7 @@ import { PIN_CONFIG } from '~/renderer/lib/pin'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
 import type { PinApiError } from '~/renderer/lib/pin'
+import { setCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 
 type Step = 'enter-pin' | 'confirm-pin'
 
@@ -64,7 +65,7 @@ export function PinSetupPage() {
       }
 
       // 标记为非首次启动
-      localStorage.setItem('life-canvas-first-launch', 'false')
+      setCache(CACHE_KEYS.FIRST_LAUNCH, 'false')
 
       // 更新 PIN 状态缓存
       await updatePinStatusAfterOperation()
