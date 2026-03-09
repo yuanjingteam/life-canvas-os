@@ -10,6 +10,7 @@ import {
   type MealDeviation,
   type MealDeviationCreate,
   type MealItem,
+  type ScoreHistoryItem,
 } from '~/renderer/api/diet'
 
 // 前端使用的偏离事件类型
@@ -245,6 +246,38 @@ export function useDietApi() {
     toast.success('删除成功')
   }, [])
 
+  /**
+   * 获取评分历史
+   */
+  const getScoreHistory = useCallback(async (days: number = 30): Promise<{
+    history: (ScoreHistoryItem & { timestamp: number })[]
+    currentScore: number
+  }> => {
+    const response = await dietApi.getScoreHistory(days)
+
+    if (!response.ok) {
+      const error = await response.json()
+      toast.error('获取评分历史失败', {
+        description: error.detail?.message || '请稍后重试',
+      })
+      throw error
+    }
+
+    const result = await response.json()
+    const data = result.data as { history: ScoreHistoryItem[]; current_score: number }
+
+    // 添加 timestamp 字段（从 created_at 字符串解析）
+    const historyWithTimestamp = data.history.map(item => ({
+      ...item,
+      timestamp: new Date(item.created_at).getTime(),
+    }))
+
+    return {
+      history: historyWithTimestamp,
+      currentScore: data.current_score,
+    }
+  }, [])
+
   return {
     getBaseline,
     updateBaseline,
@@ -252,5 +285,6 @@ export function useDietApi() {
     getDeviations,
     updateDeviation,
     deleteDeviation,
+    getScoreHistory,
   }
 }

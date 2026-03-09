@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -5,11 +6,36 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from 'lucide-react'
-import { useTheme } from 'next-themes'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = 'system' } = useTheme()
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
+
+  // 监听主题变化（与 AppContext 同步）
+  useEffect(() => {
+    const root = window.document.documentElement
+
+    const updateTheme = () => {
+      const isDark = root.classList.contains('dark')
+      setTheme(isDark ? 'dark' : 'light')
+    }
+
+    // 初始获取
+    updateTheme()
+
+    // 使用 MutationObserver 监听主题变化
+    const observer = new MutationObserver(mutations => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'class') {
+          updateTheme()
+        }
+      }
+    })
+
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+
+    return () => observer.disconnect()
+  }, [])
 
   return (
     <Sonner

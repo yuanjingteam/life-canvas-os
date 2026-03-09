@@ -11,6 +11,7 @@ import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
+import CharacterCount from '@tiptap/extension-character-count'
 import TurndownService from 'turndown'
 import { cn } from '~/renderer/lib/utils'
 
@@ -19,6 +20,7 @@ interface TiptapEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  maxLength?: number
 }
 
 // 创建 turndown 实例用于 HTML 转 Markdown
@@ -216,8 +218,10 @@ export const TiptapEditor = memo(function TiptapEditor({
   onChange,
   placeholder = '开始记录...',
   className,
+  maxLength = 20000,
 }: TiptapEditorProps) {
   const [isEditorReady, setIsEditorReady] = useState(false)
+  const [charCount, setCharCount] = useState(0)
   const lastContentRef = useRef('')
   const isUpdatingRef = useRef(false)
   const previousValueRef = useRef('')
@@ -255,6 +259,9 @@ export const TiptapEditor = memo(function TiptapEditor({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
       }),
+      CharacterCount.configure({
+        limit: maxLength,
+      }),
     ],
     content: markdownToHtml(value),
     editorProps: {
@@ -271,6 +278,8 @@ export const TiptapEditor = memo(function TiptapEditor({
         lastContentRef.current = markdown
         onChange(markdown)
       }
+      // 更新字符计数
+      setCharCount(editor.storage.characterCount.characters())
     },
     onSelectionUpdate: ({ editor }) => {
       if (isUpdatingRef.current) return
@@ -281,6 +290,8 @@ export const TiptapEditor = memo(function TiptapEditor({
         lastContentRef.current = markdown
         onChange(markdown)
       }
+      // 更新字符计数
+      setCharCount(editor.storage.characterCount.characters())
     },
     immediatelyRender: false,
     onCreate: () => {
@@ -513,6 +524,19 @@ export const TiptapEditor = memo(function TiptapEditor({
       {/* 编辑器内容区 */}
       <div className="flex-1 overflow-y-auto">
         <EditorContent editor={editor} />
+      </div>
+
+      {/* 底部字数统计 */}
+      <div className="flex-shrink-0 border-t border-apple-border dark:border-white/5 bg-white/50 dark:bg-white/5 p-2">
+        <div className="flex items-center justify-between text-xs text-apple-textSec dark:text-white/40">
+          <span>字数统计</span>
+          <span className={cn(
+            'font-medium',
+            charCount >= maxLength ? 'text-destructive' : ''
+          )}>
+            {charCount} / {maxLength}
+          </span>
+        </div>
       </div>
     </div>
   )

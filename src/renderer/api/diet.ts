@@ -42,6 +42,22 @@ export interface DeviationsListParams {
   page_size: number
 }
 
+export interface ScoreHistoryItem {
+  id: number
+  system_id: number
+  old_score: number
+  new_score: number
+  change_reason: string
+  related_id: number | null
+  created_at: string
+}
+
+export interface ScoreHistoryResponse {
+  system_type: string
+  current_score: number
+  history: ScoreHistoryItem[]
+}
+
 export const dietApi = {
   /**
    * 获取饮食基准
@@ -112,5 +128,13 @@ export const dietApi = {
     return apiRequest(`/api/diet/deviations/${deviationId}`, {
       method: 'DELETE',
     })
+  },
+
+  /**
+   * 获取评分历史
+   */
+  getScoreHistory(days?: number): Promise<Response> {
+    const url = `/api/diet/score-history?days=${days || 30}`
+    return apiRequest(url)
   },
 }
