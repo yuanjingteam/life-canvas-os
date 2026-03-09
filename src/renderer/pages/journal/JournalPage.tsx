@@ -50,7 +50,9 @@ export function JournalPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'unsaved' | 'saving' | 'saved'>('unsaved')
+  const [saveStatus, setSaveStatus] = useState<'unsaved' | 'saving' | 'saved'>(
+    'unsaved'
+  )
 
   // 选中的日记数据
   const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(
@@ -143,7 +145,11 @@ export function JournalPage() {
 
       // 检查是否需要 PIN 验证（每次查看私密日记都需要验证）
       // 需要同时满足：日记是私密的 + 已设置 PIN + 开启了私密日记验证开关
-      if (journal.isPrivate && pinStatus?.has_pin && pinStatus?.requirements?.private_journal) {
+      if (
+        journal.isPrivate &&
+        pinStatus?.has_pin &&
+        pinStatus?.requirements?.private_journal
+      ) {
         // 需要验证 PIN
         setVerifyJournalId(id)
         setNeedsPinVerify(true)

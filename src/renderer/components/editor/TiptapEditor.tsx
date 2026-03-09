@@ -530,10 +530,12 @@ export const TiptapEditor = memo(function TiptapEditor({
       <div className="flex-shrink-0 border-t border-apple-border dark:border-white/5 bg-white/50 dark:bg-white/5 p-2">
         <div className="flex items-center justify-between text-xs text-apple-textSec dark:text-white/40">
           <span>字数统计</span>
-          <span className={cn(
-            'font-medium',
-            charCount >= maxLength ? 'text-destructive' : ''
-          )}>
+          <span
+            className={cn(
+              'font-medium',
+              charCount >= maxLength ? 'text-destructive' : ''
+            )}
+          >
             {charCount} / {maxLength}
           </span>
         </div>

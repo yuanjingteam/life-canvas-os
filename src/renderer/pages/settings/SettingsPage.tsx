@@ -481,14 +481,16 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="mbti">MBTI 类型</Label>
                   <Select
-                    onValueChange={(value) => setFormData({ ...formData, mbti: value })}
+                    onValueChange={value =>
+                      setFormData({ ...formData, mbti: value })
+                    }
                     value={formData.mbti}
                   >
-                    <SelectTrigger id="mbti" className="w-full">
+                    <SelectTrigger className="w-full" id="mbti">
                       <SelectValue placeholder="请选择 MBTI 类型" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MBTI_TYPES.map((type) => (
+                      {MBTI_TYPES.map(type => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label} - {type.description}
                         </SelectItem>

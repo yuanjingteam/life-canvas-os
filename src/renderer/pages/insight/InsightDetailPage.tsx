@@ -5,10 +5,7 @@ import { Button } from '~/renderer/components/ui/button'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import { aiApi, type InsightResponse } from '~/renderer/api/ai'
 import { toast } from 'sonner'
-import {
-  getSystemName,
-  getSystemColor,
-} from '~/renderer/lib/insightUtils'
+import { getSystemName, getSystemColor } from '~/renderer/lib/insightUtils'
 import {
   InsightCard,
   SystemScoreChart,

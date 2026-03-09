@@ -113,50 +113,42 @@ export function ScoreHistoryChart({
         <AreaChart data={chartData}>
           <defs>
             <linearGradient id="scoreGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop
-                offset="5%"
-                stopColor="#f97316"
-                stopOpacity={0.3}
-              />
-              <stop
-                offset="95%"
-                stopColor="#f97316"
-                stopOpacity={0}
-              />
+              <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
-            strokeDasharray="3 3"
             stroke={isDarkMode ? 'rgba(255,255,255,0.05)' : '#efeff4'}
+            strokeDasharray="3 3"
             vertical={false}
           />
           <XAxis
+            axisLine={false}
             dataKey="date"
             tick={{
               fill: isDarkMode ? 'rgba(255,255,255,0.4)' : '#86868b',
               fontSize: 11,
             }}
-            tickLine={false}
-            axisLine={false}
             tickFormatter={formatDate}
+            tickLine={false}
           />
           <YAxis
+            axisLine={false}
             domain={[0, 100]}
             tick={{
               fill: isDarkMode ? 'rgba(255,255,255,0.4)' : '#86868b',
               fontSize: 11,
             }}
-            tickLine={false}
-            axisLine={false}
             tickFormatter={value => `${value}%`}
+            tickLine={false}
           />
           <Tooltip content={<CustomTooltip />} />
           <Area
             dataKey="score"
-            stroke="#f97316"
-            strokeWidth={2}
             fill="url(#scoreGradient)"
             name="一致性评分"
+            stroke="#f97316"
+            strokeWidth={2}
           />
         </AreaChart>
       </ResponsiveContainer>

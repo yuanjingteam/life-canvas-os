@@ -25,14 +25,22 @@ import { Label } from '~/renderer/components/ui/label'
 import { TagInput } from '~/renderer/components/ui/tag-input'
 import { Input } from '~/renderer/components/ui/input'
 import { Badge } from '~/renderer/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/renderer/components/ui/tabs'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '~/renderer/components/ui/tabs'
 import {
   useDietApi,
   type BaselineData,
   type Deviation,
 } from '~/renderer/hooks/useDietApi'
 import type { MealItem, ScoreHistoryItem } from '~/renderer/api/diet'
-import { ScoreHistoryChart, type ScoreHistoryDataPoint } from '~/renderer/components/diet/ScoreHistoryChart'
+import {
+  ScoreHistoryChart,
+  type ScoreHistoryDataPoint,
+} from '~/renderer/components/diet/ScoreHistoryChart'
 import { cn } from '~/renderer/lib/utils'
 
 const PAGE_SIZE = 10
@@ -43,10 +51,30 @@ const MEAL_ICONS: Record<string, any> = {
 }
 
 const DEVIATION_TYPES = [
-  { id: 'excess', label: '吃多了', icon: TrendingUp, color: 'text-red-500 bg-red-500/10' },
-  { id: 'deficit', label: '吃少了', icon: TrendingDown, color: 'text-blue-500 bg-blue-500/10' },
-  { id: 'snack', label: '加餐/宵夜', icon: Clock, color: 'text-orange-500 bg-orange-500/10' },
-  { id: 'other', label: '其他', icon: Minus, color: 'text-zinc-500 bg-zinc-500/10' },
+  {
+    id: 'excess',
+    label: '吃多了',
+    icon: TrendingUp,
+    color: 'text-red-500 bg-red-500/10',
+  },
+  {
+    id: 'deficit',
+    label: '吃少了',
+    icon: TrendingDown,
+    color: 'text-blue-500 bg-blue-500/10',
+  },
+  {
+    id: 'snack',
+    label: '加餐/宵夜',
+    icon: Clock,
+    color: 'text-orange-500 bg-orange-500/10',
+  },
+  {
+    id: 'other',
+    label: '其他',
+    icon: Minus,
+    color: 'text-zinc-500 bg-zinc-500/10',
+  },
 ]
 
 interface MealItemRowProps {
@@ -57,7 +85,13 @@ interface MealItemRowProps {
   onRemove: (index: number) => void
 }
 
-function MealItemRow({ item, index, editable, onUpdate, onRemove }: MealItemRowProps) {
+function MealItemRow({
+  item,
+  index,
+  editable,
+  onUpdate,
+  onRemove,
+}: MealItemRowProps) {
   return (
     <div className="flex items-center gap-2 p-2.5 bg-black/5 dark:bg-white/5 rounded-lg border border-apple-border dark:border-white/10">
       <div className="flex-1 flex items-center gap-2">
@@ -109,11 +143,28 @@ interface MealSectionProps {
   mealType: 'breakfast' | 'lunch' | 'dinner'
   editable: boolean
   onAddItem: (mealType: 'breakfast' | 'lunch' | 'dinner') => void
-  onUpdateItem: (mealType: 'breakfast' | 'lunch' | 'dinner', index: number, field: 'name' | 'amount', value: string) => void
-  onRemoveItem: (mealType: 'breakfast' | 'lunch' | 'dinner', index: number) => void
+  onUpdateItem: (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    index: number,
+    field: 'name' | 'amount',
+    value: string
+  ) => void
+  onRemoveItem: (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    index: number
+  ) => void
 }
 
-function MealSection({ title, icon: Icon, items, mealType, editable, onAddItem, onUpdateItem, onRemoveItem }: MealSectionProps) {
+function MealSection({
+  title,
+  icon: Icon,
+  items,
+  mealType,
+  editable,
+  onAddItem,
+  onUpdateItem,
+  onRemoveItem,
+}: MealSectionProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -146,7 +197,9 @@ function MealSection({ title, icon: Icon, items, mealType, editable, onAddItem, 
               item={item}
               key={`${mealType}-${index}`}
               onRemove={index => onRemoveItem(mealType, index)}
-              onUpdate={(index, field, value) => onUpdateItem(mealType, index, field, value)}
+              onUpdate={(index, field, value) =>
+                onUpdateItem(mealType, index, field, value)
+              }
             />
           ))
         )}
@@ -184,7 +237,9 @@ export function FuelSystemPage() {
 
   // 偏离记录状态
   const [deviations, setDeviations] = useState<Deviation[]>([])
-  const [displayedDeviations, setDisplayedDeviations] = useState<Deviation[]>([])
+  const [displayedDeviations, setDisplayedDeviations] = useState<Deviation[]>(
+    []
+  )
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
 
@@ -202,16 +257,19 @@ export function FuelSystemPage() {
   const loadScoreHistory = async (days: number) => {
     setIsLoadingHistory(true)
     try {
-      const { history, currentScore: scoreFromApi } = await getScoreHistory(days)
+      const { history, currentScore: scoreFromApi } =
+        await getScoreHistory(days)
 
       // 使用接口返回的 current_score
       setCurrentScore(scoreFromApi)
 
       // 按时间正序排列数据（从旧到新）
-      const sortedHistory = [...history].sort((a, b) => a.timestamp - b.timestamp)
+      const sortedHistory = [...history].sort(
+        (a, b) => a.timestamp - b.timestamp
+      )
 
       // 按天汇总数据，取每天的最后一个记录（最终分数）
-      const dailyMap = new Map<string, typeof history[0]>()
+      const dailyMap = new Map<string, (typeof history)[0]>()
       sortedHistory.forEach(item => {
         const dateKey = new Date(item.timestamp).toLocaleDateString('zh-CN')
         // 同一天的多条记录，只保留最后一条（分数最低的）
@@ -219,7 +277,9 @@ export function FuelSystemPage() {
       })
 
       // 转换为图表数据格式
-      const chartData: ScoreHistoryDataPoint[] = Array.from(dailyMap.values()).map(item => ({
+      const chartData: ScoreHistoryDataPoint[] = Array.from(
+        dailyMap.values()
+      ).map(item => ({
         date: new Date(item.timestamp).toLocaleDateString('zh-CN'),
         score: item.new_score,
         timestamp: item.timestamp,
@@ -308,7 +368,10 @@ export function FuelSystemPage() {
     })
   }
 
-  const removeMealItem = (mealType: 'breakfast' | 'lunch' | 'dinner', index: number) => {
+  const removeMealItem = (
+    mealType: 'breakfast' | 'lunch' | 'dinner',
+    index: number
+  ) => {
     setBaselineForm({
       ...baselineForm,
       [mealType]: baselineForm[mealType].filter((_, i) => i !== index),
@@ -339,7 +402,8 @@ export function FuelSystemPage() {
 
   const addQuickDeviation = async () => {
     const typeInfo = DEVIATION_TYPES.find(t => t.id === quickDeviationType)
-    const description = quickDescription.trim() || `${typeInfo?.label}：未填写具体描述`
+    const description =
+      quickDescription.trim() || `${typeInfo?.label}：未填写具体描述`
 
     try {
       const newDev = await createDeviation(description)
@@ -396,7 +460,10 @@ export function FuelSystemPage() {
     if (isLoadingMore || !hasMore) return
     setIsLoadingMore(true)
     const currentLength = displayedDeviations.length
-    const nextDeviations = deviations.slice(currentLength, currentLength + PAGE_SIZE)
+    const nextDeviations = deviations.slice(
+      currentLength,
+      currentLength + PAGE_SIZE
+    )
     setTimeout(() => {
       setDisplayedDeviations([...displayedDeviations, ...nextDeviations])
       setHasMore(currentLength + PAGE_SIZE < deviations.length)
@@ -455,19 +522,29 @@ export function FuelSystemPage() {
               </div>
             </div>
           </div>
-          <Tabs value={historyDays} onValueChange={(v) => setHistoryDays(v as any)} className="w-auto">
+          <Tabs
+            className="w-auto"
+            onValueChange={v => setHistoryDays(v as any)}
+            value={historyDays}
+          >
             <TabsList className="h-8">
-              <TabsTrigger className="text-xs h-7" value="7">7 天</TabsTrigger>
-              <TabsTrigger className="text-xs h-7" value="30">30 天</TabsTrigger>
-              <TabsTrigger className="text-xs h-7" value="90">90 天</TabsTrigger>
+              <TabsTrigger className="text-xs h-7" value="7">
+                7 天
+              </TabsTrigger>
+              <TabsTrigger className="text-xs h-7" value="30">
+                30 天
+              </TabsTrigger>
+              <TabsTrigger className="text-xs h-7" value="90">
+                90 天
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
         <ScoreHistoryChart
-          data={scoreHistory}
           currentScore={currentScore}
-          isLoading={isLoadingHistory}
+          data={scoreHistory}
           hasTodayData={hasTodayData}
+          isLoading={isLoadingHistory}
         />
       </GlassCard>
 
@@ -479,34 +556,34 @@ export function FuelSystemPage() {
           <GlassCard title="基准饮食">
             <div className="space-y-4">
               <MealSection
-                title="早餐"
+                editable={isEditingBaseline}
                 icon={Coffee}
                 items={baselineForm.breakfast}
                 mealType="breakfast"
-                editable={isEditingBaseline}
                 onAddItem={addMealItem}
-                onUpdateItem={updateMealItem}
                 onRemoveItem={removeMealItem}
+                onUpdateItem={updateMealItem}
+                title="早餐"
               />
               <MealSection
-                title="午餐"
+                editable={isEditingBaseline}
                 icon={Sun}
                 items={baselineForm.lunch}
                 mealType="lunch"
-                editable={isEditingBaseline}
                 onAddItem={addMealItem}
-                onUpdateItem={updateMealItem}
                 onRemoveItem={removeMealItem}
+                onUpdateItem={updateMealItem}
+                title="午餐"
               />
               <MealSection
-                title="晚餐"
+                editable={isEditingBaseline}
                 icon={Moon}
                 items={baselineForm.dinner}
                 mealType="dinner"
-                editable={isEditingBaseline}
                 onAddItem={addMealItem}
-                onUpdateItem={updateMealItem}
                 onRemoveItem={removeMealItem}
+                onUpdateItem={updateMealItem}
+                title="晚餐"
               />
               <div className="space-y-2 pt-2 border-t border-apple-border dark:border-white/5">
                 <Label className="text-sm font-semibold text-apple-textMain dark:text-white">
@@ -514,7 +591,9 @@ export function FuelSystemPage() {
                 </Label>
                 {isEditingBaseline ? (
                   <TagInput
-                    onChange={tags => setBaselineForm({ ...baselineForm, taste: tags })}
+                    onChange={tags =>
+                      setBaselineForm({ ...baselineForm, taste: tags })
+                    }
                     placeholder="添加口味标签"
                     tagClassName="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
                     value={baselineForm.taste}
@@ -522,12 +601,14 @@ export function FuelSystemPage() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {baselineForm.taste.length === 0 ? (
-                      <span className="text-xs text-apple-textTer dark:text-white/30">未设置</span>
+                      <span className="text-xs text-apple-textTer dark:text-white/30">
+                        未设置
+                      </span>
                     ) : (
                       baselineForm.taste.map((taste, i) => (
                         <Badge
-                          key={i}
                           className="text-xs px-2.5 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10"
+                          key={i}
                           variant="secondary"
                         >
                           {taste}
@@ -577,7 +658,6 @@ export function FuelSystemPage() {
           {/* 快速记录偏离 */}
           <GlassCard title="快速记录偏离">
             <div className="space-y-4">
-
               {/* 描述输入 */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -634,18 +714,32 @@ export function FuelSystemPage() {
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-apple-textTer dark:text-white/60">偏离次数</span>
+                <span className="text-sm text-apple-textTer dark:text-white/60">
+                  偏离次数
+                </span>
                 <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/10">
-                  {deviations.filter(d => d.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000).length} 次
+                  {
+                    deviations.filter(
+                      d => d.timestamp > Date.now() - 7 * 24 * 60 * 60 * 1000
+                    ).length
+                  }{' '}
+                  次
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-apple-textTer dark:text-white/60">当前评分</span>
-                <span className={cn(
-                  'text-sm font-bold',
-                  currentScore >= 80 ? 'text-green-500' :
-                  currentScore >= 60 ? 'text-orange-500' : 'text-red-500'
-                )}>
+                <span className="text-sm text-apple-textTer dark:text-white/60">
+                  当前评分
+                </span>
+                <span
+                  className={cn(
+                    'text-sm font-bold',
+                    currentScore >= 80
+                      ? 'text-green-500'
+                      : currentScore >= 60
+                        ? 'text-orange-500'
+                        : 'text-red-500'
+                  )}
+                >
                   {currentScore}%
                 </span>
               </div>
@@ -653,7 +747,7 @@ export function FuelSystemPage() {
           </GlassCard>
 
           {/* 偏离事件时间轴 - 带滚动条 */}
-          <GlassCard title="偏离事件时间轴" className="flex flex-col">
+          <GlassCard className="flex flex-col" title="偏离事件时间轴">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 max-h-[600px]">
               {displayedDeviations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-apple-textTer dark:text-white/20">
@@ -713,7 +807,9 @@ export function FuelSystemPage() {
                                       {dev.description}
                                     </div>
                                     <div className="text-xs text-apple-textTer dark:text-white/30 mt-0.5">
-                                      {new Date(dev.timestamp).toLocaleString('zh-CN')}
+                                      {new Date(dev.timestamp).toLocaleString(
+                                        'zh-CN'
+                                      )}
                                     </div>
                                   </>
                                 )}
