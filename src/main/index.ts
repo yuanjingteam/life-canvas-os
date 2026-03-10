@@ -1,6 +1,4 @@
 import { app, ipcMain, dialog } from 'electron'
-import { mkdirSync, existsSync, copyFileSync } from 'node:fs'
-import { join } from 'node:path'
 
 import { makeAppWithSingleInstanceLock } from '~/lib/electron-app/factories/app/instance'
 import { makeAppSetup } from '~/lib/electron-app/factories/app/setup'
@@ -47,26 +45,10 @@ makeAppWithSingleInstanceLock(async () => {
       return { canceled: true }
     }
 
+    // 直接返回用户选择的原始文件完整路径
     const sourcePath = result.filePaths[0]
-
-    // 创建临时导入目录
-    const tempImportDir = join(app.getPath('temp'), 'life-canvas-import')
-    if (!existsSync(tempImportDir)) {
-      mkdirSync(tempImportDir, { recursive: true })
-    }
-
-    // 复制文件到临时目录
-    const fileName = sourcePath.split('/').pop() || 'backup.zip'
-    const targetPath = join(tempImportDir, fileName)
-
-    try {
-      copyFileSync(sourcePath, targetPath)
-      console.log(`[IPC] File copied from ${sourcePath} to ${targetPath}`)
-      return { canceled: false, filePath: targetPath }
-    } catch (error) {
-      console.error('[IPC] Failed to copy file:', error)
-      throw error
-    }
+    console.log(`[IPC] Selected file: ${sourcePath}`)
+    return { canceled: false, filePath: sourcePath }
   })
 
   // 导出数据 IPC handler - 保存文件到指定路径

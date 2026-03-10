@@ -11,9 +11,20 @@ import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
-import CharacterCount from '@tiptap/extension-character-count'
-import TurndownService from 'turndown'
+// @ts-expect-error tiptap-markdown 类型定义问题
+import { Markdown } from 'tiptap-markdown'
 import { cn } from '~/renderer/lib/utils'
+import { PasteMarkdown } from './extensions/PasteMarkdown'
+
+/**
+ * 从编辑器内容获取 Markdown，保留空行
+ *
+ * 使用 tiptap-markdown 的 getMarkdown() 方法序列化整个文档
+ */
+function getMarkdownWithEmptyLines(editor: any): string {
+  // 使用 tiptap-markdown 提供的 getMarkdown 方法
+  return editor.storage.markdown.getMarkdown()
+}
 
 interface TiptapEditorProps {
   value: string
@@ -21,196 +32,6 @@ interface TiptapEditorProps {
   placeholder?: string
   className?: string
   maxLength?: number
-}
-
-// 创建 turndown 实例用于 HTML 转 Markdown
-const turndownService = new TurndownService({
-  headingStyle: 'atx',
-  codeBlockStyle: 'fenced',
-  emDelimiter: '*',
-  strongDelimiter: '**',
-  bulletListMarker: '-',
-})
-
-// 自定义规则：标题
-turndownService.addRule('headings', {
-  filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-  replacement: (content: string, node: Node) => {
-    const el = node as HTMLElement
-    const tagName = el.tagName.toLowerCase()
-    const level = parseInt(tagName.charAt(1), 10)
-    const prefix = '#'.repeat(level)
-    return `${prefix} ${content.trim()}\n\n`
-  },
-})
-
-// 自定义规则：列表项（确保正确的缩进）
-turndownService.addRule('listItems', {
-  filter: 'li',
-  replacement: (content: string) => {
-    const trimmed = content.trim()
-    if (!trimmed) return ''
-    // 检查是否是任务列表项
-    if (trimmed.includes('[ ]') || trimmed.includes('[x]')) {
-      return `- ${trimmed}\n`
-    }
-    return `- ${trimmed}\n`
-  },
-})
-
-// 自定义规则：有序列表
-turndownService.addRule('orderedList', {
-  filter: 'ol',
-  replacement: (content: string) => {
-    // 将内容按行分割，为每一项添加序号
-    const items = content
-      .split('\n')
-      .filter(line => line.trim().startsWith('-'))
-    return `${items
-      .map((item, index) => {
-        const text = item.replace(/^- /, '')
-        return `${index + 1}. ${text}`
-      })
-      .join('\n')}\n\n`
-  },
-})
-
-// 自定义规则：段落
-turndownService.addRule('paragraphs', {
-  filter: 'p',
-  replacement: (content: string) => {
-    const trimmed = content.trim()
-    if (!trimmed) return ''
-    return `${trimmed}\n\n`
-  },
-})
-
-// 自定义规则：任务列表项
-turndownService.addRule('taskListItems', {
-  filter: (node: Node) => {
-    const el = node as HTMLElement
-    return (
-      el.nodeName === 'LI' &&
-      el.hasAttribute('data-type') &&
-      el.getAttribute('data-type') === 'taskItem'
-    )
-  },
-  replacement: (content: string, node: Node) => {
-    const el = node as HTMLElement
-    const isChecked = el.hasAttribute('data-checked')
-    const checkbox = isChecked ? '[x]' : '[ ]'
-    return `- ${checkbox} ${content.trim()}\n`
-  },
-})
-
-// 简单的 Markdown 转 HTML 函数
-function markdownToHtml(markdown: string): string {
-  if (!markdown) return '<p></p>'
-
-  let html = markdown
-
-  // 处理代码块（优先处理，避免内部内容被其他规则干扰）
-  html = html.replace(
-    /```(\w*)\n([\s\S]*?)```/g,
-    '<pre><code class="language-$1">$2</code></pre>'
-  )
-
-  // 处理行内代码
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
-
-  // 处理标题（# 后面必须有空格）
-  html = html.replace(/^### +(.*$)/gim, '<h3>$1</h3>')
-  html = html.replace(/^## +(.*$)/gim, '<h2>$1</h2>')
-  html = html.replace(/^# +(.*$)/gim, '<h1>$1</h1>')
-
-  // 处理粗体和斜体
-  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>')
-  html = html.replace(/~~(.*?)~~/g, '<s>$1</s>')
-  html = html.replace(/__(.*?)__/g, '<u>$1</u>')
-
-  // 处理引用
-  html = html.replace(/^> +(.*$)/gim, '<blockquote>$1</blockquote>')
-
-  // 处理链接
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-
-  // 处理图片
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
-
-  // 处理水平线
-  html = html.replace(/^---$/gim, '<hr />')
-
-  // 处理任务列表
-  html = html.replace(
-    /^- \[([ x])\] +(.*$)/gim,
-    '<li data-type="taskItem" data-checked="$1" === \'x\'"><div>$2</div></li>'
-  )
-
-  // 处理无序列表（- * + 后面有空格）
-  html = html.replace(/^[-*+] +(.*$)/gim, '<li>$1</li>')
-
-  // 处理有序列表（数字 +. 后面有空格）
-  html = html.replace(/^\d+\. +(.*$)/gim, '<li>$1</li>')
-
-  // 将连续的 li 包裹在 ul/ol 中
-  html = html.replace(/(<li[^>]*>.*?<\/li>\n?)+/g, match => {
-    // 检查是否包含任务列表项
-    if (match.includes('data-type="taskItem"')) {
-      return `<ul data-type="taskList">${match}</ul>`
-    }
-    return `<ul>${match}</ul>`
-  })
-
-  // 处理段落 - 按双换行分隔
-  const blocks = html.split(/\n\n+/)
-  html = blocks
-    .map(block => {
-      const trimmed = block.trim()
-      if (!trimmed) return ''
-      // 如果已经是块级元素，不再包裹
-      if (
-        trimmed.startsWith('<h') ||
-        trimmed.startsWith('<ul') ||
-        trimmed.startsWith('<ol') ||
-        trimmed.startsWith('<blockquote') ||
-        trimmed.startsWith('<pre') ||
-        trimmed.startsWith('<li') ||
-        trimmed.startsWith('<hr')
-      ) {
-        return trimmed
-      }
-      // 将单换行转为 <br>
-      return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`
-    })
-    .join('')
-
-  // 清理多余的空段落
-  html = html.replace(/<p><\/p>/g, '')
-  html = html.replace(/<p>\s*<\/p>/g, '')
-
-  return html
-}
-
-// 简单的 HTML 转 Markdown 函数（作为 turndown 的补充）
-function htmlToMarkdown(html: string): string {
-  if (!html) return ''
-  const markdown = turndownService.turndown(html)
-  // 清理 turndown 添加的多余反斜杠（保留必要的转义）
-  // 移除 `>`, `#`, `-`, 数字 +. 前面的反斜杠
-  return markdown
-    .replace(/\\>/g, '>')
-    .replace(/\\#/g, '#')
-    .replace(/\\[-*+]/g, (match, offset, string) => {
-      // 只移除列表标记前的反斜杠（在行首）
-      const prevChar = offset > 0 ? string[offset - 1] : ''
-      if (prevChar === '' || prevChar === '\n') {
-        return match.charAt(1)
-      }
-      return match
-    })
-    .replace(/\\(\d+)\./g, '$1.')
 }
 
 export const TiptapEditor = memo(function TiptapEditor({
@@ -228,6 +49,14 @@ export const TiptapEditor = memo(function TiptapEditor({
 
   const editor = useEditor({
     extensions: [
+      Markdown.configure({
+        html: true, // 允许 HTML 解析
+        tightLists: false, // 宽松列表，保留空行
+        tightListClass: 'tight',
+        bulletListMarker: '-',
+        linkify: false,
+        breaks: true, // 将换行符转换为硬换行
+      }),
       StarterKit.configure({
         bulletList: {
           keepMarks: true,
@@ -259,11 +88,8 @@ export const TiptapEditor = memo(function TiptapEditor({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
       }),
-      CharacterCount.configure({
-        limit: maxLength,
-      }),
+      PasteMarkdown, // 启用 Markdown 粘贴解析
     ],
-    content: markdownToHtml(value),
     editorProps: {
       attributes: {
         class: 'tiptap focus:outline-none min-h-full max-w-none',
@@ -272,26 +98,25 @@ export const TiptapEditor = memo(function TiptapEditor({
     onUpdate: ({ editor }) => {
       if (isUpdatingRef.current) return
 
-      const html = editor.getHTML()
-      const markdown = htmlToMarkdown(html)
+      // 使用自定义函数获取 Markdown 内容（保留空行）
+      const markdown = getMarkdownWithEmptyLines(editor)
       if (markdown !== lastContentRef.current) {
         lastContentRef.current = markdown
         onChange(markdown)
       }
-      // 更新字符计数
-      setCharCount(editor.storage.characterCount.characters())
+      // 更新字符计数（使用 Markdown 源码长度，包括换行符）
+      setCharCount(markdown.length)
     },
     onSelectionUpdate: ({ editor }) => {
       if (isUpdatingRef.current) return
-      // 选择变化时也触发更新，确保气泡菜单正确显示
-      const html = editor.getHTML()
-      const markdown = htmlToMarkdown(html)
+      // 选择变化时也触发更新
+      const markdown = getMarkdownWithEmptyLines(editor)
       if (markdown !== lastContentRef.current) {
         lastContentRef.current = markdown
         onChange(markdown)
       }
-      // 更新字符计数
-      setCharCount(editor.storage.characterCount.characters())
+      // 更新字符计数（使用 Markdown 源码长度，包括换行符）
+      setCharCount(markdown.length)
     },
     immediatelyRender: false,
     onCreate: () => {
@@ -306,21 +131,21 @@ export const TiptapEditor = memo(function TiptapEditor({
     // 标记正在更新，防止触发 onUpdate
     isUpdatingRef.current = true
 
-    const currentHtml = editor.getHTML()
-    const expectedHtml = markdownToHtml(value)
+    const currentMarkdown = getMarkdownWithEmptyLines(editor)
 
-    // 只有当内容真正不同时才更新（避免干扰用户输入）
+    // 只有当内容真正不同时才更新
     if (
-      currentHtml !== expectedHtml &&
+      currentMarkdown !== value &&
       value !== '' &&
       value !== previousValueRef.current
     ) {
-      editor.commands.setContent(expectedHtml)
+      // tiptap-markdown 会自动解析 Markdown 内容
+      editor.commands.setContent(value)
       previousValueRef.current = value
       lastContentRef.current = value
     }
 
-    // 延迟重置标志，让编辑器有时间处理
+    // 延迟重置标志
     setTimeout(() => {
       isUpdatingRef.current = false
     }, 50)
