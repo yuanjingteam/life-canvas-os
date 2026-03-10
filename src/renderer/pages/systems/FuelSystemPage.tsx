@@ -8,13 +8,10 @@ import {
   Check,
   X,
   TrendingUp,
-  TrendingDown,
-  Minus,
   Coffee,
   Sun,
   Moon,
   Sparkles,
-  Clock,
   Calendar,
 } from 'lucide-react'
 import { useApp } from '~/renderer/contexts/AppContext'
@@ -49,33 +46,6 @@ const MEAL_ICONS: Record<string, any> = {
   lunch: Sun,
   dinner: Moon,
 }
-
-const DEVIATION_TYPES = [
-  {
-    id: 'excess',
-    label: '吃多了',
-    icon: TrendingUp,
-    color: 'text-red-500 bg-red-500/10',
-  },
-  {
-    id: 'deficit',
-    label: '吃少了',
-    icon: TrendingDown,
-    color: 'text-blue-500 bg-blue-500/10',
-  },
-  {
-    id: 'snack',
-    label: '加餐/宵夜',
-    icon: Clock,
-    color: 'text-orange-500 bg-orange-500/10',
-  },
-  {
-    id: 'other',
-    label: '其他',
-    icon: Minus,
-    color: 'text-zinc-500 bg-zinc-500/10',
-  },
-]
 
 interface MealItemRowProps {
   item: MealItem
@@ -244,7 +214,6 @@ export function FuelSystemPage() {
   const [hasMore, setHasMore] = useState(false)
 
   // 快速记录偏离
-  const [quickDeviationType, setQuickDeviationType] = useState('other')
   const [quickDescription, setQuickDescription] = useState('')
 
   // 编辑状态
@@ -401,12 +370,12 @@ export function FuelSystemPage() {
   }
 
   const addQuickDeviation = async () => {
-    const typeInfo = DEVIATION_TYPES.find(t => t.id === quickDeviationType)
-    const description =
-      quickDescription.trim() || `${typeInfo?.label}：未填写具体描述`
+    if (!quickDescription.trim()) {
+      return
+    }
 
     try {
-      const newDev = await createDeviation(description)
+      const newDev = await createDeviation(quickDescription.trim())
       const newDeviations = [newDev, ...deviations]
       setDeviations(newDeviations)
       setDisplayedDeviations(newDeviations.slice(0, PAGE_SIZE))
@@ -501,7 +470,7 @@ export function FuelSystemPage() {
             一致性评分
           </div>
           <div className="text-3xl font-black text-apple-textMain dark:text-white mt-1">
-            {currentScore}%
+            {currentScore}
           </div>
         </GlassCard>
       </header>
@@ -699,7 +668,7 @@ export function FuelSystemPage() {
               {/* 提示信息 */}
               <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs">
                 <AlertCircle size={16} />
-                <span>每次记录会使一致性评分降低 5%</span>
+                <span>每次记录会使一致性评分降低 5 分</span>
               </div>
             </div>
           </GlassCard>
@@ -740,7 +709,7 @@ export function FuelSystemPage() {
                         : 'text-red-500'
                   )}
                 >
-                  {currentScore}%
+                  {currentScore}
                 </span>
               </div>
             </div>

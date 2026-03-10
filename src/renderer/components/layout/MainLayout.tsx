@@ -169,7 +169,7 @@ export function MainLayout() {
 
       {/* 主内容区域 */}
       <main className="flex-1 h-screen overflow-y-auto">
-        <div className="min-h-full max-w-7xl mx-auto px-10 py-12 flex flex-col">
+        <div className="h-full max-w-7xl mx-auto px-10 py-12 flex flex-col">
           <Outlet />
         </div>
       </main>
