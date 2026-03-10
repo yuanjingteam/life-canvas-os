@@ -43,7 +43,15 @@ import { useUserSettings } from '~/renderer/hooks/useUserSettings'
 import { toast } from 'sonner'
 import { ScrollArea } from '~/renderer/components/ui/scroll-area'
 import { Separator } from '~/renderer/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/renderer/components/ui/select'
 import { removeCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
+import { MBTI_TYPES } from '~/renderer/lib/constants'
 
 export function SettingsPage() {
   const { state, updateState, setTheme } = useApp()
@@ -273,12 +281,7 @@ export function SettingsPage() {
     }
 
     if (!formData.mbti || formData.mbti.trim() === '') {
-      toast.error('请输入 MBTI 类型')
-      return
-    }
-
-    if (!/^[A-Za-z]{4}$/.test(formData.mbti)) {
-      toast.error('MBTI 类型必须为 4 个字母（例如：INTJ）')
+      toast.error('请选择 MBTI 类型')
       return
     }
 
@@ -477,19 +480,28 @@ export function SettingsPage() {
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="mbti">MBTI 类型</Label>
-                  <Input
-                    id="mbti"
-                    maxLength={4}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        mbti: e.target.value.toUpperCase(),
-                      })
+                  <Select
+                    onValueChange={value =>
+                      setFormData({ ...formData, mbti: value })
                     }
-                    placeholder="例如 INTJ"
-                    type="text"
                     value={formData.mbti}
-                  />
+                  >
+                    <SelectTrigger className="w-full" id="mbti">
+                      <SelectValue placeholder="请选择 MBTI 类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MBTI_TYPES.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label} - {type.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.mbti && (
+                    <p className="text-xs text-apple-textTer dark:text-white/40">
+                      已选择：{formData.mbti}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lifespan">预期寿命 (岁)</Label>

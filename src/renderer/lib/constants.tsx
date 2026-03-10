@@ -126,6 +126,26 @@ export const NAV_ITEMS = [
   { id: 'timeline', label: '时间轴', icon: <History className="w-5 h-5" /> },
 ]
 
+// 16 种 MBTI 人格类型
+export const MBTI_TYPES = [
+  { value: 'INTJ', label: 'INTJ', description: '建筑师型' },
+  { value: 'INTP', label: 'INTP', description: '逻辑学家型' },
+  { value: 'ENTJ', label: 'ENTJ', description: '指挥官型' },
+  { value: 'ENTP', label: 'ENTP', description: '辩论家型' },
+  { value: 'INFJ', label: 'INFJ', description: '提倡者型' },
+  { value: 'INFP', label: 'INFP', description: '调停者型' },
+  { value: 'ENFJ', label: 'ENFJ', description: '主人公型' },
+  { value: 'ENFP', label: 'ENFP', description: '竞选者型' },
+  { value: 'ISTJ', label: 'ISTJ', description: '物流师型' },
+  { value: 'ISFJ', label: 'ISFJ', description: '守卫者型' },
+  { value: 'ESTJ', label: 'ESTJ', description: '总经理型' },
+  { value: 'ESFJ', label: 'ESFJ', description: '执政官型' },
+  { value: 'ISTP', label: 'ISTP', description: '鉴赏家型' },
+  { value: 'ISFP', label: 'ISFP', description: '探险家型' },
+  { value: 'ESTP', label: 'ESTP', description: '企业家型' },
+  { value: 'ESFP', label: 'ESFP', description: '表演者型' },
+]
+
 const _now = Date.now()
 const _oneDay = 24 * 60 * 60 * 1000
 

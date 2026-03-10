@@ -9,6 +9,7 @@ import {
   X,
   LockKeyhole,
   Save,
+  CheckCircle2,
 } from 'lucide-react'
 import { Button } from '~/renderer/components/ui/button'
 import { Badge } from '~/renderer/components/ui/badge'
@@ -49,6 +50,9 @@ export function JournalPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'unsaved' | 'saving' | 'saved'>(
+    'unsaved'
+  )
 
   // 选中的日记数据
   const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(
@@ -65,6 +69,9 @@ export function JournalPage() {
   const [needsPinVerify, setNeedsPinVerify] = useState(false)
   const [verifyJournalId, setVerifyJournalId] = useState<string | null>(null)
   const [unlockError, setUnlockError] = useState<string | undefined>()
+
+  // 展开/收起状态 - 记录哪些日期是展开的
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
 
   // 自动保存相关
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -88,15 +95,35 @@ export function JournalPage() {
 
     try {
       setIsLoading(true)
+      // 获取 PIN 状态
+      await fetchPinStatus()
       const result = await listJournals({ page: 1, page_size: PAGE_SIZE })
       setJournals(result.items)
+      // 默认展开所有日期
+      const dates = new Set(
+        result.items.map(item => formatDateCN(item.timestamp))
+      )
+      setExpandedDates(dates)
     } catch (error) {
       console.error('Failed to load journals:', error)
     } finally {
       setIsLoading(false)
       isLoadingRef.current = false
     }
-  }, [listJournals])
+  }, [listJournals, fetchPinStatus])
+
+  // 切换日期的展开/收起状态
+  const toggleDateExpand = useCallback((date: string) => {
+    setExpandedDates(prev => {
+      const next = new Set(prev)
+      if (next.has(date)) {
+        next.delete(date)
+      } else {
+        next.add(date)
+      }
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     loadJournals()
@@ -109,18 +136,28 @@ export function JournalPage() {
       await doSaveJournal(selectedJournalId, true)
     }
 
+    // 清除之前的选中状态，确保每次都是新的选择
+    setSelectedJournal(null)
+    setSelectedJournalId(null)
+
     try {
       const journal = await getJournal(id)
 
-      // 检查是否需要 PIN 验证
-      if (journal.isPrivate && pinStatus?.has_pin) {
+      // 检查是否需要 PIN 验证（每次查看私密日记都需要验证）
+      // 需要同时满足：日记是私密的 + 已设置 PIN + 开启了私密日记验证开关
+      if (
+        journal.isPrivate &&
+        pinStatus?.has_pin &&
+        pinStatus?.requirements?.private_journal
+      ) {
         // 需要验证 PIN
         setVerifyJournalId(id)
         setNeedsPinVerify(true)
-        setSelectedJournalId(id)
+        setUnlockError(undefined)
         return
       }
 
+      // 非私密日记或没有 PIN 码，直接加载
       setSelectedJournal(journal)
       setSelectedJournalId(id)
       setEditTitle(journal.title || '未命名')
@@ -130,6 +167,7 @@ export function JournalPage() {
       setEditDimensions(journal.linkedDimensions || [])
       setEditIsPrivate(journal.isPrivate || false)
       setHasUnsavedChanges(false)
+      setSaveStatus('unsaved')
       saveNeededRef.current = false
       saveDataRef.current = null
     } catch (error) {
@@ -166,6 +204,7 @@ export function JournalPage() {
       setEditDimensions(created.linkedDimensions || [])
       setEditIsPrivate(created.isPrivate || false)
       setHasUnsavedChanges(false)
+      setSaveStatus('unsaved')
       saveNeededRef.current = false
       saveDataRef.current = null
       toast.success('日记已创建，开始编辑吧')
@@ -190,6 +229,7 @@ export function JournalPage() {
 
     try {
       setIsSaving(true)
+      setSaveStatus('saving')
       const entry = {
         title: dataToSave.title.trim() || '未命名',
         content: dataToSave.content,
@@ -205,18 +245,21 @@ export function JournalPage() {
       setJournals(prev => prev.map(j => (j.id === id ? updated : j)))
       setSelectedJournal(updated)
 
-      if (!silent) {
-        toast.success('日记已保存')
-      }
-
       setHasUnsavedChanges(false)
       saveNeededRef.current = false
       saveDataRef.current = null
+      setSaveStatus('saved')
+
+      // 2 秒后恢复为未保存状态（视觉上）
+      setTimeout(() => {
+        setSaveStatus('unsaved')
+      }, 2000)
     } catch (error) {
       console.error('Failed to save journal:', error)
       if (!silent) {
         toast.error('保存失败，请重试')
       }
+      setSaveStatus('unsaved')
     } finally {
       setIsSaving(false)
     }
@@ -277,24 +320,28 @@ export function JournalPage() {
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEditTitle(e.target.value)
     setHasUnsavedChanges(true)
+    setSaveStatus('unsaved')
   }
 
   // 处理内容变化
   const handleContentChange = (val?: string) => {
     setEditContent(val || '')
     setHasUnsavedChanges(true)
+    setSaveStatus('unsaved')
   }
 
   // 处理情绪变化
   const handleMoodChange = (mood: MoodType) => {
     setEditMood(mood)
     setHasUnsavedChanges(true)
+    setSaveStatus('unsaved')
   }
 
   // 处理标签变化
   const handleTagsChange = (tags: string[]) => {
     setEditTags(tags)
     setHasUnsavedChanges(true)
+    setSaveStatus('unsaved')
   }
 
   // 处理维度变化
@@ -303,12 +350,14 @@ export function JournalPage() {
       prev.includes(type) ? prev.filter(d => d !== type) : [...prev, type]
     )
     setHasUnsavedChanges(true)
+    setSaveStatus('unsaved')
   }
 
   // 处理私密开关变化
   const handleIsPrivateChange = (checked: boolean) => {
     setEditIsPrivate(checked)
     setHasUnsavedChanges(true)
+    setSaveStatus('unsaved')
   }
 
   // PIN 验证成功后的回调
@@ -317,6 +366,7 @@ export function JournalPage() {
       try {
         const journal = await getJournal(verifyJournalId)
         setSelectedJournal(journal)
+        setSelectedJournalId(verifyJournalId)
         setEditTitle(journal.title || '未命名')
         setEditContent(journal.content)
         setEditMood(journal.mood || 'good')
@@ -327,10 +377,14 @@ export function JournalPage() {
         setVerifyJournalId(null)
         setUnlockError(undefined)
         setHasUnsavedChanges(false)
+        setSaveStatus('unsaved')
         saveNeededRef.current = false
         saveDataRef.current = null
       } catch (error) {
         console.error('Failed to load journal after PIN verify:', error)
+        setNeedsPinVerify(false)
+        setVerifyJournalId(null)
+        setSelectedJournalId(null)
       }
     }
   }
@@ -382,9 +436,12 @@ export function JournalPage() {
         description="请输入 PIN 码以查看此私密日记"
         error={unlockError}
         onCancel={() => {
+          // 取消验证时清空选中状态，返回日记列表
           setNeedsPinVerify(false)
           setVerifyJournalId(null)
           setUnlockError(undefined)
+          setSelectedJournal(null)
+          setSelectedJournalId(null)
         }}
         onUnlock={async pin => {
           setUnlockError(undefined)
@@ -458,48 +515,63 @@ export function JournalPage() {
               </p>
             </div>
           ) : (
-            sortedDates.map(date => (
-              <div className="mb-4" key={date}>
-                <div className="flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider">
-                  <ChevronDown className="w-3.5 h-3.5" />
-                  {date}
-                </div>
-                <div className="space-y-0.5">
-                  {groupedJournals[date].map(journal => {
-                    const MoodIcon = getMoodIcon(journal.mood || 'good')
-                    const isSelected = selectedJournalId === journal.id
+            sortedDates.map(date => {
+              const isExpanded = expandedDates.has(date)
+              return (
+                <div className="mb-4" key={date}>
+                  <button
+                    className="w-full flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                    onClick={() => toggleDateExpand(date)}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    <span className="flex-1 text-left">{date}</span>
+                    <span className="text-[10px] opacity-60">
+                      {groupedJournals[date].length}
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="space-y-0.5">
+                      {groupedJournals[date].map(journal => {
+                        const MoodIcon = getMoodIcon(journal.mood || 'good')
+                        const isSelected = selectedJournalId === journal.id
 
-                    return (
-                      <button
-                        className={cn(
-                          'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all group',
-                          isSelected
-                            ? 'bg-apple-accent/10 dark:bg-white/10 text-apple-textMain dark:text-white'
-                            : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
-                        )}
-                        key={journal.id}
-                        onClick={() => loadJournalDetail(journal.id)}
-                      >
-                        {MoodIcon && (
-                          <MoodIcon
+                        return (
+                          <button
                             className={cn(
-                              'w-4 h-4 flex-shrink-0',
-                              getMoodColor(journal.mood || 'good')
+                              'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all group',
+                              isSelected
+                                ? 'bg-apple-accent/10 dark:bg-white/10 text-apple-textMain dark:text-white'
+                                : 'text-apple-textSec dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'
                             )}
-                          />
-                        )}
-                        <span className="flex-1 truncate text-sm">
-                          {journal.title || '未命名'}
-                        </span>
-                        {journal.isPrivate && (
-                          <LockKeyhole className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
-                        )}
-                      </button>
-                    )
-                  })}
+                            key={journal.id}
+                            onClick={() => loadJournalDetail(journal.id)}
+                          >
+                            {MoodIcon && (
+                              <MoodIcon
+                                className={cn(
+                                  'w-4 h-4 flex-shrink-0',
+                                  getMoodColor(journal.mood || 'good')
+                                )}
+                              />
+                            )}
+                            <span className="flex-1 truncate text-sm">
+                              {journal.title || '未命名'}
+                            </span>
+                            {journal.isPrivate && (
+                              <LockKeyhole className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
@@ -518,12 +590,26 @@ export function JournalPage() {
                   type="text"
                   value={editTitle}
                 />
-                {hasUnsavedChanges && (
-                  <span className="text-xs text-apple-textSec dark:text-white/40 flex items-center gap-1">
-                    <Save className="w-3 h-3 animate-pulse" />
-                    保存中...
-                  </span>
-                )}
+                <span className="text-xs text-apple-textSec dark:text-white/40 flex items-center gap-1 min-w-[80px]">
+                  {saveStatus === 'saving' && (
+                    <>
+                      <Save className="w-3 h-3 animate-pulse" />
+                      保存中...
+                    </>
+                  )}
+                  {saveStatus === 'saved' && (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      <span className="text-green-500">已保存</span>
+                    </>
+                  )}
+                  {saveStatus === 'unsaved' && hasUnsavedChanges && (
+                    <>
+                      <Save className="w-3 h-3 animate-pulse" />
+                      保存中...
+                    </>
+                  )}
+                </span>
               </div>
             </div>
 
