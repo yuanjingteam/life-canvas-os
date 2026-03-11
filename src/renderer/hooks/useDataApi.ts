@@ -37,7 +37,7 @@ export function useDataApi() {
           description: '正在从服务器获取数据...',
         })
 
-        // 使用 fetch 调用后端 API（这样可以在开发者工具的网络面板中看到请求）
+        // 使用 fetch 调用后端 API
         const response = await dataApi.exportData(format)
 
         if (!response.ok) {
@@ -49,9 +49,43 @@ export function useDataApi() {
           throw error
         }
 
-        // 读取响应数据为 Uint8Array（浏览器兼容）
-        const arrayBuffer = await response.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
+        // 解析 JSON 响应获取文件路径
+        const jsonResponse = await response.json()
+        const exportPath = jsonResponse.data?.export_path
+
+        if (!exportPath) {
+          toast.error('导出失败', {
+            id: 'export-progress',
+            description: '未获取到文件路径',
+          })
+          throw new Error('No export path in response')
+        }
+
+        // 读取文件数据
+        let uint8Array: Uint8Array
+
+        // 检查是否在 Electron 环境中（生产模式）
+        const IS_DEV = process.env.NODE_ENV === 'development'
+        if (!IS_DEV && window.App?.fileOps?.downloadFile) {
+          // 生产模式：使用 IPC 读取文件
+          const result = await window.App.fileOps.downloadFile(exportPath)
+          if (!result || !result.success) {
+            throw new Error(
+              `Failed to read file: ${result?.error || 'Unknown error'}`
+            )
+          }
+          // Node.js Buffer 可以直接转换为 Uint8Array
+          uint8Array = new Uint8Array(result.data)
+        } else {
+          // 开发模式：使用 HTTP 下载
+          const downloadResponse = await dataApi.downloadFile(exportPath)
+          if (!downloadResponse.ok) {
+            const errorText = await downloadResponse.text()
+            console.error('Download error:', errorText)
+            throw new Error('Download failed')
+          }
+          uint8Array = new Uint8Array(await downloadResponse.arrayBuffer())
+        }
 
         // 更新提示
         toast.loading('正在导出数据...', {

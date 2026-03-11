@@ -632,18 +632,25 @@ export function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="model-name">模型名称</Label>
-                  <Input
-                    id="model-name"
-                    onChange={e =>
+                  <Select
+                    defaultValue={aiFormData.modelName}
+                    onValueChange={value =>
                       setAiFormData({
                         ...aiFormData,
-                        modelName: e.target.value,
+                        modelName: value,
                       })
                     }
-                    placeholder="deepseek-chat"
-                    type="text"
                     value={aiFormData.modelName}
-                  />
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="选择模型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="deepseek-chat">
+                        deepseek-chat
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-3">
@@ -1113,7 +1120,7 @@ export function SettingsPage() {
                 onClick={() => handleExportFormatSelect('json')}
                 variant="outline"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 my-3">
                   <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
                     <Database size={20} />
                   </div>
@@ -1131,7 +1138,7 @@ export function SettingsPage() {
                 onClick={() => handleExportFormatSelect('zip')}
                 variant="outline"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 my-3">
                   <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
                     <Download size={20} />
                   </div>

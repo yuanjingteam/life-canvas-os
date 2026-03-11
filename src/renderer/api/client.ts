@@ -22,7 +22,6 @@ export async function apiRequest(
   if (!IS_DEV && window.App?.request) {
     const method = (options?.method || 'GET').toUpperCase()
     const body = options?.body ? JSON.parse(options.body as string) : {}
-
     // 使用通用 api_call action
     const action = `${method.toLowerCase()}_${endpoint.replace(/^\//, '').replace(/\//g, '_')}`
 
@@ -31,6 +30,7 @@ export async function apiRequest(
       ...body,
     })
 
+    console.log('[API] IPC Request:', { action, ...body })
     console.log('[API] IPC Result:', result)
 
     // 修复：IPC 返回的数据可能包含 { success: true, data: ... } 的包装

@@ -22,6 +22,14 @@ export const dataApi = {
   },
 
   /**
+   * 下载文件（通过路径）
+   */
+  downloadFile(path: string): Promise<Response> {
+    const encodedPath = encodeURIComponent(path)
+    return apiRequest(`/api/data/download?path=${encodedPath}`)
+  },
+
+  /**
    * 导入数据（通过文件路径）
    * 使用 Electron IPC 选择文件并获取路径
    */

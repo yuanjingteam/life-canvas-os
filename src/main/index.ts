@@ -91,6 +91,21 @@ makeAppWithSingleInstanceLock(async () => {
     }
   )
 
+  // 下载文件 IPC handler - 读取文件并返回二进制数据
+  ipcMain.handle('file:download', async (_event, filePath: string) => {
+    try {
+      const { readFile } = require('node:fs/promises')
+      const fileData = await readFile(filePath)
+      return { success: true, data: fileData }
+    } catch (error) {
+      console.error('[IPC] Failed to read file:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
+    }
+  })
+
   // 通用 API 请求处理程序 - 转发到 Python 后端
   ipcMain.handle(
     'api:request',

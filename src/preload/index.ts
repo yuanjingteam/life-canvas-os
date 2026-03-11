@@ -16,6 +16,9 @@ const API = {
     // 保存导出数据到指定路径
     saveExportData: (fileData: Uint8Array, format: 'json' | 'zip') =>
       ipcRenderer.invoke('file:save-export-data', fileData, format),
+    // 下载文件（读取文件并返回二进制数据）
+    downloadFile: (filePath: string) =>
+      ipcRenderer.invoke('file:download', filePath),
   },
   // 通用 API 请求（通过 IPC 转发到 Python 后端）
   request: (action: string, params: any = {}) =>

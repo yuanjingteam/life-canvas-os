@@ -15,6 +15,13 @@ export interface FileOpsAPI {
     fileData: Uint8Array,
     format: 'json' | 'zip'
   ): Promise<{ canceled: boolean; filePath?: string; success?: boolean }>
+
+  /**
+   * 下载文件（读取文件并返回二进制数据）
+   */
+  downloadFile(
+    filePath: string
+  ): Promise<{ success: boolean; data?: Buffer; error?: string }>
 }
 
 export interface AppAPI {
