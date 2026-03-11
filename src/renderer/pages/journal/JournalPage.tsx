@@ -10,7 +10,9 @@ import {
   LockKeyhole,
   Save,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '~/renderer/components/ui/button'
 import { Badge } from '~/renderer/components/ui/badge'
 import { Switch } from '~/renderer/components/ui/switch'
@@ -27,6 +29,7 @@ import { toast } from '~/renderer/lib/toast'
 import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 import { usePinApi } from '~/renderer/hooks'
+import { GlassCard } from '~/renderer/components/GlassCard'
 
 const PAGE_SIZE = 50
 const AUTO_SAVE_DELAY = 1000 // 自动保存延迟（毫秒）
@@ -36,6 +39,7 @@ interface GroupedJournal {
 }
 
 export function JournalPage() {
+  const navigate = useNavigate()
   const { listJournals, createJournal, getJournal, updateJournal } =
     useJournalApi()
   const { pinStatus, fetchPinStatus } = usePinStatus()
@@ -69,6 +73,9 @@ export function JournalPage() {
   const [needsPinVerify, setNeedsPinVerify] = useState(false)
   const [verifyJournalId, setVerifyJournalId] = useState<string | null>(null)
   const [unlockError, setUnlockError] = useState<string | undefined>()
+
+  // PIN 设置提示弹窗
+  const [showPinSetupDialog, setShowPinSetupDialog] = useState(false)
 
   // 展开/收起状态 - 记录哪些日期是展开的
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
@@ -355,6 +362,12 @@ export function JournalPage() {
 
   // 处理私密开关变化
   const handleIsPrivateChange = (checked: boolean) => {
+    // 如果开启私密功能，检查是否已设置 PIN
+    if (checked && !pinStatus?.has_pin) {
+      // 未设置 PIN，显示提示弹窗
+      setShowPinSetupDialog(true)
+      return
+    }
     setEditIsPrivate(checked)
     setHasUnsavedChanges(true)
     setSaveStatus('unsaved')
@@ -735,6 +748,65 @@ export function JournalPage() {
           </div>
         )}
       </div>
+
+      {/* PIN 设置提示弹窗 */}
+      {showPinSetupDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <GlassCard className="!p-6 max-w-md w-full">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center">
+                <LockKeyhole className="text-purple-500" size={40} />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-apple-textMain dark:text-white mb-2">
+                  需要设置 PIN 码
+                </h3>
+                <p className="text-sm text-apple-textSec dark:text-white/60">
+                  开启日记私密功能前需要先设置 PIN 码
+                </p>
+              </div>
+
+              <div className="w-full bg-purple-500/5 dark:bg-purple-500/5 border border-purple-500/20 dark:border-purple-500/10 rounded-xl p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle
+                    className="text-purple-500 shrink-0 mt-0.5"
+                    size={16}
+                  />
+                  <div className="text-left space-y-1">
+                    <p className="text-xs font-semibold text-purple-500 dark:text-purple-400">
+                      PIN 码作用
+                    </p>
+                    <div className="text-xs text-apple-textSec dark:text-white/60 space-y-1">
+                      <p>• 保护私密日记不被他人查看</p>
+                      <p>• 只有输入正确的 PIN 码才能访问私密内容</p>
+                      <p>• PIN 码为 6 位数字</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full pt-2">
+                <Button
+                  onClick={() => setShowPinSetupDialog(false)}
+                  variant="outline"
+                >
+                  取消
+                </Button>
+                <Button
+                  className="flex-1 bg-purple-500 hover:bg-purple-600"
+                  onClick={() => {
+                    navigate('/settings?tab=security')
+                    setShowPinSetupDialog(false)
+                  }}
+                >
+                  去设置
+                </Button>
+              </div>
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   )
 }

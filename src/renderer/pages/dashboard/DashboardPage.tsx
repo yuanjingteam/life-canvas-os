@@ -1,20 +1,40 @@
-import { useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Heart } from 'lucide-react'
 import { useApp } from '~/renderer/contexts/AppContext'
 import { DIMENSIONS } from '~/renderer/lib/constants'
+import type { DimensionType } from '~/shared/types'
 import { RadarChartCard } from '~/renderer/components/canvas/RadarChartCard'
 import { AIInsightCard } from '~/renderer/components/canvas/AIInsightCard'
 import { LifeProgressCard } from '~/renderer/components/canvas/LifeProgressCard'
 import { GlassCard } from '~/renderer/components/GlassCard'
+import { useSystemsApi } from '~/renderer/hooks/useSystemsApi'
 
 export function DashboardPage() {
-  const { state } = useApp()
+  const { state, updateDimension } = useApp()
+  const { getSystemsScores } = useSystemsApi()
+  const isInitializedRef = useRef(false)
+  const [averageScore, setAverageScore] = useState(0)
 
-  // 计算平衡总分
-  const overallBalance = useMemo(() => {
-    const values = Object.values(state.dimensions)
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
-  }, [state.dimensions])
+  // 加载八大系统评分
+  useEffect(() => {
+    if (isInitializedRef.current) return
+    isInitializedRef.current = true
+
+    const loadSystemsScores = async () => {
+      try {
+        const { scores, averageScore: avgScore } = await getSystemsScores()
+        // 更新各个维度的分数
+        Object.entries(scores).forEach(([type, score]) => {
+          updateDimension(type as DimensionType, score)
+        })
+        setAverageScore(avgScore)
+      } catch (_error) {
+        // 忽略错误，使用默认分数
+      }
+    }
+
+    loadSystemsScores()
+  }, [getSystemsScores, updateDimension])
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -34,7 +54,7 @@ export function DashboardPage() {
             平衡总分
           </div>
           <div className="text-5xl font-black text-apple-textMain dark:text-white">
-            {overallBalance}%
+            {averageScore}
           </div>
         </div>
       </header>

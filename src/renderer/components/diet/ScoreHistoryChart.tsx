@@ -60,7 +60,7 @@ export function ScoreHistoryChart({
             {data.isCurrent ? '当前评分' : formatDate(data.timestamp)}
           </p>
           <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-            评分：{data.score}%
+            评分：{data.score}
           </p>
         </div>
       )
@@ -139,7 +139,7 @@ export function ScoreHistoryChart({
               fill: isDarkMode ? 'rgba(255,255,255,0.4)' : '#86868b',
               fontSize: 11,
             }}
-            tickFormatter={value => `${value}%`}
+            tickFormatter={value => value.toString()}
             tickLine={false}
           />
           <Tooltip content={<CustomTooltip />} />

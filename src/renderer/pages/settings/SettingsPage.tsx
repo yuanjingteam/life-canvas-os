@@ -22,7 +22,7 @@ import {
   Settings,
   FileText,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '~/renderer/contexts/AppContext'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import { Input } from '~/renderer/components/ui/input'
@@ -54,6 +54,7 @@ import { removeCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 import { MBTI_TYPES } from '~/renderer/lib/constants'
 
 export function SettingsPage() {
+  const [searchParams] = useSearchParams()
   const { state, updateState, setTheme } = useApp()
   const { getUserProfile, updateUserProfile } = useUserApi()
   const { getAIConfig, saveAIConfig } = useAiApi()
@@ -83,7 +84,9 @@ export function SettingsPage() {
   >(null)
   const [unlockError, setUnlockError] = useState<string | undefined>(undefined)
   const [aiConfigLoaded, setAiConfigLoaded] = useState(false)
-  const [activeTab, setActiveTab] = useState('profile')
+  const [activeTab, setActiveTab] = useState(() => {
+    return searchParams.get('tab') || 'profile'
+  })
   const [isEditingAI, setIsEditingAI] = useState(false) // 是否处于编辑模式
   const [existingAIConfig, setExistingAIConfig] = useState<any>(null) // 已存在的 AI 配置
   const isLoadingProfileRef = useRef(false)
