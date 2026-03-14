@@ -1,0 +1,62 @@
+/**
+ * Agent 组件全局样式
+ */
+
+/* 消息气泡样式 */
+.message-agent {
+  background: rgba(245, 245, 247, 0.8);
+  color: #1d1d1f;
+  border-radius: 20px 20px 20px 8px;
+}
+
+.dark .message-agent {
+  background: rgba(44, 44, 46, 0.8);
+  color: #ffffff;
+}
+
+/* 输入框焦点效果 */
+.input-focus:focus {
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+}
+
+/* 加载动画 - 打字指示器 */
+.typing-indicator span {
+  animation: typing 1.4s infinite both;
+  background: #86868b;
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+  margin: 0 2px;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* 光晕效果 */
+.shadow-glow-accent {
+  box-shadow: 0 0 20px rgba(10, 132, 255, 0.3);
+}
+
+/* 按钮点击效果 */
+.btn-click:active {
+  transform: scale(0.96);
+}

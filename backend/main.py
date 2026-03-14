@@ -61,6 +61,7 @@ if IS_DEV:
     from backend.api.insights import router as insights_router
     from backend.api.data import router as data_router
     from backend.api.timeline import router as timeline_router
+    from backend.api.agent import router as agent_router
 
     # 导入中间件和异常处理
     from backend.core.middleware import (
@@ -156,6 +157,7 @@ if IS_DEV:
     app.include_router(insights_router, tags=["insights"])
     app.include_router(data_router, tags=["data-management"])
     app.include_router(timeline_router, tags=["timeline"])
+    app.include_router(agent_router, tags=["agent"])
 
     @app.get("/")
     async def root():
@@ -205,6 +207,7 @@ else:
                     from backend.api.insights import router as insights_router
                     from backend.api.data import router as data_router
                     from backend.api.timeline import router as timeline_router
+                    from backend.api.agent import router as agent_router
                     from backend.core.exceptions import setup_exception_handlers
 
                     # 创建 FastAPI 应用
@@ -237,6 +240,7 @@ else:
                     _app.include_router(insights_router, tags=["insights"])
                     _app.include_router(data_router, tags=["data-management"])
                     _app.include_router(timeline_router, tags=["timeline"])
+                    _app.include_router(agent_router, tags=["agent"])
 
         return _app
 

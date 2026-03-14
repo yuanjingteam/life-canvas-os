@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Canvas OS - Agent UI 设计预览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            apple: {
+              bgMain: '#fafafc',
+              bgSidebar: '#f5f5f7',
+              bg2: '#f0f0f5',
+              bgHover: '#e8e8ed',
+              textMain: '#1d1d1f',
+              textSec: '#86868b',
+              textTer: '#aeaeb2',
+              accent: '#0a84ff',
+              border: '#efeff4',
+              success: '#34c759',
+              error: '#ff3b30',
+              warning: '#ff9500',
+            }
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.5rem',
+          },
+          boxShadow: {
+            'apple-soft': '0 2px 8px rgba(0, 0, 0, 0.05)',
+            'apple-lg': '0 10px 40px rgba(0, 0, 0, 0.08)',
+            'glow-accent': '0 0 20px rgba(10, 132, 255, 0.3)',
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'bounce-slow': 'bounce 2s infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Apple UI 毛玻璃效果 */
+    .liquid-glass {
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid #efeff4;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-glass {
+      background: rgba(245, 245, 247, 0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+    }
+
+    .dark .liquid-glass {
+      background: rgba(30, 30, 30, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .dark .sidebar-glass {
+      background: rgba(28, 28, 30, 0.85);
+    }
+
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 动画 */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(10, 132, 255, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(10, 132, 255, 0.5); }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-5deg); }
+      75% { transform: rotate(5deg); }
+    }
+
+    .animate-in { animation: fadeIn 0.5s ease-out; }
+    .zoom-in { animation: zoomIn 0.3s ease-out; }
+    .slide-up { animation: slideUp 0.4s ease-out; }
+    .animate-glow { animation: glow 2s ease-in-out infinite; }
+    .animate-wiggle { animation: wiggle 0.5s ease-in-out; }
+
+    /* 悬浮球脉动效果 */
+    .floating-ball-pulse {
+      position: relative;
+    }
+    .floating-ball-pulse::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(10, 132, 255, 0.4) 0%, transparent 70%);
+      animation: pulse-slow 2s ease-in-out infinite;
+    }
+
+    /* 消息气泡样式 */
+    .message-user {
+      background: linear-gradient(135deg, #0a84ff 0%, #0066cc 100%);
+      color: white;
+      border-radius: 20px 20px 8px 20px;
+    }
+    .message-agent {
+      background: rgba(245, 245, 247, 0.8);
+      color: #1d1d1f;
+      border-radius: 20px 20px 20px 8px;
+    }
+    .dark .message-agent {
+      background: rgba(44, 44, 46, 0.8);
+      color: #ffffff;
+    }
+
+    /* 输入框焦点效果 */
+    .input-focus:focus {
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+    }
+
+    /* 按钮点击效果 */
+    .btn-click:active {
+      transform: scale(0.96);
+    }
+
+    /* 风险等级颜色 */
+    .risk-low { color: #34c759; }
+    .risk-medium { color: #ff9500; }
+    .risk-high { color: #ff3b30; }
+    .risk-critical { color: #dc1c1c; }
+
+    /* 加载动画 */
+    .typing-indicator span {
+      animation: typing 1.4s infinite both;
+      background: #86868b;
+      border-radius: 50%;
+      display: inline-block;
+      height: 8px;
+      width: 8px;
+      margin: 0 2px;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-apple-bgMain dark:bg-black min-h-screen">
+  <!-- 顶部导航栏 -->
+  <nav class="liquid-glass border-b border-apple-border sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center">
+            <i data-lucide="bot" class="text-white w-6 h-6"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-apple-textMain dark:text-white">Life Canvas OS Agent</h1>
+            <p class="text-xs text-apple-textSec dark:text-white/40">AI 智能助手 UI 设计预览</p>
+          </div>
+        </div>
+        <button id="themeToggle" class="btn-click p-2 rounded-lg hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all">
+          <i data-lucide="moon" class="w-5 h-5 text-apple-textSec dark:text-white/60"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-6 py-8 space-y-12">
+    <!-- 设计说明 -->
+    <section class="space-y-4">
+      <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">设计概述</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="liquid-glass rounded-2xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-apple-accent/10 flex items-center justify-center">
+              <i data-lucide="palette" class="w-5 h-5 text-apple-accent"></i>
+            </div>
+            <h3 class="font-semibold text-apple-textMain dark:text-white">设计风格</h3>
+          </div>
+          <p class="text-sm text-apple-textSec dark:text-white/40">采用 Apple 风格的毛玻璃效果，搭配简洁的现代设计语言，保持与应用整体风格一致。</p>
+        </div>
+        <div class="liquid-glass rounded-2xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-apple-success/10 flex items-center justify-center">
+              <i data-lucide="accessibility" class="w-5 h-5 text-apple-success"></i>
+            </div>
+            <h3 class="font-semibold text-apple-textMain dark:text-white">用户体验</h3>
+          </div>
+          <p class="text-sm text-apple-textSec dark:text-white/40">悬浮球入口不打断用户流程，快速唤醒 Agent，保持当前上下文。</p>
+        </div>
+        <div class="liquid-glass rounded-2xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-full bg-apple-warning/10 flex items-center justify-center">
+              <i data-lucide="shield-check" class="w-5 h-5 text-apple-warning"></i>
+            </div>
+            <h3 class="font-semibold text-apple-textMain dark:text-white">安全机制</h3>
+          </div>
+          <p class="text-sm text-apple-textSec dark:text-white/40">四级风险分级，高风险操作二次确认，保障用户数据安全。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. 悬浮球组件 -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-apple-accent text-white font-bold text-sm">1</span>
+        <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">悬浮球 (Floating Ball)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- 默认状态 -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider">默认状态</h3>
+          <div class="relative h-64 rounded-3xl bg-gradient-to-br from-apple-bgSidebar to-apple-bg2 border border-apple-border overflow-hidden">
+            <!-- 模拟应用界面 -->
+            <div class="absolute inset-0 p-6">
+              <div class="space-y-3">
+                <div class="h-4 w-3/4 bg-apple-border/50 rounded"></div>
+                <div class="h-4 w-1/2 bg-apple-border/50 rounded"></div>
+                <div class="h-20 bg-apple-border/30 rounded-xl"></div>
+              </div>
+            </div>
+            <!-- 悬浮球 -->
+            <div class="absolute bottom-6 right-6 floating-ball-pulse">
+              <button class="w-14 h-14 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shadow-apple-lg hover:shadow-glow-accent transition-all btn-click group">
+                <i data-lucide="sparkles" class="w-7 h-7 text-white group-hover:scale-110 transition-transform"></i>
+              </button>
+            </div>
+          </div>
+          <p class="text-xs text-apple-textSec dark:text-white/40">
+            固定在右下角，脉动光晕效果，点击展开聊天面板
+          </p>
+        </div>
+
+        <!-- 展开状态 -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider">展开状态</h3>
+          <div class="relative h-64 rounded-3xl bg-gradient-to-br from-apple-bgSidebar to-apple-bg2 border border-apple-border overflow-hidden">
+            <!-- 模拟应用界面 -->
+            <div class="absolute inset-0 p-6 opacity-30">
+              <div class="space-y-3">
+                <div class="h-4 w-3/4 bg-apple-border/50 rounded"></div>
+                <div class="h-4 w-1/2 bg-apple-border/50 rounded"></div>
+                <div class="h-20 bg-apple-border/30 rounded-xl"></div>
+              </div>
+            </div>
+            <!-- 聊天面板 -->
+            <div class="absolute bottom-6 right-6 w-80 zoom-in">
+              <div class="liquid-glass rounded-2xl shadow-apple-lg overflow-hidden">
+                <!-- 头部 -->
+                <div class="px-4 py-3 border-b border-apple-border flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center">
+                      <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div>
+                      <div class="text-sm font-semibold text-apple-textMain dark:text-white">AI 助手</div>
+                      <div class="text-xs text-apple-success flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-apple-success animate-pulse"></span>
+                        在线
+                      </div>
+                    </div>
+                  </div>
+                  <button class="p-1.5 rounded-lg hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all">
+                    <i data-lucide="x" class="w-4 h-4 text-apple-textSec"></i>
+                  </button>
+                </div>
+                <!-- 消息区域 -->
+                <div class="h-48 p-4 space-y-3 overflow-y-auto">
+                  <div class="text-center text-xs text-apple-textSec dark:text-white/40 py-8">
+                    <i data-lucide="message-circle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                    开始与 AI 助手对话...
+                  </div>
+                </div>
+                <!-- 输入区域 -->
+                <div class="p-3 border-t border-apple-border">
+                  <div class="flex items-center gap-2">
+                    <input type="text" placeholder="帮我写一篇日记..." class="flex-1 px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none transition-all">
+                    <button class="p-2 rounded-xl bg-apple-accent text-white btn-click">
+                      <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-apple-textSec dark:text-white/40">
+            展开后显示聊天面板，包含对话历史和输入区域
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 聊天面板完整状态 -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-apple-accent text-white font-bold text-sm">2</span>
+        <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">聊天面板 (Chat Panel)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- 对话示例 -->
+        <div class="liquid-glass rounded-2xl shadow-apple-lg overflow-hidden">
+          <!-- 头部 -->
+          <div class="px-4 py-3 border-b border-apple-border flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center">
+                <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-apple-textMain dark:text-white">AI 助手</div>
+                <div class="text-xs text-apple-success flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-apple-success animate-pulse"></span>
+                  在线
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="p-1.5 rounded-lg hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all" title="清除对话">
+                <i data-lucide="trash-2" class="w-4 h-4 text-apple-textSec"></i>
+              </button>
+              <button class="p-1.5 rounded-lg hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all" title="关闭">
+                <i data-lucide="x" class="w-4 h-4 text-apple-textSec"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- 消息列表 -->
+          <div class="h-80 p-4 space-y-4 overflow-y-auto">
+            <!-- 用户消息 -->
+            <div class="flex justify-end slide-up">
+              <div class="message-user px-4 py-2.5 max-w-[80%] shadow-sm">
+                <p class="text-sm">帮我写一篇日记，今天心情很好，完成了项目里程碑</p>
+                <div class="text-[10px] opacity-70 mt-1 text-right">10:30</div>
+              </div>
+            </div>
+
+            <!-- Agent 回复 -->
+            <div class="flex justify-start slide-up">
+              <div class="flex items-start gap-2 max-w-[80%]">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
+                  <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="message-agent px-4 py-2.5 shadow-sm">
+                  <p class="text-sm">已为您创建日记《今天心情很好》！</p>
+                  <div class="mt-2 p-2 rounded-lg bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10">
+                    <div class="text-xs text-apple-textSec dark:text-white/40">日记 ID: 123</div>
+                    <div class="text-xs text-apple-textSec dark:text-white/40">心情：开心</div>
+                    <div class="text-xs text-apple-textSec dark:text-white/40">标签：工作、成就</div>
+                  </div>
+                  <div class="text-[10px] text-apple-textSec dark:text-white/40 mt-1">10:30</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 用户消息 -->
+            <div class="flex justify-end slide-up">
+              <div class="message-user px-4 py-2.5 max-w-[80%] shadow-sm">
+                <p class="text-sm">我的运动评分是多少？</p>
+                <div class="text-[10px] opacity-70 mt-1 text-right">10:31</div>
+              </div>
+            </div>
+
+            <!-- Agent 回复 -->
+            <div class="flex justify-start slide-up">
+              <div class="flex items-start gap-2 max-w-[80%]">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
+                  <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="message-agent px-4 py-2.5 shadow-sm">
+                  <p class="text-sm">您的运动系统 (PHYSICAL) 当前评分为 <strong class="text-apple-accent">78 分</strong>。</p>
+                  <p class="text-sm mt-1">比上周提升了 5 分，继续保持！💪</p>
+                  <div class="mt-2 w-full bg-apple-border/30 dark:bg-white/10 rounded-full h-2">
+                    <div class="bg-gradient-to-r from-apple-accent to-blue-500 h-2 rounded-full" style="width: 78%"></div>
+                  </div>
+                  <div class="text-[10px] text-apple-textSec dark:text-white/40 mt-1">10:31</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 输入区域 -->
+          <div class="p-3 border-t border-apple-border">
+            <div class="flex items-center gap-2">
+              <button class="p-2 rounded-lg hover:bg-apple-bgHover dark:hover:bg-white/10 transition-all" title="附件">
+                <i data-lucide="paperclip" class="w-4 h-4 text-apple-textSec"></i>
+              </button>
+              <input type="text" placeholder="输入消息..." class="flex-1 px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none transition-all">
+              <button class="p-2 rounded-xl bg-apple-accent text-white btn-click">
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 加载状态和空状态 -->
+        <div class="space-y-6">
+          <!-- 加载状态 -->
+          <div>
+            <h3 class="text-sm font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider mb-3">思考中状态</h3>
+            <div class="liquid-glass rounded-2xl p-4">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
+                  <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="message-agent px-4 py-3 inline-block">
+                    <div class="typing-indicator flex items-center gap-1">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </div>
+                  <div class="text-xs text-apple-textSec dark:text-white/40 mt-2 ml-1">AI 正在思考...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 流式输出状态 -->
+          <div>
+            <h3 class="text-sm font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider mb-3">流式输出状态</h3>
+            <div class="liquid-glass rounded-2xl p-4">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
+                  <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="message-agent px-4 py-3 inline-block">
+                    <p class="text-sm">已为您创建日记《今天心情很好》<span class="inline-block w-0.5 h-4 bg-apple-accent ml-1 animate-pulse"></span></p>
+                  </div>
+                  <div class="text-xs text-apple-textSec dark:text-white/40 mt-2 ml-1">AI 正在输入...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空状态 -->
+          <div>
+            <h3 class="text-sm font-semibold text-apple-textSec dark:text-white/40 uppercase tracking-wider mb-3">空状态</h3>
+            <div class="liquid-glass rounded-2xl p-8 text-center">
+              <div class="w-16 h-16 rounded-full bg-apple-accent/10 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="sparkles" class="w-8 h-8 text-apple-accent"></i>
+              </div>
+              <h4 class="text-lg font-semibold text-apple-textMain dark:text-white mb-2">你好，我是你的 AI 助手</h4>
+              <p class="text-sm text-apple-textSec dark:text-white/40 mb-4">我可以帮你管理日记、查询评分、生成洞察等</p>
+              <div class="flex flex-wrap gap-2 justify-center">
+                <button class="px-3 py-1.5 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-xs text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all">
+                  帮我写一篇日记
+                </button>
+                <button class="px-3 py-1.5 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-xs text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all">
+                  查询我的评分
+                </button>
+                <button class="px-3 py-1.5 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-xs text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all">
+                  生成今日洞察
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 确认对话框 -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-apple-accent text-white font-bold text-sm">3</span>
+        <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">确认对话框 (Confirm Dialog)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- LOW 风险 - 无需确认 -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium">LOW</span>
+            <span class="text-sm text-apple-textSec">查询操作</span>
+          </div>
+          <div class="liquid-glass rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-apple-textMain dark:text-white">信息查询</div>
+                <div class="text-xs text-apple-textSec">无需确认直接执行</div>
+              </div>
+            </div>
+            <p class="text-xs text-apple-textSec dark:text-white/40">查询日记、查看评分等只读操作直接返回结果。</p>
+          </div>
+        </div>
+
+        <!-- MEDIUM 风险 - 可选确认 -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium">MEDIUM</span>
+            <span class="text-sm text-apple-textSec">创建/更新</span>
+          </div>
+          <div class="liquid-glass rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <i data-lucide="circle-alert" class="w-5 h-5 text-yellow-600 dark:text-yellow-400"></i>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-apple-textMain dark:text-white">创建日记</div>
+                <div class="text-xs text-apple-textSec">默认不确认</div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 mb-3">
+              <div class="text-xs text-apple-textSec dark:text-white/40 mb-2">操作预览:</div>
+              <div class="text-sm text-apple-textMain dark:text-white">创建日记《今天心情很好》</div>
+              <div class="text-xs text-apple-textSec dark:text-white/40 mt-1">心情：开心 | 标签：工作</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-xl border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:bg-apple-bgHover transition-all">
+                取消
+              </button>
+              <button class="flex-1 px-3 py-2 rounded-xl bg-apple-accent text-white text-sm btn-click">
+                确认创建
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HIGH 风险 - 必须确认 -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium">HIGH</span>
+            <span class="text-sm text-apple-textSec">删除操作</span>
+          </div>
+          <div class="liquid-glass rounded-2xl p-4 border-orange-200 dark:border-orange-900/50">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <i data-lucide="triangle-alert" class="w-5 h-5 text-orange-600 dark:text-orange-400"></i>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-apple-textMain dark:text-white">删除日记</div>
+                <div class="text-xs text-apple-textSec risk-high">必须二次确认</div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 mb-3">
+              <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="triangle-alert" class="w-4 h-4 text-red-500"></i>
+                <span class="text-sm font-semibold text-red-700 dark:text-red-400">警告</span>
+              </div>
+              <div class="text-sm text-red-600 dark:text-red-300">确认删除日记《今天心情很好》？</div>
+              <div class="text-xs text-red-500 dark:text-red-400 mt-1">此操作不可撤销。</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-xl border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:bg-apple-bgHover transition-all">
+                取消
+              </button>
+              <button class="flex-1 px-3 py-2 rounded-xl bg-red-500 text-white text-sm btn-click">
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CRITICAL 风险 - 二次验证 -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium">CRITICAL</span>
+            <span class="text-sm text-apple-textSec">关键操作</span>
+          </div>
+          <div class="liquid-glass rounded-2xl p-4 border-red-200 dark:border-red-900/50">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <i data-lucide="shield-alert" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+              </div>
+              <div>
+                <div class="text-sm font-semibold text-apple-textMain dark:text-white">导出数据</div>
+                <div class="text-xs text-apple-textSec risk-critical">验证码确认</div>
+              </div>
+            </div>
+            <div class="p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 mb-3">
+              <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="shield-alert" class="w-4 h-4 text-red-500"></i>
+                <span class="text-sm font-semibold text-red-700 dark:text-red-400">关键操作</span>
+              </div>
+              <div class="text-sm text-red-600 dark:text-red-300">确认导出所有数据？</div>
+              <div class="text-xs text-red-500 dark:text-red-400 mt-1">请输入验证码继续：DELETE</div>
+            </div>
+            <input type="text" placeholder="输入验证码" class="w-full px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none focus:border-red-500 transition-all mb-2">
+            <div class="flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-xl border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:bg-apple-bgHover transition-all">
+                取消
+              </button>
+              <button class="flex-1 px-3 py-2 rounded-xl bg-red-500 text-white text-sm btn-click">
+                确认导出
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 快速建议 -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-apple-accent text-white font-bold text-sm">4</span>
+        <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">快速建议 (Quick Suggestions)</h2>
+      </div>
+
+      <div class="liquid-glass rounded-2xl p-6">
+        <p class="text-sm text-apple-textSec dark:text-white/40 mb-4">在输入框上方显示常用操作建议，点击快速执行</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="group px-4 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-2">
+            <i data-lucide="file-plus" class="w-4 h-4"></i>
+            写一篇日记
+          </button>
+          <button class="group px-4 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-2">
+            <i data-lucide="circle-help" class="w-4 h-4"></i>
+            查看我的评分
+          </button>
+          <button class="group px-4 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-2">
+            <i data-lucide="lightbulb" class="w-4 h-4"></i>
+            生成今日洞察
+          </button>
+          <button class="group px-4 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-2">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            最近的日记
+          </button>
+          <button class="group px-4 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            更新运动评分
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 上下文引用示例 -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-apple-accent text-white font-bold text-sm">5</span>
+        <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">上下文引用 (Context Reference)</h2>
+      </div>
+
+      <div class="liquid-glass rounded-2xl overflow-hidden">
+        <div class="h-80 overflow-y-auto p-4 space-y-4">
+          <!-- 用户：帮我写一篇日记 -->
+          <div class="flex justify-end">
+            <div class="message-user px-4 py-2.5 max-w-[80%] shadow-sm">
+              <p class="text-sm">帮我写一篇日记，今天完成了项目演示</p>
+              <div class="text-[10px] opacity-70 mt-1 text-right">10:30</div>
+            </div>
+          </div>
+
+          <!-- Agent 回复 -->
+          <div class="flex justify-start">
+            <div class="flex items-start gap-2 max-w-[80%]">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
+                <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+              </div>
+              <div class="message-agent px-4 py-2.5 shadow-sm">
+                <p class="text-sm">已创建日记《今天完成了项目演示》！</p>
+                <div class="mt-2 p-2 rounded-lg bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10">
+                  <div class="text-xs text-apple-textSec dark:text-white/40 flex items-center gap-1">
+                    <i data-lucide="hash" class="w-3 h-3"></i>
+                    ID: 123
+                  </div>
+                </div>
+                <div class="text-[10px] text-apple-textSec dark:text-white/40 mt-1">10:30</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 用户：把它删掉 -->
+          <div class="flex justify-end">
+            <div class="message-user px-4 py-2.5 max-w-[80%] shadow-sm">
+              <p class="text-sm">把它删掉</p>
+              <div class="text-[10px] opacity-70 mt-1 text-right">10:31</div>
+            </div>
+          </div>
+
+          <!-- Agent 理解上下文 -->
+          <div class="flex justify-start">
+            <div class="flex items-start gap-2 max-w-[80%]">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
+                <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+              </div>
+              <div class="message-agent px-4 py-2.5 shadow-sm">
+                <p class="text-sm">确认删除以下日记？</p>
+                <div class="mt-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30">
+                  <div class="text-sm font-semibold text-apple-textMain dark:text-white">《今天完成了项目演示》</div>
+                  <div class="text-xs text-apple-textSec dark:text-white/40 mt-1">创建于 10:30 • ID: 123</div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                  <button class="px-3 py-1.5 rounded-lg border border-apple-border dark:border-white/10 text-xs text-apple-textSec hover:bg-apple-bgHover transition-all">取消</button>
+                  <button class="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs btn-click">确认删除</button>
+                </div>
+                <div class="text-[10px] text-apple-textSec dark:text-white/40 mt-1">10:31</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 多轮对话场景 -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="flex items-center justify-center w-8 h-8 rounded-full bg-apple-accent text-white font-bold text-sm">6</span>
+        <h2 class="text-2xl font-bold text-apple-textMain dark:text-white">多轮对话场景 (Multi-turn Conversation)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 第一轮：创建日记 -->
+        <div class="liquid-glass rounded-2xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-full bg-apple-accent text-white text-xs font-medium">第 1 轮</span>
+            <span class="text-xs text-apple-textSec">创建操作</span>
+          </div>
+          <div class="space-y-3">
+            <div class="text-xs text-apple-textSec dark:text-white/40">用户：</div>
+            <div class="message-user px-3 py-2 rounded-xl text-sm">
+              帮我写一篇日记
+            </div>
+            <div class="text-xs text-apple-textSec dark:text-white/40 pt-2">Agent：</div>
+            <div class="message-agent px-3 py-2 rounded-xl text-sm">
+              好的，请告诉我日记的内容？
+            </div>
+          </div>
+        </div>
+
+        <!-- 第二轮：补充信息 -->
+        <div class="liquid-glass rounded-2xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-full bg-apple-accent text-white text-xs font-medium">第 2 轮</span>
+            <span class="text-xs text-apple-textSec">参数补充</span>
+          </div>
+          <div class="space-y-3">
+            <div class="text-xs text-apple-textSec dark:text-white/40">用户：</div>
+            <div class="message-user px-3 py-2 rounded-xl text-sm">
+              今天心情很好，完成了健身目标
+            </div>
+            <div class="text-xs text-apple-textSec dark:text-white/40 pt-2">Agent：</div>
+            <div class="message-agent px-3 py-2 rounded-xl text-sm">
+              已创建日记！需要添加标签吗？
+            </div>
+          </div>
+        </div>
+
+        <!-- 第三轮：完成操作 -->
+        <div class="liquid-glass rounded-2xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="px-2 py-0.5 rounded-full bg-apple-accent text-white text-xs font-medium">第 3 轮</span>
+            <span class="text-xs text-apple-textSec">完成操作</span>
+          </div>
+          <div class="space-y-3">
+            <div class="text-xs text-apple-textSec dark:text-white/40">用户：</div>
+            <div class="message-user px-3 py-2 rounded-xl text-sm">
+              添加标签：健康、成就
+            </div>
+            <div class="text-xs text-apple-textSec dark:text-white/40 pt-2">Agent：</div>
+            <div class="message-agent px-3 py-2 rounded-xl text-sm">
+              ✅ 已更新标签：健康、成就
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="liquid-glass border-t border-apple-border mt-12">
+    <div class="max-w-7xl mx-auto px-6 py-6">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-apple-textSec dark:text-white/40">
+          Life Canvas OS Agent UI 设计预览 • 基于需求文档 AGENT_DEVELOPMENT.md
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-xs text-apple-textSec dark:text-white/40">设计版本：v1.0</span>
+          <span class="text-xs text-apple-textSec dark:text-white/40">2024</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 初始化 Lucide 图标
+    lucide.createIcons();
+
+    // 深色模式切换
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    themeToggle.addEventListener('click', () => {
+      html.classList.toggle('dark');
+      const icon = html.classList.contains('dark') ? 'sun' : 'moon';
+      themeToggle.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 text-apple-textSec dark:text-white/60"></i>`;
+      lucide.createIcons();
+    });
+
+    // 检测系统深色模式
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      html.classList.add('dark');
+      themeToggle.innerHTML = '<i data-lucide="sun" class="w-5 h-5 text-apple-textSec dark:text-white/60"></i>';
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
