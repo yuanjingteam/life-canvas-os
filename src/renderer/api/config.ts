@@ -25,8 +25,8 @@ export const API_ENDPOINTS = {
     VERIFY: '/api/pin/verify',
     CHANGE: '/api/pin/change',
     DELETE: '/api/pin',
-    STATUS: '/api/pin/status',
     SETUP: '/api/pin/setup',
+    VERIFY_REQUIREMENTS: '/api/pin/verify-requirements',
   },
 
   // 日记相关
