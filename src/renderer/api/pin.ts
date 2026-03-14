@@ -21,7 +21,6 @@ export interface PinVerifyRequirements {
 }
 
 export const pinApi = {
-
   /**
    * 获取 PIN 验证要求（新接口）
    */
