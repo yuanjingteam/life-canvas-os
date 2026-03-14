@@ -162,7 +162,7 @@ export const INITIAL_STATE: AppState = {
     [DimensionType.PHYSICAL]: 65,
     [DimensionType.INTELLECTUAL]: 90,
     [DimensionType.OUTPUT]: 70,
-    [DimensionType.RECOVERY]: 60,
+    [DimensionType.DREAM]: 60,
     [DimensionType.ASSET]: 55,
     [DimensionType.CONNECTION]: 75,
     [DimensionType.ENVIRONMENT]: 85,
