@@ -5,13 +5,7 @@
  */
 
 import { useState } from 'react'
-import {
-  TriangleAlert,
-  ShieldAlert,
-  CircleAlert,
-  Info,
-  X,
-} from 'lucide-react'
+import { TriangleAlert, ShieldAlert, CircleAlert, Info, X } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
 import { Button } from '~/renderer/components/ui/button'
 import {
@@ -129,7 +123,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -162,10 +156,10 @@ export function ConfirmDialog({
               </DialogDescription>
             </div>
             <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => onOpenChange?.(false)}
               className="shrink-0"
+              onClick={() => onOpenChange?.(false)}
+              size="icon-sm"
+              variant="ghost"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -204,30 +198,33 @@ export function ConfirmDialog({
         {requireCode && (
           <div className="space-y-2">
             <label className="text-sm text-apple-textSec dark:text-white/40">
-              请输入验证码继续：<span className="font-mono text-apple-textMain dark:text-white">DELETE</span>
+              请输入验证码继续：
+              <span className="font-mono text-apple-textMain dark:text-white">
+                DELETE
+              </span>
             </label>
             <input
-              type="text"
-              value={verificationCode}
+              className="w-full px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm focus:outline-none focus:border-red-500 transition-all text-apple-textMain dark:text-white placeholder:text-apple-textTer"
               onChange={e => setVerificationCode(e.target.value)}
               placeholder="输入验证码"
-              className="w-full px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm focus:outline-none focus:border-red-500 transition-all text-apple-textMain dark:text-white placeholder:text-apple-textTer"
+              type="text"
+              value={verificationCode}
             />
           </div>
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
-            variant="outline"
-            onClick={handleCancel}
             disabled={isConfirming}
+            onClick={handleCancel}
+            variant="outline"
           >
             {cancelText}
           </Button>
           <Button
-            onClick={handleConfirm}
-            disabled={isConfirming || (requireCode && !verificationCode.trim())}
             className={config.buttonColor}
+            disabled={isConfirming || (requireCode && !verificationCode.trim())}
+            onClick={handleConfirm}
           >
             {isConfirming ? (
               <>

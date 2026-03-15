@@ -13,3 +13,6 @@ export type { ChatMessageProps, Message } from './ChatMessage'
 
 export { ConfirmDialog } from './ConfirmDialog'
 export type { ConfirmDialogProps, RiskLevel } from './ConfirmDialog'
+
+export { SessionSidebar } from './SessionSidebar'
+export type { SessionSidebarProps } from './SessionSidebar'

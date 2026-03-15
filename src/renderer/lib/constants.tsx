@@ -9,6 +9,7 @@ import {
   Frown,
   SmilePlus,
   CircleX,
+  Bot,
 } from 'lucide-react'
 import {
   DimensionType,
@@ -124,6 +125,7 @@ export const NAV_ITEMS = [
   { id: 'fuel', label: '饮食系统', icon: <Beef className="w-5 h-5" /> },
   { id: 'journal', label: '生活日记', icon: <Sparkles className="w-5 h-5" /> },
   { id: 'timeline', label: '时间轴', icon: <History className="w-5 h-5" /> },
+  { id: 'agent', label: 'AI 助手', icon: <Bot className="w-5 h-5" /> },
 ]
 
 // 16 种 MBTI 人格类型

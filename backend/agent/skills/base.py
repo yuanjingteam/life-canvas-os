@@ -42,6 +42,7 @@ class SkillResult:
     requires_confirmation: bool = False
     confirmation_id: Optional[str] = None
     confirmation_message: Optional[str] = None
+    risk_level: Optional[RiskLevel] = None  # 风险等级
     error: Optional[str] = None
     execution_time: float = field(default=0.0)
 
@@ -53,6 +54,7 @@ class SkillResult:
         requires_confirmation: bool = False,
         confirmation_id: str = None,
         confirmation_message: str = None,
+        risk_level: RiskLevel = None,
         execution_time: float = 0.0,
     ) -> "SkillResult":
         """创建成功结果"""
@@ -63,6 +65,7 @@ class SkillResult:
             requires_confirmation=requires_confirmation,
             confirmation_id=confirmation_id,
             confirmation_message=confirmation_message,
+            risk_level=risk_level,
             execution_time=execution_time,
         )
 

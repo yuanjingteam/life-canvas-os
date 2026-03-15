@@ -132,6 +132,6 @@ export const AgentEvents = {
   SESSION_DELETED: 'session:deleted',
 
   // 通用事件
-  DATA_REFRESH: 'data:refresh',  // 数据刷新请求
-  STATE_CHANGED: 'state:changed',  // 状态变更
+  DATA_REFRESH: 'data:refresh', // 数据刷新请求
+  STATE_CHANGED: 'state:changed', // 状态变更
 } as const

@@ -4,14 +4,14 @@
 
 /* 消息气泡样式 */
 .message-agent {
-  background: rgba(245, 245, 247, 0.8);
   color: #1d1d1f;
+  background: rgba(245, 245, 247, 0.8);
   border-radius: 20px 20px 20px 8px;
 }
 
 .dark .message-agent {
-  background: rgba(44, 44, 46, 0.8);
   color: #ffffff;
+  background: rgba(44, 44, 46, 0.8);
 }
 
 /* 输入框焦点效果 */
@@ -21,13 +21,13 @@
 
 /* 加载动画 - 打字指示器 */
 .typing-indicator span {
-  animation: typing 1.4s infinite both;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 2px;
   background: #86868b;
   border-radius: 50%;
-  display: inline-block;
-  height: 8px;
-  width: 8px;
-  margin: 0 2px;
+  animation: typing 1.4s infinite both;
 }
 
 .typing-indicator span:nth-child(2) {

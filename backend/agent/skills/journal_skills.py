@@ -372,6 +372,7 @@ class DeleteJournalSkill(BaseSkill):
                     requires_confirmation=True,
                     confirmation_id=f"delete_journal_{journal_id}",
                     confirmation_message=f"确认删除日记《{diary.title}》？",
+                    risk_level=RiskLevel.HIGH,
                 )
 
         except Exception as e:

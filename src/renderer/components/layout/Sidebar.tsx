@@ -1,4 +1,10 @@
-import { ChevronRight, Settings, PanelLeftClose, PanelLeft } from 'lucide-react'
+import {
+  ChevronRight,
+  Settings,
+  PanelLeftClose,
+  PanelLeft,
+  Bot,
+} from 'lucide-react'
 import {
   Avatar,
   AvatarFallback,
@@ -33,6 +39,7 @@ export function Sidebar({
       fuel: '/system/fuel',
       journal: '/journal',
       timeline: '/timeline',
+      agent: '/agent',
     }
     navigate(routeMap[tabId] || '/dashboard')
   }

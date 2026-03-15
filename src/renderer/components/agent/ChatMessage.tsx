@@ -6,14 +6,15 @@
 
 import { Bot, User } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
+import { formatTimeCN } from '~/renderer/lib/dateUtils'
 
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  timestamp: Date
+  timestamp: number | string
   isError?: boolean
-  isStreaming?: boolean  // 是否正在流式传输
+  isStreaming?: boolean // 是否正在流式传输
   actionTaken?: {
     skill: string
     params?: Record<string, unknown>
@@ -30,17 +31,8 @@ export interface ChatMessageProps {
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
-
   return (
-    <div
-      className={cn('flex', isUser ? 'justify-end' : 'justify-start')}
-    >
+    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       {isUser ? (
         /* 用户消息 */
         <div className="max-w-[80%]">
@@ -54,7 +46,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           >
             <p className="text-sm">{message.content}</p>
             <div className="text-[10px] opacity-70 mt-1 text-right">
-              {formatTime(message.timestamp)}
+              {formatTimeCN(message.timestamp)}
             </div>
           </div>
         </div>
@@ -70,12 +62,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
               'bg-apple-bgSidebar dark:bg-white/5',
               'text-apple-textMain dark:text-white',
               'rounded-bl-md',
-              message.isError && 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30',
-              message.requiresConfirmation && 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/30'
+              message.isError &&
+                'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30',
+              message.requiresConfirmation &&
+                'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/30'
             )}
           >
             <div className="flex items-center gap-2">
-              <p className="text-sm whitespace-pre-wrap flex-1">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap flex-1">
+                {message.content}
+              </p>
               {/* 流式传输指示器 */}
               {message.isStreaming && (
                 <span className="flex items-center gap-1">
@@ -101,12 +97,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   <div>技能：{message.actionTaken.skill}</div>
                   {message.actionTaken.params && (
                     <div>
-                      参数：{JSON.stringify(message.actionTaken.params, null, 2)}
+                      参数：
+                      {JSON.stringify(message.actionTaken.params, null, 2)}
                     </div>
                   )}
                   {message.actionTaken.result && (
                     <div>
-                      结果：{JSON.stringify(message.actionTaken.result, null, 2)}
+                      结果：
+                      {JSON.stringify(message.actionTaken.result, null, 2)}
                     </div>
                   )}
                 </div>
@@ -114,7 +112,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             )}
 
             <div className="text-[10px] text-apple-textSec dark:text-white/40 mt-1">
-              {formatTime(message.timestamp)}
+              {formatTimeCN(message.timestamp)}
             </div>
           </div>
         </div>

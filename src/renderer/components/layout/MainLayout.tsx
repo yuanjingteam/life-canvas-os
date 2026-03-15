@@ -42,6 +42,7 @@ export function MainLayout() {
     if (path === '/system/fuel') return 'fuel'
     if (path.startsWith('/journal')) return 'journal'
     if (path === '/timeline') return 'timeline'
+    if (path === '/agent') return 'agent'
     if (path.startsWith('/settings')) return 'settings'
     return 'dashboard'
   }

@@ -5,6 +5,7 @@ Agent 模块初始化
 """
 
 import os
+import asyncio
 from typing import Dict, Any, Optional
 from .llm.base import LLMClient, LLMMessage, LLMToolDefinition, LLMResponse, LLMProviderType
 from .llm.client_with_fallback import LLMClientWithFallback
@@ -235,17 +236,22 @@ async def execute_chat(
     if result.requires_confirmation:
         confirmation_id = result.confirmation_id or f"confirm_{len(_pending_confirmations) + 1}"
 
+        # 根据 Skill 风险等级确定确认等级
+        risk_level = result.risk_level or RiskLevel.HIGH
+
         # 存储确认请求
         _pending_confirmations[confirmation_id] = {
             "session_id": session_id,
-            "risk_level": RiskLevel.HIGH.value,  # 默认高风险
+            "risk_level": risk_level.value,
             "action_type": "delete_journal" if "delete" in (result.data or {}) else "unknown",
             "action_data": result.data or {},
             "confirmation_message": result.confirmation_message,
+            "code": "DELETE" if risk_level == RiskLevel.CRITICAL else None,  # CRITICAL 等级需要验证码
         }
 
         response_data["confirmation_id"] = confirmation_id
         response_data["confirmation_message"] = result.confirmation_message
+        response_data["risk_level"] = risk_level.value
 
     return response_data
 

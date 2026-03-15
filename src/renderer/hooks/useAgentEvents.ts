@@ -37,12 +37,12 @@ export function useAgentEventsBatch(
 ) {
   useEffect(() => {
     const eventBus = getEventBus()
-    const unsubscribers = events.map(event =>
-      eventBus.on(event, callback)
-    )
+    const unsubscribers = events.map(event => eventBus.on(event, callback))
 
     return () => {
-      unsubscribers.forEach(unsubscribe => unsubscribe())
+      unsubscribers.forEach(unsubscribe => {
+        unsubscribe()
+      })
     }
   }, deps)
 }
@@ -53,19 +53,13 @@ export function useAgentEventsBatch(
 export function useEmitAgentEvent() {
   const eventBus = getEventBus()
 
-  const emit = useCallback(
-    (event: string, data?: unknown) => {
-      eventBus.emit(event, data)
-    },
-    []
-  )
+  const emit = useCallback((event: string, data?: unknown) => {
+    eventBus.emit(event, data)
+  }, [])
 
-  const emitSync = useCallback(
-    (event: string, data?: unknown) => {
-      eventBus.emitSync(event, data)
-    },
-    []
-  )
+  const emitSync = useCallback((event: string, data?: unknown) => {
+    eventBus.emitSync(event, data)
+  }, [])
 
   return { emit, emitSync }
 }
@@ -75,10 +69,7 @@ export function useEmitAgentEvent() {
  *
  * 订阅数据刷新事件，触发回调
  */
-export function useDataRefresh(
-  callback: EventCallback,
-  deps: unknown[] = []
-) {
+export function useDataRefresh(callback: EventCallback, deps: unknown[] = []) {
   useAgentEvents(AgentEvents.DATA_REFRESH, callback, deps)
 }
 

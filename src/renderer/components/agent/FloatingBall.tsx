@@ -38,7 +38,7 @@ export function FloatingBall({ visible = true, onClose }: FloatingBallProps) {
   if (!visible) return null
 
   return (
-    <div ref={ballRef} className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-50" ref={ballRef}>
       {/* 聊天面板 */}
       {isExpanded && (
         <div className="absolute bottom-16 right-0 animate-in zoom-in-95 duration-300">
@@ -48,6 +48,7 @@ export function FloatingBall({ visible = true, onClose }: FloatingBallProps) {
 
       {/* 悬浮球 */}
       <button
+        aria-label={isExpanded ? '关闭助手' : '打开助手'}
         className={cn(
           'relative w-14 h-14 rounded-full bg-gradient-to-br from-apple-accent to-blue-600',
           'flex items-center justify-center',
@@ -60,7 +61,6 @@ export function FloatingBall({ visible = true, onClose }: FloatingBallProps) {
         onClick={handleToggle}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
-        aria-label={isExpanded ? '关闭助手' : '打开助手'}
       >
         {/* 脉动光晕效果 */}
         <span className="absolute inset-0 rounded-full bg-apple-accent/30 animate-ping" />

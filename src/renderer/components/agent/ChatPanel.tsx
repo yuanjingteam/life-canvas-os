@@ -13,12 +13,16 @@ import {
   Paperclip,
   MessageCircle,
   Sparkles,
+  List,
+  Plus,
 } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
 import { ChatMessage, type Message as MessageType } from './ChatMessage'
 import { Button } from '~/renderer/components/ui/button'
 import { useAgentApi } from '~/renderer/hooks/useAgentApi'
 import { ConfirmDialog } from './ConfirmDialog'
+import { SessionSidebar } from './SessionSidebar'
+import { getSessionId } from '~/renderer/hooks/useAgentApi'
 
 export interface ChatPanelProps {
   /** 关闭回调 */
@@ -32,24 +36,20 @@ const QUICK_SUGGESTIONS = [
   { icon: Bot, text: '生成今日洞察', prompt: '帮我生成今日洞察' },
 ]
 
-// 获取会话 ID
-let currentSessionId: string | null = null
-function getSessionId(): string {
-  if (!currentSessionId) {
-    currentSessionId = `sess_${Math.random().toString(36).substring(2, 14)}`
-  }
-  return currentSessionId
-}
-
 export function ChatPanel({ onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<MessageType[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [sessionId, setSessionId] = useState(() => getSessionId())
 
-  const { chat, chatStream, confirm } = useAgentApi()
-  const [useStreaming, setUseStreaming] = useState(true)
+  // 会话列表侧边栏状态
+  const [showSessionList, setShowSessionList] = useState(false)
+
+  const { chat, chatStream, confirm, createSession } = useAgentApi()
+  // 生产模式 (IPC) 下禁用流式，因为 IPC 不支持 SSE 流式响应
+  const [useStreaming, setUseStreaming] = useState(import.meta.env.DEV)
 
   // 确认对话框状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -92,7 +92,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       id: Date.now().toString(),
       role: 'user',
       content: input.trim(),
-      timestamp: new Date(),
+      timestamp: Date.now(),
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -105,7 +105,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       id: assistantMessageId,
       role: 'assistant',
       content: '',
-      timestamp: new Date(),
+      timestamp: Date.now(),
       isStreaming: true,
     }
     setMessages(prev => [...prev, assistantMessage])
@@ -117,7 +117,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         let requiresConfirmation = false
         let confirmationId: string | undefined
         let confirmationMessage: string | undefined
-        let streamingFailed = false
+        const streamingFailed = false
 
         for await (const chunk of chatStream(input.trim())) {
           if (chunk.type === 'content') {
@@ -135,17 +135,20 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             requiresConfirmation = chunk.data?.requires_confirmation || false
             confirmationId = chunk.data?.confirmation_id
             confirmationMessage = chunk.data?.confirmation_message
+            const riskLevel =
+              (chunk.data?.risk_level as 'HIGH' | 'CRITICAL') || 'HIGH'
 
             // 处理确认
             if (requiresConfirmation && confirmationId) {
+              const isCritical = riskLevel === 'CRITICAL'
               setConfirmDialog({
                 open: true,
                 confirmationId,
-                riskLevel: 'HIGH',
-                title: '确认操作',
+                riskLevel,
+                title: isCritical ? '关键操作' : '确认操作',
                 description: confirmationMessage || '此操作需要您的确认',
                 operation: '',
-                requireCode: false,
+                requireCode: isCritical,
               })
 
               // 添加确认提示消息
@@ -153,7 +156,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                 id: (Date.now() + 2).toString(),
                 role: 'assistant',
                 content: confirmationMessage || '请确认此操作',
-                timestamp: new Date(),
+                timestamp: Date.now(),
                 requiresConfirmation: true,
                 confirmationId,
               }
@@ -166,7 +169,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
                 msg.id === assistantMessageId
                   ? {
                       ...msg,
-                      content: chunk.data || '抱歉，我遇到了一些问题，请稍后重试。',
+                      content:
+                        chunk.data || '抱歉，我遇到了一些问题，请稍后重试。',
                       isError: true,
                     }
                   : msg
@@ -266,7 +270,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         id: Date.now().toString(),
         role: 'assistant',
         content: response.response,
-        timestamp: new Date(),
+        timestamp: Date.now(),
       }
       setMessages(prev => [...prev, resultMessage])
     } catch (error) {
@@ -275,7 +279,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         id: Date.now().toString(),
         role: 'assistant',
         content: '确认失败，请稍后重试。',
-        timestamp: new Date(),
+        timestamp: Date.now(),
         isError: true,
       }
       setMessages(prev => [...prev, errorMessage])
@@ -331,25 +335,58 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         </div>
         <div className="flex items-center gap-1">
           <Button
-            variant="ghost"
+            className="text-apple-textSec hover:text-apple-accent"
+            onClick={() => setShowSessionList(true)}
             size="icon-xs"
-            onClick={handleClear}
-            title="清除对话"
+            title="会话列表"
+            variant="ghost"
+          >
+            <List className="w-4 h-4" />
+          </Button>
+          <Button
+            className="text-apple-textSec hover:text-apple-accent"
+            onClick={() => {
+              createSession()
+              setSessionId(getSessionId())
+              setMessages([])
+            }}
+            size="icon-xs"
+            title="新建会话"
+            variant="ghost"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+          <Button
             className="text-apple-textSec hover:text-apple-textMain"
+            onClick={handleClear}
+            size="icon-xs"
+            title="清除对话"
+            variant="ghost"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
           <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={onClose}
-            title="关闭"
             className="text-apple-textSec hover:text-apple-textMain"
+            onClick={onClose}
+            size="icon-xs"
+            title="关闭"
+            variant="ghost"
           >
             <X className="w-4 h-4" />
           </Button>
         </div>
       </div>
+
+      {/* 会话列表侧边栏 */}
+      <SessionSidebar
+        onClose={() => setShowSessionList(false)}
+        onSessionSwitch={sessionId => {
+          setSessionId(sessionId)
+          // 切换会话后加载历史消息
+          // TODO: 加载历史消息
+        }}
+        open={showSessionList}
+      />
 
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
@@ -370,9 +407,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             <div className="flex flex-wrap gap-2 justify-center max-w-[280px]">
               {QUICK_SUGGESTIONS.map((suggestion, index) => (
                 <button
+                  className="px-3 py-1.5 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-xs text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-1.5"
                   key={index}
                   onClick={() => handleQuickSuggestion(suggestion.prompt)}
-                  className="px-3 py-1.5 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-xs text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-1.5"
                 >
                   <suggestion.icon className="w-3.5 h-3.5" />
                   {suggestion.text}
@@ -415,9 +452,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
           <div className="flex flex-wrap gap-2 mb-2">
             {QUICK_SUGGESTIONS.slice(0, 2).map((suggestion, index) => (
               <button
+                className="px-2.5 py-1 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-[10px] text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-1"
                 key={index}
                 onClick={() => handleQuickSuggestion(suggestion.prompt)}
-                className="px-2.5 py-1 rounded-full bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-[10px] text-apple-textSec hover:border-apple-accent hover:text-apple-accent transition-all flex items-center gap-1"
               >
                 <suggestion.icon className="w-3 h-3" />
                 {suggestion.text}
@@ -428,29 +465,29 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
 
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
-            size="icon-sm"
             className="text-apple-textSec"
+            size="icon-sm"
             title="附件"
+            variant="ghost"
           >
             <Paperclip className="w-4 h-4" />
           </Button>
 
           <input
-            ref={inputRef}
-            type="text"
-            placeholder="输入消息..."
-            value={input}
+            className="flex-1 px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none transition-all text-apple-textMain dark:text-white placeholder:text-apple-textTer"
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none transition-all text-apple-textMain dark:text-white placeholder:text-apple-textTer"
+            placeholder="输入消息..."
+            ref={inputRef}
+            type="text"
+            value={input}
           />
 
           <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            size="icon"
             className="rounded-xl bg-apple-accent text-white hover:bg-apple-accent/90 disabled:opacity-50"
+            disabled={!input.trim() || isLoading}
+            onClick={handleSend}
+            size="icon"
           >
             <Send className="w-4 h-4" />
           </Button>
@@ -459,21 +496,21 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
 
       {/* 确认对话框 */}
       <ConfirmDialog
-        open={confirmDialog.open}
-        riskLevel={confirmDialog.riskLevel}
-        title={confirmDialog.title}
-        description={confirmDialog.description}
-        operation={confirmDialog.operation}
-        requireCode={confirmDialog.requireCode}
-        confirmText="确认执行"
         cancelText="取消"
-        onOpenChange={(open) => {
+        confirmText="确认执行"
+        description={confirmDialog.description}
+        onCancel={() => handleConfirm(false)}
+        onConfirm={() => handleConfirm(true)}
+        onOpenChange={open => {
           if (!open) {
             setConfirmDialog(prev => ({ ...prev, open: false }))
           }
         }}
-        onCancel={() => handleConfirm(false)}
-        onConfirm={() => handleConfirm(true)}
+        open={confirmDialog.open}
+        operation={confirmDialog.operation}
+        requireCode={confirmDialog.requireCode}
+        riskLevel={confirmDialog.riskLevel}
+        title={confirmDialog.title}
       />
     </div>
   )

@@ -59,6 +59,11 @@ const InsightHistoryDetailPage = lazy(() =>
     default: m.InsightHistoryDetailPage,
   }))
 )
+const AgentPage = lazy(() =>
+  import('~/renderer/pages/agent/AgentPage').then(m => ({
+    default: m.AgentPage,
+  }))
+)
 
 // 页面组件（暂时使用占位符）
 function PlaceholderPage({ name }: { name: string }) {
@@ -178,6 +183,14 @@ export function AppRoutes() {
               </Suspense>
             }
             path="/insights/history/detail"
+          />
+          <Route
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <AgentPage />
+              </Suspense>
+            }
+            path="/agent"
           />
           <Route
             element={<PlaceholderPage name="子系统详情" />}

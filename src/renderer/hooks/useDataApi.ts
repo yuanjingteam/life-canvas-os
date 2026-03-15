@@ -65,7 +65,7 @@ export function useDataApi() {
         let uint8Array: Uint8Array
 
         // 检查是否在 Electron 环境中（生产模式）
-        const IS_DEV = process.env.NODE_ENV === 'development'
+        const IS_DEV = import.meta.env.DEV
         if (!IS_DEV && window.App?.fileOps?.downloadFile) {
           // 生产模式：使用 IPC 读取文件
           const result = await window.App.fileOps.downloadFile(exportPath)

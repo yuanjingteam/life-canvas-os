@@ -5,14 +5,27 @@
 import { useCallback } from 'react'
 import { apiRequest } from '~/renderer/api/client'
 
-// 会话 ID 存储（实际应用中应该使用更持久的存储方式）
-let currentSessionId: string | null = null
+// 会话 ID 存储键
+const SESSION_ID_STORAGE_KEY = 'life_canvas_agent_session_id'
 
+// 从 localStorage 获取或创建会话 ID
 function getSessionId(): string {
-  if (!currentSessionId) {
-    currentSessionId = `sess_${Math.random().toString(36).substring(2, 14)}`
+  let sessionId = localStorage.getItem(SESSION_ID_STORAGE_KEY)
+  if (!sessionId) {
+    sessionId = `sess_${Math.random().toString(36).substring(2, 14)}`
+    localStorage.setItem(SESSION_ID_STORAGE_KEY, sessionId)
   }
-  return currentSessionId
+  return sessionId
+}
+
+// 设置会话 ID 到 localStorage
+function setSessionId(sessionId: string): void {
+  localStorage.setItem(SESSION_ID_STORAGE_KEY, sessionId)
+}
+
+// 从 localStorage 清除当前会话 ID
+function clearSessionId(): void {
+  localStorage.removeItem(SESSION_ID_STORAGE_KEY)
 }
 
 export interface ChatResponse {
@@ -70,64 +83,61 @@ export function useAgentApi() {
    * 发送流式聊天请求
    * 返回一个 AsyncIterator 用于接收流式响应
    */
-  const chatStream = useCallback(
-    async function* (message: string) {
-      const sessionId = getSessionId()
-      const response = await apiRequest('/api/agent/chat/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          session_id: sessionId,
-        }),
-      })
+  const chatStream = useCallback(async function* (message: string) {
+    const sessionId = getSessionId()
+    const response = await apiRequest('/api/agent/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        session_id: sessionId,
+      }),
+    })
 
-      if (!response.ok) {
-        throw new Error('流式请求失败')
-      }
+    if (!response.ok) {
+      throw new Error('流式请求失败')
+    }
 
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('无法读取响应流')
-      }
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('无法读取响应流')
+    }
 
-      const decoder = new TextDecoder()
-      let buffer = ''
+    const decoder = new TextDecoder()
+    let buffer = ''
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
+        buffer += decoder.decode(value, { stream: true })
 
-          // 解析 SSE 格式
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || '' // 保留不完整行
+        // 解析 SSE 格式
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // 保留不完整行
 
-          for (const line of lines) {
-            const trimmedLine = line.trim()
-            if (trimmedLine.startsWith('data: ')) {
-              const data = trimmedLine.slice(6)
-              if (data === '[DONE]') {
-                yield { type: 'done', data: null }
-                return
-              }
-              try {
-                const parsed = JSON.parse(data)
-                yield parsed
-              } catch {
-                // JSON 解析失败，跳过
-              }
+        for (const line of lines) {
+          const trimmedLine = line.trim()
+          if (trimmedLine.startsWith('data: ')) {
+            const data = trimmedLine.slice(6)
+            if (data === '[DONE]') {
+              yield { type: 'done', data: null }
+              return
+            }
+            try {
+              const parsed = JSON.parse(data)
+              yield parsed
+            } catch {
+              // JSON 解析失败，跳过
             }
           }
         }
-      } finally {
-        reader.releaseLock()
       }
-    },
-    []
-  )
+    } finally {
+      reader.releaseLock()
+    }
+  }, [])
 
   /**
    * 确认操作
@@ -154,45 +164,39 @@ export function useAgentApi() {
   /**
    * 获取会话历史
    */
-  const getHistory = useCallback(
-    async (sessionId: string, limit = 10) => {
-      const response = await apiRequest(
-        `/api/agent/history?session_id=${sessionId}&limit=${limit}`,
-        {
-          method: 'GET',
-        }
-      )
-
-      const result = await response.json()
-
-      if (response.ok && result.code === 200) {
-        return result.data.messages || []
+  const getHistory = useCallback(async (sessionId: string, limit = 10) => {
+    const response = await apiRequest(
+      `/api/agent/history?session_id=${sessionId}&limit=${limit}`,
+      {
+        method: 'GET',
       }
+    )
 
-      throw new Error(result.message || '获取历史失败')
-    },
-    []
-  )
+    const result = await response.json()
+
+    if (response.ok && result.code === 200) {
+      return result.data.messages || []
+    }
+
+    throw new Error(result.message || '获取历史失败')
+  }, [])
 
   /**
    * 删除会话
    */
-  const deleteSession = useCallback(
-    async (sessionId: string) => {
-      const response = await apiRequest(`/api/agent/session/${sessionId}`, {
-        method: 'DELETE',
-      })
+  const deleteSession = useCallback(async (sessionId: string) => {
+    const response = await apiRequest(`/api/agent/session/${sessionId}`, {
+      method: 'DELETE',
+    })
 
-      const result = await response.json()
+    const result = await response.json()
 
-      if (response.ok && result.code === 200) {
-        return true
-      }
+    if (response.ok && result.code === 200) {
+      return true
+    }
 
-      throw new Error(result.message || '删除会话失败')
-    },
-    []
-  )
+    throw new Error(result.message || '删除会话失败')
+  }, [])
 
   /**
    * 获取会话列表
@@ -214,28 +218,25 @@ export function useAgentApi() {
   /**
    * 获取会话详情
    */
-  const getSession = useCallback(
-    async (sessionId: string) => {
-      const response = await apiRequest(`/api/agent/session/${sessionId}`, {
-        method: 'GET',
-      })
+  const getSession = useCallback(async (sessionId: string) => {
+    const response = await apiRequest(`/api/agent/session/${sessionId}`, {
+      method: 'GET',
+    })
 
-      const result = await response.json()
+    const result = await response.json()
 
-      if (response.ok && result.code === 200) {
-        return result.data
-      }
+    if (response.ok && result.code === 200) {
+      return result.data
+    }
 
-      throw new Error(result.message || '获取会话详情失败')
-    },
-    []
-  )
+    throw new Error(result.message || '获取会话详情失败')
+  }, [])
 
   /**
    * 切换会话
    */
   const switchSession = useCallback((sessionId: string) => {
-    currentSessionId = sessionId
+    setSessionId(sessionId)
     return sessionId
   }, [])
 
@@ -243,8 +244,9 @@ export function useAgentApi() {
    * 创建新会话
    */
   const createSession = useCallback(() => {
-    currentSessionId = null
-    return getSessionId()
+    const newSessionId = getSessionId()
+    setSessionId(newSessionId)
+    return newSessionId
   }, [])
 
   return {
@@ -257,5 +259,9 @@ export function useAgentApi() {
     getSession,
     switchSession,
     createSession,
+    getCurrentSessionId: getSessionId,
   }
 }
+
+// 导出辅助函数
+export { getSessionId, setSessionId, clearSessionId }
