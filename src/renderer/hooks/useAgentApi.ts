@@ -133,7 +133,10 @@ export function useAgentApi() {
    * 发送流式聊天请求
    * 返回一个 AsyncIterator 用于接收流式响应
    */
-  const chatStream = useCallback(async function* (message: string, sessionId: string) {
+  const chatStream = useCallback(async function* (
+    message: string,
+    sessionId: string
+  ) {
     const response = await apiRequest('/api/agent/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -190,13 +193,16 @@ export function useAgentApi() {
   }, [])
 
   // 包装函数，用于在组件中调用
-  const chatStreamWrapper = useCallback(async function* (message: string) {
-    const sessionId = getSessionId()
-    const stream = chatStream(message, sessionId)
-    for await (const chunk of stream) {
-      yield chunk
-    }
-  }, [chatStream])
+  const chatStreamWrapper = useCallback(
+    async function* (message: string) {
+      const sessionId = getSessionId()
+      const stream = chatStream(message, sessionId)
+      for await (const chunk of stream) {
+        yield chunk
+      }
+    },
+    [chatStream]
+  )
 
   /**
    * 确认操作

@@ -252,7 +252,8 @@ export function AgentPage() {
               setMessages(prev => [...prev, confirmMessage])
             }
           } else if (chunk.type === 'error') {
-            const errorMsg = chunk.data || '抱歉，我遇到了一些问题，请稍后重试。'
+            const errorMsg =
+              chunk.data || '抱歉，我遇到了一些问题，请稍后重试。'
             setMessages(prev =>
               prev.map(msg =>
                 msg.id === assistantMessageId
@@ -297,7 +298,10 @@ export function AgentPage() {
           )
         )
         // 显示错误提示
-        if (errorMessage.includes('API Key') || errorMessage.includes('未配置 AI')) {
+        if (
+          errorMessage.includes('API Key') ||
+          errorMessage.includes('未配置 AI')
+        ) {
           toast.error(errorMessage, { duration: 5000 })
         } else {
           toast.error(errorMessage || '聊天失败，请稍后重试')
