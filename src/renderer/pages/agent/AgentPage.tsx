@@ -13,6 +13,7 @@ import { Button } from '~/renderer/components/ui/button'
 import { ChatMessage, ConfirmDialog } from '~/renderer/components/agent'
 import type { Message } from '~/renderer/components/agent'
 import { useAgentApi } from '~/renderer/hooks/useAgentApi'
+import { toast } from '~/renderer/lib/toast'
 import {
   Dialog,
   DialogContent,
@@ -115,8 +116,8 @@ export function AgentPage() {
       try {
         const history = await getHistory(sessionId, 50)
         setMessages(
-          history.map((msg: any) => ({
-            id: msg.id || Date.now().toString(),
+          history.map((msg: any, index: number) => ({
+            id: `${sessionId}_${index}_${Date.now()}`, // 使用会话 ID+ 索引生成唯一 ID
             role: msg.role,
             content: msg.content,
             timestamp: msg.timestamp,
@@ -251,18 +252,24 @@ export function AgentPage() {
               setMessages(prev => [...prev, confirmMessage])
             }
           } else if (chunk.type === 'error') {
+            const errorMsg = chunk.data || '抱歉，我遇到了一些问题，请稍后重试。'
             setMessages(prev =>
               prev.map(msg =>
                 msg.id === assistantMessageId
                   ? {
                       ...msg,
-                      content:
-                        chunk.data || '抱歉，我遇到了一些问题，请稍后重试。',
+                      content: errorMsg,
                       isError: true,
                     }
                   : msg
               )
             )
+            // 显示错误提示
+            if (errorMsg.includes('API Key')) {
+              toast.error(errorMsg, { duration: 5000 })
+            } else {
+              toast.error(errorMsg)
+            }
           }
         }
 
@@ -277,17 +284,24 @@ export function AgentPage() {
         }
       } catch (error) {
         console.error('Chat error:', error)
+        const errorMessage = error instanceof Error ? error.message : '未知错误'
         setMessages(prev =>
           prev.map(msg =>
             msg.id === assistantMessageId
               ? {
                   ...msg,
-                  content: '抱歉，我遇到了一些问题，请稍后重试。',
+                  content: errorMessage,
                   isError: true,
                 }
               : msg
           )
         )
+        // 显示错误提示
+        if (errorMessage.includes('API Key') || errorMessage.includes('未配置 AI')) {
+          toast.error(errorMessage, { duration: 5000 })
+        } else {
+          toast.error(errorMessage || '聊天失败，请稍后重试')
+        }
       } finally {
         setIsChatLoading(false)
       }
@@ -490,22 +504,6 @@ export function AgentPage() {
               {messages.map(message => (
                 <ChatMessage key={message.id} message={message} />
               ))}
-
-              {/* 加载中 */}
-              {isChatLoading && (
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="px-4 py-3 rounded-2xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10">
-                    <div className="typing-indicator flex items-center gap-1">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div ref={messagesEndRef} />
             </>

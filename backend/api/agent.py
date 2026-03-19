@@ -125,7 +125,7 @@ async def get_history(session_id: str, limit: int = 10):
     """
     获取会话历史
 
-    返回指定会话的对话历史记录。
+    返回指定会话的对话历史记录。如果会话不存在，返回空列表。
     """
     try:
         ctx_manager = get_context_manager()
@@ -134,7 +134,12 @@ async def get_history(session_id: str, limit: int = 10):
 
         context = ctx_manager.get(session_id)
         if not context:
-            return error_response(message="会话不存在", code=404)
+            # 会话不存在可能是新会话，返回空列表
+            return success_response(
+                data={"messages": [], "session_id": session_id},
+                message="会话不存在或为空",
+                code=200,
+            )
 
         # 获取消息历史
         messages = context.messages[-limit:] if context.messages else []

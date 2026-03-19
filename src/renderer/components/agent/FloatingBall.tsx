@@ -4,7 +4,7 @@
  * 悬浮球入口，固定在右下角，点击展开聊天面板
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Sparkles, X } from 'lucide-react'
 import { ChatPanel } from './ChatPanel'
 import { cn } from '~/renderer/lib/utils'
@@ -34,6 +34,27 @@ export function FloatingBall({ visible = true, onClose }: FloatingBallProps) {
     setIsExpanded(false)
     onClose?.()
   }
+
+  // 快捷键监听
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+K 快速唤起 Agent
+      if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+        e.preventDefault()
+        handleToggle()
+        return
+      }
+
+      // Esc 关闭面板
+      if (e.key === 'Escape' && isExpanded) {
+        e.preventDefault()
+        handleClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isExpanded])
 
   if (!visible) return null
 

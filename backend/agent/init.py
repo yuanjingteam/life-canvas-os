@@ -7,7 +7,7 @@ Agent 模块初始化
 import os
 import asyncio
 from typing import Dict, Any, Optional
-from .llm.base import LLMClient, LLMMessage, LLMToolDefinition, LLMResponse, LLMProviderType
+from .llm.base import LLMClient, LLMMessage, LLMToolDefinition, LLMResponse, LLMProviderType, AuthenticationError, RateLimitError, TimeoutError, ServerError
 from .llm.client_with_fallback import LLMClientWithFallback
 from .llm.factory import LLMClientFactory
 from .skills.base import BaseSkill, RiskLevel
@@ -20,6 +20,11 @@ from .core.executor import ReActExecutor
 _agent_executor: Optional[ReActExecutor] = None
 _context_manager: Optional[ContextManager] = None
 _pending_confirmations: Dict[str, Dict[str, Any]] = {}
+
+
+class AgentConfigError(Exception):
+    """Agent 配置错误（如缺少 API Key）"""
+    pass
 
 
 def _get_api_key_from_db() -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
@@ -217,12 +222,49 @@ async def execute_chat(
     if _agent_executor is None:
         _agent_executor = initialize_agent()
 
-    # 执行 ReAct 循环
-    result, requires_confirmation = await _agent_executor.execute(
-        message=message,
-        session_id=session_id,
-        user_id=user_id,
-    )
+    # 每次调用时重新从数据库读取 API Key 配置
+    deepseek_key, deepseek_model, doubao_key, doubao_model = _get_api_key_from_db()
+
+    # 检查是否有有效的 API Key
+    has_valid_key = bool(deepseek_key) or bool(doubao_key)
+    if not has_valid_key:
+        raise AgentConfigError("未配置 AI API Key，请先在设置中配置 DeepSeek 或豆包 API Key")
+
+    # 如果需要，重新初始化 LLM 客户端（当 API Key 发生变化时）
+    llm_client = _agent_executor.llm
+    need_reinit = False
+
+    # 检查当前客户端是否有效
+    if hasattr(llm_client, 'clients') and llm_client.clients:
+        has_valid_client = False
+        for client in llm_client.clients:
+            if hasattr(client, 'api_key') and client.api_key:
+                has_valid_client = True
+                break
+        if not has_valid_client:
+            need_reinit = True
+    elif hasattr(_agent_executor.llm, 'api_key') and not _agent_executor.llm.api_key:
+        need_reinit = True
+
+    # 如果需要重新初始化且有有效的 API Key
+    if need_reinit and has_valid_key:
+        _agent_executor.llm = _create_llm_client_with_fallback()
+
+    try:
+        # 执行 ReAct 循环
+        result, requires_confirmation = await _agent_executor.execute(
+            message=message,
+            session_id=session_id,
+            user_id=user_id,
+        )
+    except AuthenticationError as e:
+        raise AgentConfigError(f"API Key 验证失败：{str(e)}，请检查 API Key 是否正确")
+    except RateLimitError as e:
+        raise AgentConfigError(f"请求频率超限：{str(e)}，请稍后重试")
+    except TimeoutError as e:
+        raise AgentConfigError(f"请求超时：{str(e)}，请检查网络连接")
+    except ServerError as e:
+        raise AgentConfigError(f"服务端错误：{str(e)}，请稍后重试")
 
     # 构建响应
     response_data = {
@@ -278,6 +320,39 @@ async def execute_stream_chat(
     if _agent_executor is None:
         _agent_executor = initialize_agent()
 
+    # 每次调用时重新从数据库读取 API Key 配置
+    deepseek_key, deepseek_model, doubao_key, doubao_model = _get_api_key_from_db()
+
+    # 检查是否有有效的 API Key
+    has_valid_key = bool(deepseek_key) or bool(doubao_key)
+    if not has_valid_key:
+        yield {
+            "type": "error",
+            "data": "未配置 AI API Key，请先在设置中配置 DeepSeek 或豆包 API Key"
+        }
+        return
+
+    # 如果需要，重新初始化 LLM 客户端（当 API Key 发生变化时）
+    llm_client = _agent_executor.llm
+    need_reinit = False
+
+    # 检查当前客户端是否有效
+    if hasattr(llm_client, 'clients') and llm_client.clients:
+        has_valid_client = False
+        for client in llm_client.clients:
+            if hasattr(client, 'api_key') and client.api_key:
+                has_valid_client = True
+                break
+        if not has_valid_client:
+            need_reinit = True
+    elif hasattr(_agent_executor.llm, 'api_key') and not _agent_executor.llm.api_key:
+        need_reinit = True
+
+    # 如果需要重新初始化且有有效的 API Key
+    if need_reinit and has_valid_key:
+        _agent_executor.llm = _create_llm_client_with_fallback()
+        llm_client = _agent_executor.llm
+
     # 获取上下文
     context = _agent_executor.context_manager.get_or_create(session_id)
 
@@ -296,6 +371,36 @@ async def execute_stream_chat(
             messages=messages,
             tools=tool_definitions if tool_definitions else None,
         )
+    except AuthenticationError as e:
+        yield {
+            "type": "error",
+            "data": f"API Key 验证失败：{str(e)}，请检查 API Key 是否正确"
+        }
+        return
+    except RateLimitError as e:
+        yield {
+            "type": "error",
+            "data": f"请求频率超限：{str(e)}，请稍后重试"
+        }
+        return
+    except TimeoutError as e:
+        yield {
+            "type": "error",
+            "data": f"请求超时：{str(e)}，请检查网络连接"
+        }
+        return
+    except ServerError as e:
+        yield {
+            "type": "error",
+            "data": f"服务端错误：{str(e)}，请稍后重试"
+        }
+        return
+    except AgentConfigError as e:
+        yield {
+            "type": "error",
+            "data": str(e)
+        }
+        return
     except Exception as e:
         yield {"type": "error", "data": f"LLM 调用失败：{str(e)}"}
         return

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
 import { Button } from '~/renderer/components/ui/button'
-import { useAgentApi } from '~/renderer/hooks/useAgentApi'
+import { useAgentApi, getSessionHistory } from '~/renderer/hooks/useAgentApi'
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,15 @@ export function SessionSidebar({
   onClose,
   onSessionSwitch,
 }: SessionSidebarProps) {
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [sessions, setSessions] = useState<
+    Array<{
+      session_id: string
+      message_count: number
+      last_message_time: string | null
+      last_message_preview: string | null
+      last_message_role: string | null
+    }>
+  >([])
   const [isLoading, setIsLoading] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean
@@ -60,17 +68,75 @@ export function SessionSidebar({
     sessionPreview: null,
   })
 
-  const { getSessions, switchSession, deleteSession, createSession } =
-    useAgentApi()
+  const {
+    getSessions,
+    switchSession,
+    deleteSession,
+    createSession,
+    getSessionList,
+    getHistory,
+  } = useAgentApi()
 
-  // 加载会话列表
+  // 加载会话列表 - 从 localStorage 获取会话 ID 列表，然后从后端获取每个会话的信息
   const loadSessions = async () => {
     setIsLoading(true)
     try {
-      const data = await getSessions()
-      setSessions(data.sessions || [])
+      // 从 localStorage 获取会话 ID 列表
+      const sessionIds = getSessionHistory()
+
+      // 从后端获取有上下文的会话列表（有实际对话的会话）
+      const backendSessions = await getSessions()
+      const backendSessionMap = new Map(
+        (backendSessions.sessions || []).map((s: any) => [s.session_id, s])
+      )
+
+      // 合并数据：优先显示有上下文的会话，然后是没有上下文的 session ID
+      const mergedSessions: Array<{
+        session_id: string
+        message_count: number
+        last_message_time: string | null
+        last_message_preview: string | null
+        last_message_role: string | null
+      }> = []
+
+      // 先添加有上下文的会话
+      for (const session of backendSessions.sessions || []) {
+        mergedSessions.push({
+          session_id: session.session_id,
+          message_count: session.message_count,
+          last_message_time: session.last_message_time,
+          last_message_preview: session.last_message_preview,
+          last_message_role: session.last_message_role,
+        })
+      }
+
+      // 添加没有上下文的会话 ID（新创建但还没对话的会话）
+      for (const sessionId of sessionIds) {
+        if (!backendSessionMap.has(sessionId)) {
+          mergedSessions.push({
+            session_id: sessionId,
+            message_count: 0,
+            last_message_time: null,
+            last_message_preview: null,
+            last_message_role: null,
+          })
+        }
+      }
+
+      setSessions(mergedSessions)
     } catch (error) {
       console.error('Failed to load sessions:', error)
+      // 降级：只显示 localStorage 中的会话 ID
+      const sessionIds = getSessionHistory()
+      setSessions(
+        sessionIds.map(id => ({
+          session_id: id,
+          message_count: 0,
+          last_message_time: null,
+          last_message_preview: null,
+          last_message_role: null,
+        }))
+      )
     } finally {
       setIsLoading(false)
     }

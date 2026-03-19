@@ -8,24 +8,74 @@ import { apiRequest } from '~/renderer/api/client'
 // 会话 ID 存储键
 const SESSION_ID_STORAGE_KEY = 'life_canvas_agent_session_id'
 
+// 会话 ID 列表存储键
+const SESSION_ID_LIST_STORAGE_KEY = 'life_canvas_agent_session_ids'
+
 // 从 localStorage 获取或创建会话 ID
 function getSessionId(): string {
   let sessionId = localStorage.getItem(SESSION_ID_STORAGE_KEY)
   if (!sessionId) {
-    sessionId = `sess_${Math.random().toString(36).substring(2, 14)}`
+    sessionId = generateSessionId()
     localStorage.setItem(SESSION_ID_STORAGE_KEY, sessionId)
   }
   return sessionId
 }
 
+// 生成新的会话 ID
+function generateSessionId(): string {
+  return `sess_${Math.random().toString(36).substring(2, 14)}`
+}
+
 // 设置会话 ID 到 localStorage
 function setSessionId(sessionId: string): void {
   localStorage.setItem(SESSION_ID_STORAGE_KEY, sessionId)
+  // 同时保存到会话列表
+  saveSessionToHistory(sessionId)
 }
 
 // 从 localStorage 清除当前会话 ID
 function clearSessionId(): void {
   localStorage.removeItem(SESSION_ID_STORAGE_KEY)
+}
+
+// 保存会话 ID 到历史列表
+function saveSessionToHistory(sessionId: string): void {
+  try {
+    const existing = localStorage.getItem(SESSION_ID_LIST_STORAGE_KEY)
+    const sessionList: string[] = existing ? JSON.parse(existing) : []
+    if (!sessionList.includes(sessionId)) {
+      sessionList.unshift(sessionId) // 新会话放到列表开头
+      localStorage.setItem(
+        SESSION_ID_LIST_STORAGE_KEY,
+        JSON.stringify(sessionList)
+      )
+    }
+  } catch (error) {
+    console.error('Failed to save session to history:', error)
+  }
+}
+
+// 获取会话历史列表
+function getSessionHistory(): string[] {
+  try {
+    const existing = localStorage.getItem(SESSION_ID_LIST_STORAGE_KEY)
+    return existing ? JSON.parse(existing) : []
+  } catch (error) {
+    console.error('Failed to get session history:', error)
+    return []
+  }
+}
+
+// 从会话历史列表中移除
+function removeSessionFromHistory(sessionId: string): void {
+  try {
+    const existing = localStorage.getItem(SESSION_ID_LIST_STORAGE_KEY)
+    const sessionList: string[] = existing ? JSON.parse(existing) : []
+    const filtered = sessionList.filter(id => id !== sessionId)
+    localStorage.setItem(SESSION_ID_LIST_STORAGE_KEY, JSON.stringify(filtered))
+  } catch (error) {
+    console.error('Failed to remove session from history:', error)
+  }
 }
 
 export interface ChatResponse {
@@ -83,8 +133,7 @@ export function useAgentApi() {
    * 发送流式聊天请求
    * 返回一个 AsyncIterator 用于接收流式响应
    */
-  const chatStream = useCallback(async function* (message: string) {
-    const sessionId = getSessionId()
+  const chatStream = useCallback(async function* (message: string, sessionId: string) {
     const response = await apiRequest('/api/agent/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -95,6 +144,7 @@ export function useAgentApi() {
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
       throw new Error('流式请求失败')
     }
 
@@ -138,6 +188,15 @@ export function useAgentApi() {
       reader.releaseLock()
     }
   }, [])
+
+  // 包装函数，用于在组件中调用
+  const chatStreamWrapper = useCallback(async function* (message: string) {
+    const sessionId = getSessionId()
+    const stream = chatStream(message, sessionId)
+    for await (const chunk of stream) {
+      yield chunk
+    }
+  }, [chatStream])
 
   /**
    * 确认操作
@@ -241,17 +300,31 @@ export function useAgentApi() {
   }, [])
 
   /**
-   * 创建新会话
+   * 创建新会话 - 总是生成新的 session ID
    */
   const createSession = useCallback(() => {
-    const newSessionId = getSessionId()
+    const newSessionId = generateSessionId()
     setSessionId(newSessionId)
     return newSessionId
   }, [])
 
+  /**
+   * 获取会话历史列表
+   */
+  const getSessionList = useCallback(() => {
+    return getSessionHistory()
+  }, [])
+
+  /**
+   * 从历史列表中移除会话
+   */
+  const removeSessionFromList = useCallback((sessionId: string) => {
+    removeSessionFromHistory(sessionId)
+  }, [])
+
   return {
     chat,
-    chatStream,
+    chatStream: chatStreamWrapper,
     confirm,
     getHistory,
     deleteSession,
@@ -259,9 +332,18 @@ export function useAgentApi() {
     getSession,
     switchSession,
     createSession,
+    getSessionList,
+    removeSessionFromList,
     getCurrentSessionId: getSessionId,
   }
 }
 
 // 导出辅助函数
-export { getSessionId, setSessionId, clearSessionId }
+export {
+  getSessionId,
+  setSessionId,
+  clearSessionId,
+  generateSessionId,
+  getSessionHistory,
+  saveSessionToHistory,
+}
