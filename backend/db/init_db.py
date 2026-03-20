@@ -18,6 +18,7 @@ from backend.models.dimension import (
 from backend.models.diary import Diary, DiaryAttachment, DiaryEditHistory
 from backend.models.insight import Insight
 from backend.models.record import DailyRecord
+from backend.models.session import AgentSession, AgentMessage
 
 
 def ensure_database_initialized(db: Session) -> bool:

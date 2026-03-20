@@ -10,6 +10,19 @@ from datetime import datetime, timedelta
 from ..models.context import ContextState
 
 
+def _get_db_session():
+    """
+    获取数据库会话
+
+    延迟导入以避免循环依赖
+
+    Returns:
+        数据库上下文管理器
+    """
+    from backend.db.session import get_db_context
+    return get_db_context
+
+
 class ContextManager:
     """
     上下文管理器
@@ -18,6 +31,7 @@ class ContextManager:
     - 会话创建和销毁
     - 上下文记忆（短期、中期）
     - 记忆压缩（当 token 数接近阈值时）
+    - 数据库持久化
     """
 
     # 上下文配置
@@ -28,6 +42,61 @@ class ContextManager:
     def __init__(self):
         self._contexts: Dict[str, ContextState] = {}
         self._last_accessed: Dict[str, datetime] = {}
+
+    def _sync_to_db(self, session_id: str, role: str, content: str) -> None:
+        """
+        同步消息到数据库
+
+        Args:
+            session_id: 会话 ID
+            role: 消息角色（user/assistant）
+            content: 消息内容
+        """
+        try:
+            from backend.services.agent_session_service import AgentSessionService
+
+            with _get_db_session()() as session:
+                AgentSessionService.add_message(
+                    db=session,
+                    session_id=session_id,
+                    role=role,
+                    content=content,
+                )
+        except Exception as e:
+            print(f"同步消息到数据库失败：{e}")
+
+    def add_message_to_context(self, session_id: str, role: str, content: str) -> None:
+        """
+        添加消息到上下文并同步到数据库
+
+        Args:
+            session_id: 会话 ID
+            role: 消息角色（user/assistant）
+            content: 消息内容
+        """
+        # 获取或创建上下文
+        context = self.get_or_create(session_id)
+
+        # 添加到内存中的上下文
+        context.add_message(role, content)
+
+        # 同步到数据库
+        self._sync_to_db(session_id, role, content)
+
+    def _ensure_session_exists(self, session_id: str) -> None:
+        """
+        确保会话在数据库中存在
+
+        Args:
+            session_id: 会话 ID
+        """
+        try:
+            from backend.services.agent_session_service import AgentSessionService
+
+            with _get_db_session()() as session:
+                AgentSessionService.get_or_create_session(session, session_id)
+        except Exception as e:
+            print(f"确保会话存在失败：{e}")
 
     def get_or_create(self, session_id: Optional[str] = None) -> ContextState:
         """
@@ -45,6 +114,8 @@ class ContextManager:
         # 检查是否已存在
         if session_id not in self._contexts:
             self._contexts[session_id] = ContextState(session_id=session_id)
+            # 确保数据库中存在会话记录
+            self._ensure_session_exists(session_id)
 
         # 更新最后访问时间
         self._last_accessed[session_id] = datetime.now()

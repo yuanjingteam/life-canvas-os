@@ -357,7 +357,7 @@ async def execute_stream_chat(
     context = _agent_executor.context_manager.get_or_create(session_id)
 
     # 添加用户消息
-    context.add_message("user", message)
+    _agent_executor.context_manager.add_message_to_context(session_id, "user", message)
 
     # 构建消息
     messages = _agent_executor._build_messages(context, message)
@@ -434,7 +434,7 @@ async def execute_stream_chat(
             yield {"type": "content", "data": char}
             await asyncio.sleep(0.02)  # 模拟打字机效果
 
-        context.add_message("assistant", final_response)
+        _agent_executor.context_manager.add_message_to_context(session_id, "assistant", final_response)
         yield {"type": "done", "data": {"response": final_response, "session_id": session_id}}
     else:
         # 没有工具调用，直接流式返回内容
@@ -445,7 +445,7 @@ async def execute_stream_chat(
             yield {"type": "content", "data": char}
             await asyncio.sleep(0.02)  # 模拟打字机效果
 
-        context.add_message("assistant", content)
+        _agent_executor.context_manager.add_message_to_context(session_id, "assistant", content)
         yield {"type": "done", "data": {"response": content, "session_id": session_id}}
 
 

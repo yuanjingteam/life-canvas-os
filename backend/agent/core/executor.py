@@ -85,7 +85,7 @@ class ReActExecutor:
         context = self.context_manager.get_or_create(session_id)
 
         # 添加用户消息到上下文
-        context.add_message("user", message)
+        self.context_manager.add_message_to_context(session_id, "user", message)
 
         # 构建消息历史
         messages = self._build_messages(context, message)
@@ -155,7 +155,7 @@ class ReActExecutor:
                     final_result = SkillResult.ok(response.content or "我暂时没有更好的建议，换个话题试试吧～")
 
                     # 添加到上下文
-                    context.add_message("assistant", response.content or "我暂时没有更好的建议，换个话题试试吧～")
+                    self.context_manager.add_message_to_context(session_id, "assistant", response.content or "我暂时没有更好的建议，换个话题试试吧～")
 
                     return final_result, False
 

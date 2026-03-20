@@ -125,27 +125,39 @@ async def get_history(session_id: str, limit: int = 10):
     """
     获取会话历史
 
-    返回指定会话的对话历史记录。如果会话不存在，返回空列表。
+    返回指定会话的对话历史记录，优先从数据库读取。
     """
     try:
-        ctx_manager = get_context_manager()
-        if not ctx_manager:
-            return error_response(message="上下文管理器未初始化", code=500)
+        from backend.db.session import SessionLocal
+        from backend.services.agent_session_service import AgentSessionService
 
-        context = ctx_manager.get(session_id)
-        if not context:
-            # 会话不存在可能是新会话，返回空列表
-            return success_response(
-                data={"messages": [], "session_id": session_id},
-                message="会话不存在或为空",
-                code=200,
-            )
+        db = SessionLocal()
+        try:
+            # 从数据库获取消息
+            messages = AgentSessionService.get_messages(db, session_id, limit)
 
-        # 获取消息历史
-        messages = context.messages[-limit:] if context.messages else []
+            # 转换为前端格式
+            formatted_messages = [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat(),
+                }
+                for msg in messages
+            ]
+        finally:
+            db.close()
+
+        # 如果数据库中没有消息，尝试从内存中获取（向后兼容）
+        if not formatted_messages:
+            ctx_manager = get_context_manager()
+            if ctx_manager:
+                context = ctx_manager.get(session_id)
+                if context:
+                    formatted_messages = context.messages[-limit:] if context.messages else []
 
         return success_response(
-            data={"messages": messages, "session_id": session_id},
+            data={"messages": formatted_messages, "session_id": session_id},
             message="获取历史成功",
             code=200,
         )
@@ -159,12 +171,23 @@ async def delete_session(session_id: str):
     """
     删除会话
 
-    清空指定会话的上下文和历史记录。
+    从数据库清空指定会话的上下文和历史记录。
     """
     try:
+        from backend.db.session import SessionLocal
+        from backend.services.agent_session_service import AgentSessionService
+
+        # 同时删除内存和数据库中的会话
         ctx_manager = get_context_manager()
         if ctx_manager:
             ctx_manager.delete(session_id)
+
+        # 从数据库删除
+        db = SessionLocal()
+        try:
+            AgentSessionService.delete_session(db, session_id)
+        finally:
+            db.close()
 
         return success_response(
             data={"session_id": session_id},
@@ -229,32 +252,33 @@ async def list_sessions():
     """
     获取会话列表
 
-    返回所有活跃会话的摘要信息。
+    从数据库返回所有活跃会话的摘要信息。
     """
     try:
-        ctx_manager = get_context_manager()
-        if not ctx_manager:
-            return error_response(message="上下文管理器未初始化", code=500)
+        from backend.db.session import SessionLocal
+        from backend.services.agent_session_service import AgentSessionService
 
-        stats = ctx_manager.get_stats()
-        sessions = []
+        db = SessionLocal()
+        try:
+            # 从数据库获取会话列表
+            db_sessions = AgentSessionService.get_all_sessions(db, limit=100)
 
-        # 获取所有会话的摘要
-        for session_id, context in ctx_manager._contexts.items():
-            last_message = context.messages[-1] if context.messages else None
-            sessions.append({
-                "session_id": session_id,
-                "message_count": len(context.messages),
-                "last_message_time": context.last_accessed.isoformat() if context.last_accessed else None,
-                "last_message_preview": last_message["content"][:50] if last_message else None,
-                "last_message_role": last_message["role"] if last_message else None,
-            })
-
-        # 按最后访问时间排序
-        sessions.sort(key=lambda x: x["last_message_time"] or "", reverse=True)
+            sessions = []
+            for db_session in db_sessions:
+                # 获取最新消息
+                last_message = db_session.messages[-1] if db_session.messages else None
+                sessions.append({
+                    "session_id": db_session.session_id,
+                    "message_count": db_session.message_count,
+                    "last_message_time": db_session.updated_at.isoformat() if db_session.updated_at else None,
+                    "last_message_preview": last_message.content[:50] if last_message else None,
+                    "last_message_role": last_message.role if last_message else None,
+                })
+        finally:
+            db.close()
 
         return success_response(
-            data={"sessions": sessions, "stats": stats},
+            data={"sessions": sessions},
             message="获取会话列表成功",
             code=200,
         )
