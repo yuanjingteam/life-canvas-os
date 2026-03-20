@@ -14,7 +14,7 @@ class DiaryBase(BaseModel):
     title: str = Field(default="未命名", max_length=200, description="标题")
     content: str = Field(default="", description="内容")
     mood: Optional[MoodType] = Field(None, description="心情")
-    tags: Optional[str] = Field(None, description="标签（JSON 数组字符串）")
+    tags: Optional[List[str]] = Field(None, description="标签（数组）")
     related_system: Optional[str] = Field(None, description="关联系统类型")
     is_private: bool = Field(default=False, description="是否私密")
 
@@ -34,6 +34,25 @@ class DiaryBase(BaseModel):
             return ""
         return v
 
+    @field_validator("tags", mode="before")
+    @classmethod
+    def validate_tags(cls, v):
+        """tags 可能是字符串或数组，统一转换为数组"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # 如果是 JSON 字符串，尝试解析
+            import json
+            try:
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, list) else None
+            except (json.JSONDecodeError, TypeError):
+                # 如果不是 JSON，按逗号分割
+                return [t.strip() for t in v.split(",") if t.strip()]
+        if isinstance(v, list):
+            return v
+        return None
+
 
 class DiaryCreate(DiaryBase):
     """创建日记"""
@@ -45,7 +64,7 @@ class DiaryUpdate(BaseModel):
     title: Optional[str] = Field(default="未命名", max_length=200)
     content: Optional[str] = Field(default="")
     mood: Optional[MoodType] = None
-    tags: Optional[str] = None
+    tags: Optional[List[str]] = None
     related_system: Optional[str] = None
     is_private: Optional[bool] = None
 
@@ -64,6 +83,25 @@ class DiaryUpdate(BaseModel):
         if v is None:
             return ""
         return v
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def validate_tags(cls, v):
+        """tags 可能是字符串或数组，统一转换为数组"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # 如果是 JSON 字符串，尝试解析
+            import json
+            try:
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, list) else None
+            except (json.JSONDecodeError, TypeError):
+                # 如果不是 JSON，按逗号分割
+                return [t.strip() for t in v.split(",") if t.strip()]
+        if isinstance(v, list):
+            return v
+        return None
 
 
 class DiaryResponse(DiaryBase):

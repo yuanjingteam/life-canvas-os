@@ -429,13 +429,27 @@ async def execute_stream_chat(
         responses = [r.get("response", "") for r in tool_results if r.get("response")]
         final_response = "\n".join(responses) if responses else "操作已完成"
 
+        # 提取 action_taken 数据
+        action_taken = None
+        for result in tool_results:
+            if result.get("data"):
+                action_taken = result.get("data")
+                break
+
         # 流式输出响应
         for char in final_response:
             yield {"type": "content", "data": char}
             await asyncio.sleep(0.02)  # 模拟打字机效果
 
         _agent_executor.context_manager.add_message_to_context(session_id, "assistant", final_response)
-        yield {"type": "done", "data": {"response": final_response, "session_id": session_id}}
+        yield {
+            "type": "done",
+            "data": {
+                "response": final_response,
+                "session_id": session_id,
+                "action_taken": action_taken,
+            }
+        }
     else:
         # 没有工具调用，直接流式返回内容
         content = response.content or "我暂时没有更好的建议，换个话题试试吧～"

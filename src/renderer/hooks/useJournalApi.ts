@@ -36,13 +36,28 @@ function transformJournalToEntry(journal: JournalResponse): JournalEntry {
     throw new Error('Journal response is null or undefined')
   }
 
+  // 处理 tags 字段：后端可能返回数组或字符串
+  let tags: string[] = []
+  if (journal.tags) {
+    if (Array.isArray(journal.tags)) {
+      tags = journal.tags
+    } else if (typeof journal.tags === 'string') {
+      try {
+        const parsed = JSON.parse(journal.tags)
+        tags = Array.isArray(parsed) ? parsed : [journal.tags]
+      } catch {
+        tags = [journal.tags]
+      }
+    }
+  }
+
   return {
     id: journal.id.toString(),
     timestamp: new Date(journal.created_at).getTime(),
     title: journal.title,
     content: journal.content,
     mood: journal.mood || 'neutral',
-    tags: journal.tags ? JSON.parse(journal.tags) : [],
+    tags,
     attachments: [],
     linkedDimensions: journal.related_system
       ? [journal.related_system as any]
@@ -88,6 +103,7 @@ export function useJournalApi() {
   const listJournals = useCallback(
     async (params?: { page?: number; page_size?: number; mood?: MoodType }) => {
       const response = await journalApi.list(params)
+      console.log('[useJournalApi] list API response:', response)
 
       if (!response.ok) {
         const error = (await response.json()) as JournalApiError
@@ -100,6 +116,8 @@ export function useJournalApi() {
       const result = (await response.json()) as {
         data: PaginatedJournalsResponse
       }
+      console.log('[useJournalApi] Parsed result:', result)
+      console.log('[useJournalApi] Data items:', result.data?.items)
       return {
         ...result.data,
         items: result.data.items.map(transformJournalToEntry),

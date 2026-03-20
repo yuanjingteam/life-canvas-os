@@ -22,6 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '~/renderer/components/ui/dialog'
+import { getEventBus, AgentEvents } from '~/renderer/lib/event-bus'
 
 interface Session {
   session_id: string
@@ -227,6 +228,16 @@ export function AgentPage() {
             confirmationId = chunk.data?.confirmation_id
             confirmationMessage = chunk.data?.confirmation_message
             riskLevel = chunk.data?.risk_level as 'HIGH' | 'CRITICAL'
+            const actionTaken = chunk.data?.action_taken
+
+            // 如果没有确认，说明操作已直接执行，触发相应事件
+            if (!requiresConfirmation && actionTaken) {
+              const eventBus = getEventBus()
+              if (actionTaken.id && actionTaken.title !== undefined) {
+                // 日记创建
+                eventBus.emit(AgentEvents.JOURNAL_CREATED, actionTaken)
+              }
+            }
 
             if (requiresConfirmation && confirmationId) {
               const isCritical = riskLevel === 'CRITICAL'
@@ -338,6 +349,16 @@ export function AgentPage() {
           timestamp: Date.now(),
         }
         setMessages(prev => [...prev, resultMessage])
+
+        // 确认成功后触发相应事件
+        if (confirmed) {
+          const eventBus = getEventBus()
+          // 根据 confirmationId 判断操作类型
+          if (confirmDialog.confirmationId.startsWith('delete_journal_')) {
+            const journalId = confirmDialog.confirmationId.replace('delete_journal_', '')
+            eventBus.emit(AgentEvents.JOURNAL_DELETED, { id: journalId })
+          }
+        }
       } catch (error) {
         console.error('Confirm error:', error)
         const errorMessage: Message = {

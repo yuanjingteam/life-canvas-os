@@ -65,5 +65,11 @@ export async function apiRequest(
 
   // 开发模式：使用 HTTP
   const url = `${HTTP_BASE_URL}${endpoint}`
-  return fetch(url, options)
+  const fetchResponse = await fetch(url, options)
+  console.log('[API] HTTP Request:', url)
+  console.log('[API] HTTP Response status:', fetchResponse.status)
+  const clone = fetchResponse.clone()
+  const responseBody = await clone.json()
+  console.log('[API] HTTP Response body:', responseBody)
+  return fetchResponse
 }

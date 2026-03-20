@@ -20,6 +20,7 @@ import { Button } from '~/renderer/components/ui/button'
 import { useAgentApi, getSessionId } from '~/renderer/hooks/useAgentApi'
 import { ConfirmDialog } from './ConfirmDialog'
 import { toast } from '~/renderer/lib/toast'
+import { getEventBus, AgentEvents } from '~/renderer/lib/event-bus'
 
 export interface ChatPanelProps {
   /** 关闭回调 */
@@ -210,6 +211,17 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             confirmationMessage = chunk.data?.confirmation_message
             const riskLevel =
               (chunk.data?.risk_level as 'HIGH' | 'CRITICAL') || 'HIGH'
+            const actionTaken = chunk.data?.action_taken
+
+            // 如果没有确认，说明操作已直接执行，触发相应事件
+            if (!requiresConfirmation && actionTaken) {
+              // 根据 action_taken 的类型触发事件
+              const eventBus = getEventBus()
+              if (actionTaken.id && actionTaken.title !== undefined) {
+                // 日记创建
+                eventBus.emit(AgentEvents.JOURNAL_CREATED, actionTaken)
+              }
+            }
 
             // 处理确认
             if (requiresConfirmation && confirmationId) {
@@ -367,6 +379,17 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
         timestamp: Date.now(),
       }
       updateCurrentSessionMessages(prev => [...prev, resultMessage])
+
+      // 确认成功后触发相应事件
+      if (confirmed) {
+        const eventBus = getEventBus()
+        // 根据 confirmationId 判断操作类型
+        if (confirmDialog.confirmationId.startsWith('delete_journal_')) {
+          const journalId = confirmDialog.confirmationId.replace('delete_journal_', '')
+          eventBus.emit(AgentEvents.JOURNAL_DELETED, { id: journalId })
+        }
+      }
+
       toast.success('操作成功')
     } catch (error) {
       console.error('Confirm error:', error)
