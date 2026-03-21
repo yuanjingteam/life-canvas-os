@@ -2,7 +2,7 @@
  * Agent API Hook
  */
 
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { apiRequest } from '~/renderer/api/client'
 
 // 会话 ID 存储键
@@ -106,6 +106,19 @@ export interface ConfirmRequest {
  * Agent API Hook
  */
 export function useAgentApi() {
+  // 用于存储当前的 AbortController
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  /**
+   * 中断当前的流式请求
+   */
+  const abortStream = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+  }, [])
+
   /**
    * 发送聊天请求
    */
@@ -137,58 +150,75 @@ export function useAgentApi() {
     message: string,
     sessionId: string
   ) {
-    const response = await apiRequest('/api/agent/chat/stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        session_id: sessionId,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error('流式请求失败')
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('无法读取响应流')
-    }
-
-    const decoder = new TextDecoder()
-    let buffer = ''
+    // 创建新的 AbortController
+    abortControllerRef.current = new AbortController()
+    const abortSignal = abortControllerRef.current.signal
 
     try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      const response = await apiRequest('/api/agent/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          session_id: sessionId,
+        }),
+        signal: abortSignal,
+      })
 
-        buffer += decoder.decode(value, { stream: true })
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error('流式请求失败')
+      }
 
-        // 解析 SSE 格式
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || '' // 保留不完整行
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('无法读取响应流')
+      }
 
-        for (const line of lines) {
-          const trimmedLine = line.trim()
-          if (trimmedLine.startsWith('data: ')) {
-            const data = trimmedLine.slice(6)
-            if (data === '[DONE]') {
-              yield { type: 'done', data: null }
-              return
-            }
-            try {
-              const parsed = JSON.parse(data)
-              yield parsed
-            } catch {
-              // JSON 解析失败，跳过
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      try {
+        while (true) {
+          if (abortSignal?.aborted) {
+            break
+          }
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+
+          // 解析 SSE 格式
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || '' // 保留不完整行
+
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            if (trimmedLine.startsWith('data: ')) {
+              const data = trimmedLine.slice(6)
+              if (data === '[DONE]') {
+                yield { type: 'done', data: null }
+                return
+              }
+              try {
+                const parsed = JSON.parse(data)
+                yield parsed
+              } catch {
+                // JSON 解析失败，跳过
+              }
             }
           }
         }
+      } finally {
+        reader.releaseLock()
+        abortControllerRef.current = null
       }
-    } finally {
-      reader.releaseLock()
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // 用户主动中断
+        return
+      }
+      throw error
     }
   }, [])
 
@@ -331,6 +361,7 @@ export function useAgentApi() {
   return {
     chat,
     chatStream: chatStreamWrapper,
+    abortStream,
     confirm,
     getHistory,
     deleteSession,

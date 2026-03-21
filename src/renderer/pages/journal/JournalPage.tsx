@@ -108,8 +108,6 @@ export function JournalPage() {
       // 获取 PIN 状态
       await fetchPinStatus()
       const result = await listJournals({ page: 1, page_size: PAGE_SIZE })
-      console.log('[JournalPage] Loaded journals:', result)
-      console.log('[JournalPage] Items count:', result.items?.length)
       setJournals(result.items)
       // 默认展开所有日期
       const dates = new Set(

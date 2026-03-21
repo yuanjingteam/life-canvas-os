@@ -103,7 +103,6 @@ export function useJournalApi() {
   const listJournals = useCallback(
     async (params?: { page?: number; page_size?: number; mood?: MoodType }) => {
       const response = await journalApi.list(params)
-      console.log('[useJournalApi] list API response:', response)
 
       if (!response.ok) {
         const error = (await response.json()) as JournalApiError
@@ -116,8 +115,6 @@ export function useJournalApi() {
       const result = (await response.json()) as {
         data: PaginatedJournalsResponse
       }
-      console.log('[useJournalApi] Parsed result:', result)
-      console.log('[useJournalApi] Data items:', result.data?.items)
       return {
         ...result.data,
         items: result.data.items.map(transformJournalToEntry),

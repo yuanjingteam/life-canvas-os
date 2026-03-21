@@ -13,6 +13,7 @@ import {
   Sparkles,
   Plus,
   Bot,
+  Square, // 停止图标
 } from 'lucide-react'
 import { cn } from '~/renderer/lib/utils'
 import { ChatMessage, type Message as MessageType } from './ChatMessage'
@@ -55,6 +56,7 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   const {
     chat,
     chatStream,
+    abortStream,
     confirm,
     getHistory,
     getSessionList,
@@ -62,6 +64,8 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   } = useAgentApi()
   // 生产模式 (IPC) 下禁用流式，因为 IPC 不支持 SSE 流式响应
   const [useStreaming, setUseStreaming] = useState(import.meta.env.DEV)
+  // 追踪是否正在流式响应
+  const [isStreaming, setIsStreaming] = useState(false)
 
   // 获取当前会话的消息列表
   const currentMessages = sessionMessages.get(sessionId) || []
@@ -170,8 +174,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     }
 
     updateCurrentSessionMessages(prev => [...prev, userMessage])
-    setInput('')
+    setInput('')  // 发送后立即清空输入框
     setIsLoading(true)
+    setIsStreaming(true)
 
     // 添加助手消息占位
     const assistantMessageId = (Date.now() + 1).toString()
@@ -358,8 +363,24 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
       }
     } finally {
       setIsLoading(false)
+      setIsStreaming(false)
     }
   }
+
+  // 中断流式响应
+  const handleStop = useCallback(() => {
+    abortStream()
+    setIsStreaming(false)
+    setIsLoading(false)
+    // 更新消息状态为已完成
+    updateCurrentSessionMessages(prev =>
+      prev.map(msg =>
+        msg.isStreaming
+          ? { ...msg, isStreaming: false }
+          : msg
+      )
+    )
+  }, [abortStream])
 
   // 处理确认
   const handleConfirm = async (confirmed: boolean) => {
@@ -458,6 +479,9 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
     setEditingText('')
   }, [])
 
+  // 中文输入状态
+  const [isComposing, setIsComposing] = useState(false)
+
   // 重新发送失败消息
   const handleRetryMessage = useCallback(
     async (content: string) => {
@@ -469,13 +493,24 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
   )
 
   // 键盘事件 - Enter 发送，Shift+Enter 换行
+  // 注意：在中文输入时（IME 组合中），Enter 不发送消息
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
       e.preventDefault()
       handleSend()
     }
     // Shift+Enter 允许换行（默认行为）
   }
+
+  // 处理 IME 组合开始（中文输入开始）
+  const handleCompositionStart = useCallback(() => {
+    setIsComposing(true)
+  }, [])
+
+  // 处理 IME 组合结束（中文输入结束）
+  const handleCompositionEnd = useCallback(() => {
+    setIsComposing(false)
+  }, [])
 
   return (
     <div
@@ -614,20 +649,34 @@ export function ChatPanel({ onClose }: ChatPanelProps) {
             className="flex-1 px-3 py-2 rounded-xl bg-apple-bgSidebar dark:bg-white/5 border border-apple-border dark:border-white/10 text-sm input-focus focus:outline-none transition-all text-apple-textMain dark:text-white placeholder:text-apple-textTer"
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
             ref={inputRef}
             type="text"
             value={input}
           />
 
-          <Button
-            className="rounded-xl bg-apple-accent text-white hover:bg-apple-accent/90 disabled:opacity-50"
-            disabled={!input.trim() || isLoading}
-            onClick={handleSend}
-            size="icon"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+          {/* 停止按钮 - 在流式响应时显示 */}
+          {isStreaming ? (
+            <Button
+              className="rounded-xl bg-red-500 hover:bg-red-600 text-white"
+              onClick={handleStop}
+              size="icon"
+              title="停止生成"
+            >
+              <Square className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button
+              className="rounded-xl bg-apple-accent text-white hover:bg-apple-accent/90 disabled:opacity-50"
+              disabled={!input.trim() || isLoading}
+              onClick={handleSend}
+              size="icon"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
