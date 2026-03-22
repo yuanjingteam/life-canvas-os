@@ -1,12 +1,20 @@
 # Life Canvas OS API 接口文档
 
-> 版本：v1.8.1
-> 最后更新：2026-03-11
+> 版本：v1.9.0
+> 最后更新：2026-03-20
 > 基础 URL：`http://127.0.0.1:8000`（开发环境）
 > 数据格式：JSON
 > 遵循规范：[API_STANDARDS.md](./API_STANDARDS.md)
 
 ## 📝 更新日志
+
+### v1.9.0 (2026-03-20)
+- ✨ **Agent 智能助手**：新增 Agent 聊天接口，支持自然语言交互
+- ✨ **Agent 智能助手**：支持流式响应（SSE），实现打字机效果
+- ✨ **Agent 智能助手**：支持高风险操作确认机制
+- ✨ **Agent 智能助手**：支持会话持久化和历史记录
+- ✨ **Agent 智能助手**：支持技能查询和上下文管理
+- 📝 **文档**：新增 Agent 智能助手模块完整 API 文档
 
 ### v1.8.1 (2026-03-11)
 - ✨ **数据导入**：`backup_path` 参数新增支持 `.json` 文件路径导入
@@ -70,6 +78,7 @@
 - [AI 洞察](#ai-洞察)
 - [审计时间轴](#审计时间轴)
 - [数据管理](#数据管理)
+- [Agent 智能助手](#agent-智能助手)
 - [数据模型](#数据模型)
 
 ---
@@ -2284,6 +2293,326 @@ curl -O "http://127.0.0.1:8000/api/data/download?path=C%3A%5CUsers%5Cxxx%5Clife-
 - 此操作会自动创建当前数据库的备份
 - 备份文件保存在 `backups/` 目录下
 - 重置后会恢复到初始状态（默认用户、设置、8个系统）
+
+---
+
+## 🤖 Agent 智能助手
+
+Agent 智能助手模块支持自然语言交互，可以理解用户意图并执行系统操作。
+
+### 1. Agent 聊天
+
+**接口地址**：`POST /api/agent/chat`
+
+**描述**：发送消息给 Agent，获取 AI 响应
+
+**请求体**：
+```json
+{
+  "message": "帮我创建一篇关于今天工作的日记",
+  "session_id": "optional-session-id"
+}
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| message | String | 是 | 用户消息内容 |
+| session_id | String | 否 | 会话 ID，不传则创建新会话 |
+| stream | Boolean | 否 | 是否流式输出，默认 false |
+
+**成功响应（200）**：
+```json
+{
+  "session_id": "sess_abc123",
+  "message": "好的，我来帮您创建一篇工作日记。请问您今天的工作内容是什么？",
+  "actions": [],
+  "confirmation_required": null,
+  "error": null,
+  "timestamp": "2026-03-20T10:30:00"
+}
+```
+
+**需要确认的响应**：
+```json
+{
+  "session_id": "sess_abc123",
+  "message": "我检测到您要删除这篇日记，这是一个高风险操作。",
+  "actions": [],
+  "confirmation_required": {
+    "confirmation_id": "confirm_xyz789",
+    "action": {
+      "skill": "journal",
+      "action": "delete_journal",
+      "params": {"journal_id": 1},
+      "risk_level": "HIGH"
+    },
+    "message": "确定要删除这篇日记吗？此操作不可恢复。",
+    "risk_level": "HIGH",
+    "requires_code": false
+  },
+  "error": null,
+  "timestamp": "2026-03-20T10:30:00"
+}
+```
+
+**响应字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| session_id | String | 会话 ID，后续对话需传递此 ID |
+| message | String | Agent 响应消息 |
+| actions | Array | 执行的操作列表 |
+| confirmation_required | Object | 需要确认的操作信息，无则为 null |
+| error | String | 错误信息，无则为 null |
+| timestamp | String | 响应时间戳 |
+
+**错误响应（424）**：
+```json
+{
+  "code": 424,
+  "message": "AI 服务未配置",
+  "data": {
+    "hint": "请先在设置中配置 AI 服务"
+  }
+}
+```
+
+---
+
+### 2. Agent 流式聊天
+
+**接口地址**：`POST /api/agent/chat/stream`
+
+**描述**：以 SSE (Server-Sent Events) 流式返回响应，实现打字机效果
+
+**请求体**：
+```json
+{
+  "message": "帮我查询今天的饮食记录",
+  "session_id": "optional-session-id"
+}
+```
+
+**响应格式**：`text/event-stream`
+
+**事件类型**：
+
+| 事件类型 | 说明 |
+|----------|------|
+| thinking | Agent 思考中 |
+| action | Agent 执行操作 |
+| observation | 操作结果 |
+| message | 文本消息片段 |
+| confirmation | 需要用户确认 |
+| error | 错误信息 |
+| done | 流式响应结束 |
+
+**事件示例**：
+```
+data: {"type": "thinking", "content": "正在分析用户请求..."}
+
+data: {"type": "action", "skill": "diet", "action": "get_diet_records", "params": {"date": "2026-03-20"}}
+
+data: {"type": "observation", "result": "找到2条饮食记录"}
+
+data: {"type": "message", "content": "您今天有2条饮食记录..."}
+
+data: {"type": "done", "session_id": "sess_abc123"}
+```
+
+---
+
+### 3. 确认操作
+
+**接口地址**：`POST /api/agent/confirm`
+
+**描述**：确认或拒绝高风险操作
+
+**请求体**：
+```json
+{
+  "session_id": "sess_abc123",
+  "confirmation_id": "confirm_xyz789",
+  "confirmed": true,
+  "user_reason": null
+}
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| session_id | String | 是 | 会话 ID |
+| confirmation_id | String | 是 | 确认 ID（从聊天响应中获取） |
+| confirmed | Boolean | 是 | 是否确认执行 |
+| user_reason | String | 否 | 拒绝原因（拒绝时填写） |
+
+**成功响应（200）**：
+```json
+{
+  "session_id": "sess_abc123",
+  "message": "日记已删除",
+  "actions": [
+    {
+      "skill": "journal",
+      "action": "delete_journal",
+      "params": {"journal_id": 1},
+      "risk_level": "HIGH"
+    }
+  ],
+  "confirmation_required": null,
+  "error": null,
+  "timestamp": "2026-03-20T10:35:00"
+}
+```
+
+---
+
+### 4. 获取会话历史
+
+**接口地址**：`GET /api/agent/history/{session_id}`
+
+**描述**：获取指定会话的完整对话历史
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| session_id | String | 是 | 会话 ID |
+
+**成功响应（200）**：
+```json
+{
+  "session_id": "sess_abc123",
+  "title": "创建工作日记",
+  "messages": [
+    {
+      "id": 0,
+      "role": "user",
+      "content": "帮我创建一篇关于今天工作的日记",
+      "actions": [],
+      "created_at": "2026-03-20T10:30:00"
+    },
+    {
+      "id": 1,
+      "role": "assistant",
+      "content": "好的，我来帮您创建...",
+      "actions": [],
+      "created_at": "2026-03-20T10:30:05"
+    }
+  ],
+  "referenced_entities": {},
+  "last_operations": [],
+  "created_at": "2026-03-20T10:30:00",
+  "updated_at": "2026-03-20T10:35:00"
+}
+```
+
+**错误响应（404）**：
+```json
+{
+  "code": 404,
+  "message": "会话不存在或已过期"
+}
+```
+
+---
+
+### 5. 获取会话列表
+
+**接口地址**：`GET /api/agent/sessions`
+
+**描述**：获取所有会话列表（按更新时间倒序）
+
+**查询参数**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| limit | Integer | 否 | 20 | 每页数量，最大 100 |
+| offset | Integer | 否 | 0 | 偏移量 |
+
+**成功响应（200）**：
+```json
+{
+  "sessions": [
+    {
+      "session_id": "sess_abc123",
+      "title": "创建工作日记",
+      "message_count": 5,
+      "created_at": "2026-03-20T10:30:00",
+      "updated_at": "2026-03-20T10:35:00",
+      "last_message": "日记已创建成功"
+    }
+  ],
+  "total": 10
+}
+```
+
+---
+
+### 6. 删除会话
+
+**接口地址**：`DELETE /api/agent/sessions/{session_id}`
+
+**描述**：删除指定会话及其所有消息
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| session_id | String | 是 | 会话 ID |
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "会话已删除",
+  "data": {
+    "session_id": "sess_abc123"
+  },
+  "timestamp": 1772529146615
+}
+```
+
+**错误响应（404）**：
+```json
+{
+  "code": 404,
+  "message": "会话不存在"
+}
+```
+
+---
+
+### 7. 获取可用技能
+
+**接口地址**：`GET /api/agent/skills`
+
+**描述**：获取所有已注册的技能列表
+
+**成功响应（200）**：
+```json
+{
+  "code": 200,
+  "message": "共 5 个可用技能",
+  "data": [
+    {
+      "name": "journal",
+      "description": "日记管理技能，支持创建、查询、更新和删除日记",
+      "actions": [
+        {
+          "name": "create_journal",
+          "description": "创建新日记",
+          "parameters": {}
+        }
+      ]
+    }
+  ],
+  "timestamp": 1772529146615
+}
+```
 
 ---
 

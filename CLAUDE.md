@@ -10,7 +10,7 @@ Life Canvas OS is an Electron desktop application for personal life management b
 - **Backend**: Python 3.12 + FastAPI + SQLAlchemy + SQLite
 - **Build Tool**: PyInstaller (required for building Python backend)
 - **Communication**: Dual-mode Python backend (IPC for production, HTTP for development)
-- **Package Manager**: pnpm (required, version 10.30.3)
+- **Package Manager**: pnpm (required, version 10.32.1)
 
 ## Architecture
 
@@ -29,11 +29,12 @@ The Electron main process (`src/main/python/manager.ts`) manages the Python proc
 
 ```
 backend/
-├── api/              # FastAPI route handlers (auth, users, journals, insights, systems, data, diet, timeline)
+├── agent/            # AI Agent (ReAct pattern implementation)
+├── api/              # FastAPI route handlers (auth, users, journals, insights, systems, data, diet, timeline, agent)
 ├── core/             # Core utilities (config, exceptions, logging, middleware)
 ├── db/               # Database (session management, base models, initialization)
-├── models/           # SQLAlchemy ORM models (user, diary, insight, dimension)
-├── schemas/          # Pydantic schemas for request/response validation
+├── models/           # SQLAlchemy ORM models (user, diary, insight, dimension, agent)
+├── schemas/          # Pydantic schemas (auth, user, journal, insight, system, diet, timeline, agent, agent_context)
 ├── services/         # Business logic layer (auth, user, journal, insight, system, diet, data, timeline)
 └── main.py           # Dual-mode entry point
 ```
@@ -46,7 +47,8 @@ src/
 ├── preload/          # Preload scripts (IPC bridge to renderer)
 ├── renderer/         # React application (components, pages, routes)
 │   ├── components/   # UI components (GlassCard, PinLockScreen, shadcn/ui)
-│   ├── hooks/        # Custom hooks (useUserApi, useAiApi, useDataApi, usePinStatus, useJournalApi)
+│   ├── contexts/     # React contexts (AppContext for global state)
+│   ├── hooks/        # Custom hooks (useUserApi, useAiApi, useDataApi, usePinStatus, useJournalApi, useAgentApi)
 │   ├── pages/        # Page components (dashboard, settings, journal, timeline, systems, insight)
 │   └── lib/          # Utilities (constants, cacheUtils, insightUtils, dateUtils, pin, toast)
 ├── shared/           # Shared types and utilities
@@ -65,6 +67,26 @@ In production mode, the renderer communicates with Python backend via IPC:
 - **Method Aliases**: `create` → `POST`, `update` → `PUT`
 - **Protocol**: Length-prefixed JSON: `<length>\n<json_bytes>`
 
+### AI Agent Module
+
+The project includes an AI Agent for natural language interaction with the eight-dimensional life management system.
+
+**Architecture** (see `docs/AGENT_DEVELOPMENT.md` for detailed specs):
+
+- **Backend**: `backend/agent/` - ReAct pattern implementation
+- **API**: `backend/api/agent.py` - Agent endpoints
+- **Models**: `backend/models/agent.py`, `backend/schemas/agent.py`, `backend/schemas/agent_context.py`
+- **Frontend**: `src/renderer/components/agent/` - React components
+- **API Hook**: `src/renderer/hooks/useAgentApi.ts`
+
+**Agent Capabilities**:
+- **Natural Language Understanding**: Parse user input, understand intent
+- **Context-Aware Multi-turn Conversations**: Remember previous interactions ("刚才", "那篇日记")
+- **System Operations**: Create/update diaries, query scores, manage dimensions
+- **Extensible Tool Framework**: Easily add new capabilities
+
+**Development Pattern**: ReAct (Reason + Act) - Thought → Action → Observation loop
+
 ### Key Patterns
 
 - **Unified API Response Format**: All API endpoints return `{code, message, data, timestamp}` using `success_response()` and `error_response()` from `backend/schemas/common.py`
@@ -74,12 +96,11 @@ In production mode, the renderer communicates with Python backend via IPC:
 - **Database Session**: Use `Depends(get_db)` for API endpoints, `get_db_context()` for background tasks
 - **State Management Strategy**:
   - **Server State**: Must use TanStack Query (never useState for API data)
-  - **Global Business State**: Use Zustand for high-frequency updates (e.g., 8-dimension scores, lock state)
-  - **Global Config State**: Use React Context for low-frequency updates (e.g., theme, language, auth)
+  - **Global State**: Use React Context (`src/renderer/contexts/AppContext.tsx`) for app-wide state (theme, dimensions, lock state, user info)
   - **Local State**: Use useState/useReducer
   - **Form State**: Use react-hook-form + zod
-- **Zustand Store Location**: Stores in `src/renderer/lib/stores/` (e.g., `app-store.ts` for app state)
-- **Eight-Dimensional Scores**: Managed via Zustand for real-time updates across components
+  - **Persistence**: localStorage via `cacheUtils.ts` for client-side caching
+- **Eight-Dimensional Scores**: Managed via AppContext for real-time updates across components
 
 ## Common Commands
 
@@ -167,6 +188,7 @@ Project uses Biome for consistent code formatting:
 - **Line Width**: 80 characters
 - **Quotes**: Single quotes for JS/TS, double quotes for JSX
 - **Semicolons**: As-needed (no trailing semicolons)
+- **Trailing Commas**: ES5 style (trailing commas in lists and objects where valid in ES5)
 - **Import Sorting**: Disabled (use manual organization)
 
 Run `pnpm lint:fix` before committing.
@@ -296,6 +318,7 @@ Use `model_config` instead of deprecated `class Config`.
 - **Python manager**: `src/main/python/manager.ts` - Process lifecycle
 - **Preload bridge**: `src/preload/index.ts` - IPC exposure to renderer
 - **Renderer entry**: `src/renderer/index.html` - React app root
+- **Global state**: `src/renderer/contexts/AppContext.tsx` - App-wide state management
 - **Path aliases**: Configured in `tsconfig.json` - `~/` → `src/`
 
 ### Configuration
@@ -307,6 +330,7 @@ Use `model_config` instead of deprecated `class Config`.
 ### Documentation
 
 - **API docs**: `docs/API.md` - Complete API reference
+- **Agent development**: `docs/AGENT_DEVELOPMENT.md` - AI Agent architecture and implementation
 - **Backend rules**: `docs/BACKEND_AI_RULES.md` - Python coding standards
 - **Frontend rules**: `docs/FRONTEND_AI_RULES.md` - React/TypeScript standards
 - **Development roadmap**: `docs/DEVELOPMENT_ROADMAP.md` - Phase-by-phase plan

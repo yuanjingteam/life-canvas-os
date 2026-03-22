@@ -1,0 +1,3193 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Life Canvas OS API",
+    "description": "# 八维生命平衡系统 API\n\n基于「八维生命平衡模型」的个人生活管理桌面应用。\n\n## 八维系统\n\n| 系统类型 | 中文名 | 描述 |\n|---------|-------|------|\n| FUEL | 饮食系统 | 记录饮食、营养追踪 |\n| PHYSICAL | 运动系统 | 运动记录、体能管理 |\n| INTELLECTUAL | 读书系统 | 阅读记录、知识管理 |\n| OUTPUT | 工作系统 | 工作产出、任务管理 |\n| DREAM | 梦想系统 | 目标追踪、愿景规划 |\n| ASSET | 财务系统 | 收支记录、资产管理 |\n| CONNECTION | 社交系统 | 人际关系、社交活动 |\n| ENVIRONMENT | 环境系统 | 居住环境、生活空间 |\n\n## 认证方式\n\n使用 PIN 码认证（6位数字）。\n\n## 统一响应格式\n\n所有接口返回统一格式：\n```json\n{\n  \"code\": 200,\n  \"message\": \"操作成功\",\n  \"data\": {},\n  \"timestamp\": \"2024-01-01T00:00:00\"\n}\n```\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Root",
+        "description": "根路径健康检查",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Ping",
+        "description": "Ping 检查",
+        "operationId": "ping_ping_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test/hello": {
+      "get": {
+        "tags": [
+          "test",
+          "test"
+        ],
+        "summary": "Hello World",
+        "description": "简单的 Hello World 接口",
+        "operationId": "hello_world_api_test_hello_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test/echo": {
+      "post": {
+        "tags": [
+          "test",
+          "test"
+        ],
+        "summary": "Echo Test",
+        "description": "回显测试接口",
+        "operationId": "echo_test_api_test_echo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test/info": {
+      "get": {
+        "tags": [
+          "test",
+          "test"
+        ],
+        "summary": "Get System Info",
+        "description": "获取系统信息",
+        "operationId": "get_system_info_api_test_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/setup": {
+      "post": {
+        "tags": [
+          "authentication",
+          "authentication"
+        ],
+        "summary": "Setup Pin",
+        "description": "设置 PIN 码（首次）\n\n验证规则：6 位数字",
+        "operationId": "setup_pin_api_pin_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinSetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/verify": {
+      "post": {
+        "tags": [
+          "authentication",
+          "authentication"
+        ],
+        "summary": "Verify Pin Code",
+        "description": "验证 PIN 码",
+        "operationId": "verify_pin_code_api_pin_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/change": {
+      "post": {
+        "tags": [
+          "authentication",
+          "authentication"
+        ],
+        "summary": "Change Pin",
+        "description": "修改 PIN 码",
+        "operationId": "change_pin_api_pin_change_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/lock": {
+      "post": {
+        "tags": [
+          "authentication",
+          "authentication"
+        ],
+        "summary": "Lock App",
+        "description": "锁定应用",
+        "operationId": "lock_app_api_pin_lock_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pin/verify-requirements": {
+      "get": {
+        "tags": [
+          "authentication",
+          "authentication"
+        ],
+        "summary": "Get Pin Verify Requirements",
+        "description": "获取PIN验证要求\n\n返回各个功能是否需要PIN验证",
+        "operationId": "get_pin_verify_requirements_api_pin_verify_requirements_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diet/baseline": {
+      "get": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Get Diet Baseline",
+        "description": "获取饮食基准\n\n返回用户设置的早餐、午餐、晚餐和口味基准",
+        "operationId": "get_diet_baseline_api_diet_baseline_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Update Diet Baseline",
+        "description": "更新饮食基准\n\n支持部分更新，可以只更新某些字段\n- breakfast: 早餐基准\n- lunch: 午餐基准\n- dinner: 晚餐基准\n- taste: 口味偏好列表",
+        "operationId": "update_diet_baseline_api_diet_baseline_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuelBaselineUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diet/deviations": {
+      "post": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Create Deviation",
+        "description": "创建偏离事件\n\n记录饮食偏离基准的事件，只需填写偏离描述",
+        "operationId": "create_deviation_api_diet_deviations_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealDeviationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Get Deviations",
+        "description": "获取偏离事件列表\n\n支持按日期范围过滤",
+        "operationId": "get_deviations_api_diet_deviations_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "开始日期 (YYYY-MM-DD)",
+              "title": "Start Date"
+            },
+            "description": "开始日期 (YYYY-MM-DD)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "结束日期 (YYYY-MM-DD)",
+              "title": "End Date"
+            },
+            "description": "结束日期 (YYYY-MM-DD)"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diet/deviations/{deviation_id}": {
+      "get": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Get Deviation",
+        "description": "获取单个偏离事件详情",
+        "operationId": "get_deviation_api_diet_deviations__deviation_id__get",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Update Deviation",
+        "description": "更新偏离事件\n\n可以更新偏离描述",
+        "operationId": "update_deviation_api_diet_deviations__deviation_id__patch",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealDeviationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Delete Deviation",
+        "description": "删除偏离事件",
+        "operationId": "delete_deviation_api_diet_deviations__deviation_id__delete",
+        "parameters": [
+          {
+            "name": "deviation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Deviation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diet/statistics": {
+      "get": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Get Diet Statistics",
+        "description": "获取饮食统计信息\n\n包括总偏离次数、本月偏离次数、最近偏离时间等",
+        "operationId": "get_diet_statistics_api_diet_statistics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diet/score-history": {
+      "get": {
+        "tags": [
+          "diet",
+          "diet-system"
+        ],
+        "summary": "Get Score History",
+        "description": "获取评分变化历史\n\n返回指定天数内的评分变化记录",
+        "operationId": "get_score_history_api_diet_score_history_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "description": "查询天数范围",
+              "default": 30,
+              "title": "Days"
+            },
+            "description": "查询天数范围"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/systems/scores": {
+      "get": {
+        "tags": [
+          "systems",
+          "systems"
+        ],
+        "summary": "Get All Systems Scores",
+        "description": "获取八大系统评分摘要\n\n返回所有系统的当前评分和平均分",
+        "operationId": "get_all_systems_scores_api_systems_scores_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/profile": {
+      "get": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Get User Profile",
+        "description": "获取用户信息",
+        "operationId": "get_user_profile_api_user_profile_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Update User Profile",
+        "description": "更新用户信息",
+        "operationId": "update_user_profile_api_user_profile_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/settings": {
+      "get": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Get User Settings",
+        "description": "获取用户设置",
+        "operationId": "get_user_settings_api_user_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Update User Settings",
+        "description": "更新用户设置",
+        "operationId": "update_user_settings_api_user_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/ai-config": {
+      "get": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Get Ai Config",
+        "description": "获取 AI 配置（不返回完整 API Key）",
+        "operationId": "get_ai_config_api_user_ai_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Save Ai Config",
+        "description": "保存 AI 配置（自动验证 API Key 有效性）\n\n流程：\n1. 先验证 API Key 是否有效\n2. 验证通过后才保存配置\n3. 验证失败则返回错误，不保存配置",
+        "operationId": "save_ai_config_api_user_ai_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIConfigBase"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/ai-config/verify": {
+      "post": {
+        "tags": [
+          "users",
+          "user"
+        ],
+        "summary": "Verify Api Key",
+        "description": "验证 API Key 有效性\n\n在保存前验证 API Key 是否有效，避免保存无效的 Key。\n仅支持 DeepSeek 和豆包两个提供商。",
+        "operationId": "verify_api_key_api_user_ai_config_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APIKeyVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/journal": {
+      "post": {
+        "tags": [
+          "journals",
+          "journals"
+        ],
+        "summary": "Create Diary",
+        "description": "创建日记",
+        "operationId": "create_diary_api_journal_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiaryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "journals",
+          "journals"
+        ],
+        "summary": "Get Diaries",
+        "description": "获取日记列表",
+        "operationId": "get_diaries_api_journal_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "mood",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "great",
+                    "good",
+                    "neutral",
+                    "bad",
+                    "terrible"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mood"
+            }
+          },
+          {
+            "name": "related_system",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Related System"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "created_at",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Sort Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/journal/{diary_id}": {
+      "get": {
+        "tags": [
+          "journals",
+          "journals"
+        ],
+        "summary": "Get Diary Detail",
+        "description": "获取日记详情",
+        "operationId": "get_diary_detail_api_journal__diary_id__get",
+        "parameters": [
+          {
+            "name": "diary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Diary Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "journals",
+          "journals"
+        ],
+        "summary": "Update Diary",
+        "description": "更新日记",
+        "operationId": "update_diary_api_journal__diary_id__patch",
+        "parameters": [
+          {
+            "name": "diary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Diary Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiaryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "journals",
+          "journals"
+        ],
+        "summary": "Delete Diary",
+        "description": "删除日记",
+        "operationId": "delete_diary_api_journal__diary_id__delete",
+        "parameters": [
+          {
+            "name": "diary_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Diary Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/generate": {
+      "post": {
+        "tags": [
+          "insights",
+          "insights"
+        ],
+        "summary": "Generate Insight",
+        "description": "生成洞察",
+        "operationId": "generate_insight_api_insights_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InsightGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights": {
+      "get": {
+        "tags": [
+          "insights",
+          "insights"
+        ],
+        "summary": "Get Insights",
+        "description": "获取洞察历史",
+        "operationId": "get_insights_api_insights_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 10,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "generated_at",
+              "title": "Sort By"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Sort Order"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/latest": {
+      "get": {
+        "tags": [
+          "insights",
+          "insights"
+        ],
+        "summary": "Get Latest Insight Endpoint",
+        "description": "获取最新洞察",
+        "operationId": "get_latest_insight_endpoint_api_insights_latest_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/insights/{insight_id}": {
+      "get": {
+        "tags": [
+          "insights",
+          "insights"
+        ],
+        "summary": "Get Insight By Id",
+        "description": "获取单个洞察详情",
+        "operationId": "get_insight_by_id_api_insights__insight_id__get",
+        "parameters": [
+          {
+            "name": "insight_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Insight Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/export": {
+      "post": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "Export Data",
+        "description": "导出数据\n\nArgs:\n    format: 导出格式 (json, zip)\n\nReturns:\n    JSON 响应包含导出路径信息，同时提供文件下载",
+        "operationId": "export_data_api_data_export_post",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "导出格式 (json, zip)",
+              "default": "json",
+              "title": "Format"
+            },
+            "description": "导出格式 (json, zip)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/import": {
+      "post": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "Import Data",
+        "description": "导入数据\n\n支持两种导入方式：\n1. ZIP 备份文件：通过 backup_path 指定文件路径\n2. JSON 数据：通过 data 字段直接传入 JSON 数据\n\n请求体:\n    backup_path: 备份文件路径 (可选)\n    data: JSON 格式的导入数据 (可选)\n    verify: 是否验证备份文件 (默认 True)",
+        "operationId": "import_data_api_data_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/backups": {
+      "get": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "List Backups",
+        "description": "列出所有备份",
+        "operationId": "list_backups_api_data_backups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/backup/create": {
+      "post": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "Create Backup",
+        "description": "创建数据库备份",
+        "operationId": "create_backup_api_data_backup_create_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/health": {
+      "get": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "Health Check",
+        "description": "健康检查",
+        "operationId": "health_check_api_data_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/download": {
+      "get": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "Download File",
+        "description": "下载导出的文件\n\nArgs:\n    path: 文件的完整路径\n\nReturns:\n    FileResponse 文件下载响应",
+        "operationId": "download_file_api_data_download_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "文件完整路径",
+              "title": "Path"
+            },
+            "description": "文件完整路径"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/data/reset": {
+      "post": {
+        "tags": [
+          "data-management",
+          "data-management"
+        ],
+        "summary": "Reset System",
+        "description": "重置系统（危险操作，会删除所有数据）\n\n此操作会：\n1. 自动创建当前数据库的备份\n2. 删除所有数据\n3. 恢复到初始状态（默认用户、设置、8个系统）",
+        "operationId": "reset_system_api_data_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/timeline": {
+      "get": {
+        "tags": [
+          "timeline",
+          "timeline"
+        ],
+        "summary": "Get Timeline",
+        "description": "获取审计时间轴\n\n聚合日记和饮食偏离事件，按时间排序并按日期分组\n\n参数：\n- type: 事件类型过滤，可选值: all（全部）、diary（日记）、diet（饮食偏离）\n- page: 页码，从 1 开始\n- page_size: 每页数量，最大 100\n\n返回：\n- timeline: 按日期分组的事件列表\n- total_events: 总事件数\n- has_more: 是否有更多数据",
+        "operationId": "get_timeline_api_timeline_get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "diary",
+                "diet"
+              ],
+              "type": "string",
+              "description": "事件类型过滤：all, diary, diet",
+              "default": "all",
+              "title": "Type"
+            },
+            "description": "事件类型过滤：all, diary, diet"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "页码",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "页码"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "每页数量",
+              "default": 30,
+              "title": "Page Size"
+            },
+            "description": "每页数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/chat": {
+      "post": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "Chat",
+        "description": "Agent 聊天接口\n\n处理用户消息并返回响应",
+        "operationId": "chat_api_agent_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/chat/stream": {
+      "post": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "Chat Stream",
+        "description": "Agent 流式聊天接口\n\n以 SSE 流式返回响应",
+        "operationId": "chat_stream_api_agent_chat_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/confirm": {
+      "post": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "Confirm Action",
+        "description": "确认操作接口\n\n用于确认高风险操作",
+        "operationId": "confirm_action_api_agent_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/history/{session_id}": {
+      "get": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "Get History",
+        "description": "获取会话历史\n\n返回指定会话的对话历史（从持久化存储加载）",
+        "operationId": "get_history_api_agent_history__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/sessions": {
+      "get": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "List Sessions",
+        "description": "列出所有会话\n\n返回会话列表（固定会话在前，按更新时间倒序）",
+        "operationId": "list_sessions_api_agent_sessions_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSessionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/sessions/{session_id}": {
+      "delete": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "Delete Session",
+        "description": "删除会话\n\n删除指定会话及其所有消息",
+        "operationId": "delete_session_api_agent_sessions__session_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/sessions/{session_id}/pin": {
+      "patch": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "Toggle Pin Session",
+        "description": "切换会话固定状态\n\nArgs:\n    session_id: 会话ID\n    pinned: 固定状态 (0: 取消固定, 1: 固定)",
+        "operationId": "toggle_pin_session_api_agent_sessions__session_id__pin_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "pinned",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Pinned"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/skills": {
+      "get": {
+        "tags": [
+          "agent",
+          "agent"
+        ],
+        "summary": "List Skills",
+        "description": "列出所有可用技能\n\n返回所有已注册的技能列表",
+        "operationId": "list_skills_api_agent_skills_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AIConfigBase": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "deepseek",
+              "doubao"
+            ],
+            "title": "Provider"
+          },
+          "api_key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Api Key",
+            "description": "API Key"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name",
+            "description": "模型名称"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "api_key"
+        ],
+        "title": "AIConfigBase",
+        "description": "AI 配置基础"
+      },
+      "APIKeyVerifyRequest": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "AI 提供商 (deepseek, doubao)"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key",
+            "description": "API Key"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "可选的模型名称"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "api_key"
+        ],
+        "title": "APIKeyVerifyRequest",
+        "description": "API Key 验证请求"
+      },
+      "ActionInfoSchema": {
+        "properties": {
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level",
+            "default": "LOW"
+          }
+        },
+        "type": "object",
+        "required": [
+          "skill",
+          "action"
+        ],
+        "title": "ActionInfoSchema",
+        "description": "操作信息"
+      },
+      "AgentChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "用户消息"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "会话ID"
+          },
+          "stream": {
+            "type": "boolean",
+            "title": "Stream",
+            "description": "是否流式输出",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "AgentChatRequest",
+        "description": "Agent 聊天请求"
+      },
+      "AgentChatResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ActionInfoSchema"
+            },
+            "type": "array",
+            "title": "Actions"
+          },
+          "confirmation_required": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfirmationSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "message"
+        ],
+        "title": "AgentChatResponse",
+        "description": "Agent 聊天响应"
+      },
+      "AgentConfirmRequest": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id",
+            "description": "会话ID"
+          },
+          "confirmation_id": {
+            "type": "string",
+            "title": "Confirmation Id",
+            "description": "确认ID"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "description": "是否确认"
+          },
+          "user_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Reason",
+            "description": "拒绝原因"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "confirmation_id",
+          "confirmed"
+        ],
+        "title": "AgentConfirmRequest",
+        "description": "Agent 确认请求"
+      },
+      "AgentSessionListItem": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "message_count": {
+            "type": "integer",
+            "title": "Message Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "last_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message"
+          },
+          "pinned": {
+            "type": "integer",
+            "title": "Pinned",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "message_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AgentSessionListItem",
+        "description": "会话列表项"
+      },
+      "AgentSessionListResponse": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/AgentSessionListItem"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessions",
+          "total"
+        ],
+        "title": "AgentSessionListResponse",
+        "description": "会话列表响应"
+      },
+      "AgentSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageResponse"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "referenced_entities": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Referenced Entities"
+          },
+          "last_operations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Last Operations"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AgentSessionResponse",
+        "description": "会话响应"
+      },
+      "ConfirmationSchema": {
+        "properties": {
+          "confirmation_id": {
+            "type": "string",
+            "title": "Confirmation Id"
+          },
+          "action": {
+            "$ref": "#/components/schemas/ActionInfoSchema"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level"
+          },
+          "requires_code": {
+            "type": "boolean",
+            "title": "Requires Code",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirmation_id",
+          "action",
+          "message",
+          "risk_level"
+        ],
+        "title": "ConfirmationSchema",
+        "description": "确认信息"
+      },
+      "DataImportRequest": {
+        "properties": {
+          "backup_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Path",
+            "description": "备份文件路径（支持 .zip 和 .json 扩展名）"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data",
+            "description": "JSON 格式的导入数据"
+          },
+          "verify": {
+            "type": "boolean",
+            "title": "Verify",
+            "description": "是否验证备份文件（仅 ZIP 导入有效）",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "DataImportRequest",
+        "description": "数据导入请求\n\n支持三种导入方式：\n1. ZIP 备份文件：通过 backup_path 指定 .zip 文件路径（完整覆盖数据库）\n2. JSON 文件：通过 backup_path 指定 .json 文件路径（upsert 模式）\n3. JSON 数据：通过 data 字段直接传入 JSON 数据（upsert 模式）\n\n注意：backup_path 和 data 参数二选一，不能同时提供",
+        "example": {
+          "backup_path": "D:\\pythonCode\\life-canvas-os\\backups\\backup_20260302_093033.zip",
+          "verify": true
+        }
+      },
+      "DiaryCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "description": "标题",
+            "default": "未命名"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "内容",
+            "default": ""
+          },
+          "mood": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "great",
+                  "good",
+                  "neutral",
+                  "bad",
+                  "terrible"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mood",
+            "description": "心情"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags",
+            "description": "标签（JSON 数组字符串）"
+          },
+          "related_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Related System",
+            "description": "关联系统类型"
+          },
+          "is_private": {
+            "type": "boolean",
+            "title": "Is Private",
+            "description": "是否私密",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "DiaryCreate",
+        "description": "创建日记"
+      },
+      "DiaryUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "default": "未命名"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "default": ""
+          },
+          "mood": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "great",
+                  "good",
+                  "neutral",
+                  "bad",
+                  "terrible"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mood"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "related_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Related System"
+          },
+          "is_private": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Private"
+          }
+        },
+        "type": "object",
+        "title": "DiaryUpdate",
+        "description": "更新日记（所有字段可选）"
+      },
+      "FuelBaselineUpdate": {
+        "properties": {
+          "breakfast": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MealItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Breakfast",
+            "description": "早餐基准"
+          },
+          "lunch": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MealItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lunch",
+            "description": "午餐基准"
+          },
+          "dinner": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MealItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dinner",
+            "description": "晚餐基准"
+          },
+          "taste": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taste",
+            "description": "口味偏好"
+          }
+        },
+        "type": "object",
+        "title": "FuelBaselineUpdate",
+        "description": "更新饮食基准"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InsightGenerateRequest": {
+        "properties": {},
+        "type": "object",
+        "title": "InsightGenerateRequest",
+        "description": "生成洞察请求（无需参数，会自动检查今日生成次数）"
+      },
+      "MealDeviationCreate": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "偏离描述，如：多吃了零食、没有吃早餐"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At",
+            "description": "发生时间（默认当前时间）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description"
+        ],
+        "title": "MealDeviationCreate",
+        "description": "创建偏离事件"
+      },
+      "MealDeviationUpdate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "偏离描述"
+          }
+        },
+        "type": "object",
+        "title": "MealDeviationUpdate",
+        "description": "更新偏离事件"
+      },
+      "MealItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "食物名称"
+          },
+          "amount": {
+            "type": "string",
+            "title": "Amount",
+            "description": "分量（如：1碗、200g等）"
+          },
+          "calories": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calories",
+            "description": "卡路里（可选）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "amount"
+        ],
+        "title": "MealItem",
+        "description": "餐食项"
+      },
+      "MessageResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "actions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Actions"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "content",
+          "created_at"
+        ],
+        "title": "MessageResponse",
+        "description": "消息响应"
+      },
+      "PinChangeRequest": {
+        "properties": {
+          "old_pin": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "title": "Old Pin",
+            "description": "旧 PIN 码"
+          },
+          "new_pin": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "title": "New Pin",
+            "description": "新 PIN 码"
+          }
+        },
+        "type": "object",
+        "required": [
+          "old_pin",
+          "new_pin"
+        ],
+        "title": "PinChangeRequest",
+        "description": "修改 PIN 码请求"
+      },
+      "PinSetupRequest": {
+        "properties": {
+          "pin": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "title": "Pin",
+            "description": "6 位数字 PIN 码"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pin"
+        ],
+        "title": "PinSetupRequest",
+        "description": "设置 PIN 码请求"
+      },
+      "PinVerifyRequest": {
+        "properties": {
+          "pin": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "title": "Pin",
+            "description": "6 位数字 PIN 码"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pin"
+        ],
+        "title": "PinVerifyRequest",
+        "description": "验证 PIN 码请求"
+      },
+      "TestRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "default": "World"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "TestRequest",
+        "description": "测试请求模型"
+      },
+      "UserSettingsUpdate": {
+        "properties": {
+          "theme": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "light",
+                  "dark",
+                  "auto"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theme"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "auto_save_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Save Enabled"
+          },
+          "auto_save_interval": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 600.0,
+                "minimum": 10.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Save Interval"
+          },
+          "notification_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notification Enabled"
+          },
+          "notification_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{2}:\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notification Time"
+          },
+          "show_year_progress": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Year Progress"
+          },
+          "show_weekday": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Weekday"
+          },
+          "pin_verify_on_startup": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pin Verify On Startup"
+          },
+          "pin_verify_for_private_journal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pin Verify For Private Journal"
+          },
+          "pin_verify_for_data_export": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pin Verify For Data Export"
+          },
+          "pin_verify_for_settings_change": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pin Verify For Settings Change"
+          }
+        },
+        "type": "object",
+        "title": "UserSettingsUpdate",
+        "description": "更新用户设置（所有字段可选）"
+      },
+      "UserUpdate": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name",
+            "description": "显示名称"
+          },
+          "birthday": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birthday",
+            "description": "生日字符串 YYYY-MM-DD"
+          },
+          "mbti": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4,
+                "minLength": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mbti",
+            "description": "MBTI 类型"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values",
+            "description": "价值观列表（JSON 数组字符串）"
+          },
+          "life_expectancy": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 50.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Expectancy",
+            "description": "期望寿命"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate",
+        "description": "更新用户信息（所有字段可选）"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

@@ -6,10 +6,19 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { platform } from 'node:os'
 
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 
 // 记录启动时的进程 PID，用于清理僵尸进程
 let startedPid: number | null = null
+
+// 流式事件类型
+interface StreamEvent {
+  type: 'stream_start' | 'stream_chunk' | 'stream_end'
+  session_id: string
+  content?: string
+  result?: any
+  error?: string
+}
 
 export class PythonManager {
   private process: ChildProcess | null = null
@@ -93,9 +102,13 @@ export class PythonManager {
       try {
         console.error('[Python stderr]', data.toString())
       } catch (error) {
-        // 忽略管道错误，防止应用崩溃
-        if ((error as any)?.code !== 'EPIPE') {
-          throw error
+        // 忽略所有管道错误，防止应用崩溃
+        const err = error as any
+        if (
+          err?.code !== 'EPIPE' &&
+          err?.code !== 'ERR_STREAM_PREMATURE_CLOSE'
+        ) {
+          console.error('[Python Manager] stderr error:', err)
         }
       }
     })
@@ -177,12 +190,34 @@ export class PythonManager {
       return
     }
 
+    // 处理流式事件
+    if (response.type?.startsWith('stream_')) {
+      this.handleStreamEvent(response as StreamEvent)
+      return
+    }
+
     // 处理业务响应
     const callback = this.responseCallbacks.get(response.id)
     if (callback) {
       callback(response)
       this.responseCallbacks.delete(response.id)
     }
+  }
+
+  /**
+   * 处理流式事件
+   */
+  private handleStreamEvent(event: StreamEvent) {
+    // 向所有窗口发送流式事件
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (event.type === 'stream_start') {
+        win.webContents.send('agent-stream-start', event)
+      } else if (event.type === 'stream_chunk') {
+        win.webContents.send('agent-stream-chunk', event)
+      } else if (event.type === 'stream_end') {
+        win.webContents.send('agent-stream-end', event)
+      }
+    })
   }
 
   /**
@@ -221,17 +256,36 @@ export class PythonManager {
 
       const process = this.process
       if (process?.stdin?.writable) {
-        process.stdin.write(message, err => {
-          // 处理 EPIPE 错误（管道已关闭）
-          if (err && (err as any).code === 'EPIPE') {
-            console.warn(
-              '[Python Manager] EPIPE: Python process may have exited'
-            )
+        try {
+          process.stdin.write(message, err => {
+            // 处理 EPIPE 错误（管道已关闭）
+            if (err) {
+              const errCode = (err as any).code
+              if (
+                errCode === 'EPIPE' ||
+                errCode === 'ERR_STREAM_PREMATURE_CLOSE'
+              ) {
+                console.warn(
+                  '[Python Manager] EPIPE: Python process may have exited'
+                )
+                clearTimeout(timer)
+                this.responseCallbacks.delete(id)
+                reject(new Error('Python process is not running'))
+                return
+              }
+            }
+          })
+        } catch (err) {
+          // 处理 stdin 已关闭的情况
+          const errCode = (err as any).code
+          if (errCode === 'EPIPE' || errCode === 'ERR_STREAM_PREMATURE_CLOSE') {
             clearTimeout(timer)
             this.responseCallbacks.delete(id)
             reject(new Error('Python process is not running'))
+            return
           }
-        })
+          throw err
+        }
       } else {
         clearTimeout(timer)
         this.responseCallbacks.delete(id)
@@ -357,8 +411,13 @@ export class PythonManager {
    * 重启 Python 进程
    */
   async restart() {
-    await this.stop()
-    setTimeout(() => this.start(), 1000)
+    // 检查是否已经有进程在运行
+    if (this.process?.pid) {
+      await this.stop()
+      // 等待进程完全退出
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    this.start()
   }
 
   /**

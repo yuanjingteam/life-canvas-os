@@ -92,6 +92,8 @@ class JournalService:
         # 构建查询
         query = db.query(Diary).filter(Diary.user_id == user.id)
 
+        print(f"查询参数: {query}")
+
         # 筛选
         if mood:
             query = query.filter(Diary.mood == mood)

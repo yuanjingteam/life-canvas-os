@@ -42,7 +42,12 @@ else:
         sys.path.insert(0, str(backend_dir))
 
 # 判断运行模式
-IS_DEV = '--dev' in sys.argv
+# 开发模式条件：
+# 1. 命令行传递了 --dev 参数
+# 2. 或者 NODE_ENV 环境变量为 'development'
+# 生产模式条件：NODE_ENV 为 'production' 或未设置且无 --dev 参数
+_node_env = os.environ.get('NODE_ENV', '')
+IS_DEV = '--dev' in sys.argv or _node_env == 'development'
 
 if IS_DEV:
     # 开发模式：启动 FastAPI HTTP 服务器
@@ -61,6 +66,7 @@ if IS_DEV:
     from backend.api.insights import router as insights_router
     from backend.api.data import router as data_router
     from backend.api.timeline import router as timeline_router
+    from backend.api.agent import router as agent_router
 
     # 导入中间件和异常处理
     from backend.core.middleware import (
@@ -156,6 +162,7 @@ if IS_DEV:
     app.include_router(insights_router, tags=["insights"])
     app.include_router(data_router, tags=["data-management"])
     app.include_router(timeline_router, tags=["timeline"])
+    app.include_router(agent_router, tags=["agent"])
 
     @app.get("/")
     async def root():
@@ -179,7 +186,16 @@ if IS_DEV:
 else:
     # 生产模式：IPC 通信（通过 stdin/stdout 与 Electron 通信）
     import asyncio
+    import logging
     from httpx import AsyncClient
+
+    # 配置 stderr 使用 UTF-8 编码
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
+    # 禁用根日志器的输出，避免干扰 IPC 协议
+    logging.getLogger().handlers = []
+    logging.getLogger().setLevel(logging.WARNING)
 
     # FastAPI 应用实例（用于内部调用）
     _app = None
@@ -205,6 +221,7 @@ else:
                     from backend.api.insights import router as insights_router
                     from backend.api.data import router as data_router
                     from backend.api.timeline import router as timeline_router
+                    from backend.api.agent import router as agent_router
                     from backend.core.exceptions import setup_exception_handlers
 
                     # 创建 FastAPI 应用
@@ -237,6 +254,7 @@ else:
                     _app.include_router(insights_router, tags=["insights"])
                     _app.include_router(data_router, tags=["data-management"])
                     _app.include_router(timeline_router, tags=["timeline"])
+                    _app.include_router(agent_router, tags=["agent"])
 
         return _app
 
@@ -329,6 +347,60 @@ else:
 
         # 导入认证处理器
         from backend.api.auth import handle_auth_action
+        from backend.api.agent import handle_agent_action, get_user_ai_config, get_current_user_id
+        from backend.agent.langchain.agent import AgentExecutor
+
+        def send_stream_event(event_type: str, data: dict):
+            """发送流式事件（通过 stdout）"""
+            event = {"type": event_type, **data}
+            event_str = json.dumps(event, ensure_ascii=False)
+            event_bytes = event_str.encode('utf-8')
+            sys.stdout.buffer.write(f'{len(event_bytes)}\n'.encode('utf-8'))
+            sys.stdout.buffer.write(event_bytes)
+            sys.stdout.buffer.flush()
+
+        def handle_agent_chat_stream(params: dict) -> dict:
+            """处理流式聊天请求"""
+            from backend.db.session import SessionLocal
+
+            loop = asyncio.new_event_loop()
+            try:
+                db = SessionLocal()
+                try:
+                    user_config = get_user_ai_config(db)
+                    if not user_config:
+                        send_stream_event('stream_end', {
+                            'session_id': '',
+                            'error': 'AI 服务未配置'
+                        })
+                        return {'error': 'AI 服务未配置', 'code': 424}
+
+                    user_id = get_current_user_id(db)
+                    executor = AgentExecutor(db)
+
+                    async def run_stream():
+                        """执行流式处理"""
+                        async for event in executor.stream_chat(
+                            message=params.get("message", ""),
+                            session_id=params.get("session_id"),
+                            user_config=user_config,
+                            user_id=user_id
+                        ):
+                            # 发送流式事件
+                            send_stream_event(event.get('type', 'stream_chunk'), event)
+
+                    loop.run_until_complete(run_stream())
+                    return {'streaming': True}
+                finally:
+                    db.close()
+            except Exception as e:
+                send_stream_event('stream_end', {
+                    'session_id': '',
+                    'error': str(e)
+                })
+                return {'error': str(e)}
+            finally:
+                loop.close()
 
         action_handlers = {
             'ping': lambda params: {'action': 'pong', 'status': 'ok'},
@@ -337,6 +409,15 @@ else:
             'get_auth_status': lambda params: handle_auth_action('get_auth_status', params),
             # 通用 API 调用处理器
             'api_call': lambda params: handle_generic_action(params.get('action', ''), params),
+            # Agent 相关处理器
+            'agent_chat': lambda params: handle_agent_action('agent_chat', params),
+            'agent_chat_stream': handle_agent_chat_stream,
+            'agent_confirm': lambda params: handle_agent_action('agent_confirm', params),
+            'agent_history': lambda params: handle_agent_action('agent_history', params),
+            'agent_skills': lambda params: handle_agent_action('agent_skills', params),
+            'agent_sessions': lambda params: handle_agent_action('agent_sessions', params),
+            'agent_delete_session': lambda params: handle_agent_action('agent_delete_session', params),
+            'agent_toggle_pin': lambda params: handle_agent_action('agent_toggle_pin', params),
         }
 
         # 使用二进制模式读取 stdin
@@ -420,3 +501,6 @@ else:
         import time
         while True:
             time.sleep(1)
+
+    # 为生产模式导出 app 变量（供 uvicorn 等使用）
+    app = get_app_instance()

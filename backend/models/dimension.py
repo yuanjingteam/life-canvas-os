@@ -1,7 +1,29 @@
 """系统维度模型（八维系统）"""
+from enum import Enum
 from sqlalchemy import Column, Integer, String, JSON, DateTime, Text, ForeignKey
 from backend.db.base import Base
 from backend.db.session import localnow_func
+
+
+class SystemType(str, Enum):
+    """系统类型枚举"""
+    FUEL = "FUEL"         # 饮食系统
+    PHYSICAL = "PHYSICAL" # 运动系统
+    INTELLECTUAL = "INTELLECTUAL"  # 认知系统
+    OUTPUT = "OUTPUT"     # 产出系统
+    DREAM = "DREAM"       # 梦想系统
+    ASSET = "ASSET"       # 财务系统
+    CONNECTION = "CONNECTION"  # 社交系统
+    ENVIRONMENT = "ENVIRONMENT"  # 环境系统
+
+    @classmethod
+    def list(cls):
+        """获取枚举值的列表（向后兼容）"""
+        return [e.value for e in cls]
+
+
+# 系统类型枚举（向后兼容：可以使用 .value 获取字符串，也可以迭代）
+SYSTEM_TYPES = SystemType
 
 
 class System(Base):

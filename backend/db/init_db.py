@@ -1,6 +1,6 @@
 """数据库初始化脚本（增强版）"""
 from sqlalchemy.orm import Session
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from backend.db.base import Base
 from backend.db.session import engine, SessionLocal
 
@@ -18,6 +18,54 @@ from backend.models.dimension import (
 from backend.models.diary import Diary, DiaryAttachment, DiaryEditHistory
 from backend.models.insight import Insight
 from backend.models.record import DailyRecord
+from backend.models.agent import AgentSession, AgentMessage
+
+
+def _migrate_agent_sessions_table(db: Session) -> None:
+    """
+    迁移 agent_sessions 表，添加缺失的列
+    SQLAlchemy 的 create_all 不会修改已存在的表
+    """
+    inspector = inspect(engine)
+
+    # 检查 agent_sessions 表是否存在
+    table_names = inspector.get_table_names()
+    print(f"[DEBUG] Existing tables: {table_names}")
+
+    if 'agent_sessions' not in table_names:
+        print("[DEBUG] agent_sessions table does not exist, skipping migration")
+        return
+
+    # 获取现有列
+    existing_columns = {col['name'] for col in inspector.get_columns('agent_sessions')}
+    print(f"[DEBUG] Existing columns in agent_sessions: {existing_columns}")
+
+    # 定义需要添加的列 (name -> SQL type)
+    # 参考 backend/models/agent.py 中 AgentSession 模型的定义
+    columns_to_add = {
+        'title': 'VARCHAR(200)',
+        'pinned': 'INTEGER DEFAULT 0',
+        'referenced_entities': 'JSON',
+        'last_operations': 'JSON',
+        'expires_at': 'DATETIME',
+    }
+
+    # 添加缺失的列
+    migrated = False
+    for column_name, column_type in columns_to_add.items():
+        if column_name not in existing_columns:
+            try:
+                sql = text(f'ALTER TABLE agent_sessions ADD COLUMN {column_name} {column_type}')
+                db.execute(sql)
+                db.commit()
+                print(f"[OK] Added column '{column_name}' to agent_sessions table")
+                migrated = True
+            except Exception as e:
+                db.rollback()
+                print(f"[WARN] Failed to add column '{column_name}': {e}")
+
+    if migrated:
+        print("[INFO] agent_sessions table migration completed")
 
 
 def ensure_database_initialized(db: Session) -> bool:
@@ -44,6 +92,9 @@ def ensure_database_initialized(db: Session) -> bool:
     if new_tables:
         print(f"[OK] Created new tables: {new_tables}")
 
+    # 1.5. 迁移现有表（添加缺失的列）
+    _migrate_agent_sessions_table(db)
+
     # 2. 检查并创建默认用户
     user = db.query(User).first()
     if not user:
@@ -67,6 +118,9 @@ def init_db(db: Session) -> None:
     # 1. 创建所有表
     print("[INFO] Creating database tables...")
     Base.metadata.create_all(bind=engine)
+
+    # 1.5. 迁移现有表
+    _migrate_agent_sessions_table(db)
 
     # 2. 初始化默认用户
     _create_default_user(db)
@@ -112,13 +166,15 @@ def _create_default_settings(db: Session) -> None:
 
 def _create_default_systems(db: Session) -> None:
     """创建默认的 8 个系统"""
+    from backend.models.dimension import SystemType
+
     user = db.query(User).first()
     if not user:
         return
 
     existing_systems = db.query(System).filter(System.user_id == user.id).count()
     if existing_systems == 0:
-        for system_type in SYSTEM_TYPES:
+        for system_type in SystemType.list():
             system = System(
                 user_id=user.id,
                 type=system_type,
@@ -127,7 +183,7 @@ def _create_default_systems(db: Session) -> None:
             )
             db.add(system)
         db.commit()
-        print(f"[OK] Initialized 8 life balance systems: {', '.join(SYSTEM_TYPES)}")
+        print(f"[OK] Initialized 8 life balance systems: {', '.join(SystemType.list())}")
 
 
 def is_database_empty() -> bool:

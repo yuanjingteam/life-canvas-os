@@ -7,7 +7,7 @@
 from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 
-from backend.models.dimension import System, SYSTEM_TYPES
+from backend.models.dimension import System, SystemType
 from backend.models.user import User
 from backend.schemas.common import error_response, success_response
 
@@ -43,7 +43,7 @@ class SystemService:
         total_score = 0
         valid_count = 0
 
-        for system_type in SYSTEM_TYPES:
+        for system_type in SystemType.list():
             system = system_map.get(system_type)
             if system:
                 scores.append({
@@ -67,7 +67,7 @@ class SystemService:
             data={
                 "systems": scores,
                 "average_score": average_score,
-                "total_systems": len(SYSTEM_TYPES)
+                "total_systems": len(SystemType.list())
             },
             message="获取系统评分成功"
         ), 200

@@ -7,6 +7,7 @@ from backend.services.system_service import SystemService
 from backend.services.insight_service import InsightService
 from backend.services.journal_service import JournalService
 from backend.services.data_service import DataService
+from backend.services.agent_service import AgentService
 
 __all__ = [
     "AuthService",
@@ -16,4 +17,5 @@ __all__ = [
     "InsightService",
     "JournalService",
     "DataService",
+    "AgentService",
 ]

@@ -7,6 +7,22 @@ from datetime import datetime
 # 情绪类型
 MoodType = Literal["great", "good", "neutral", "bad", "terrible"]
 
+# 中文到英文的映射
+MOOD_MAP = {
+    "开心": "great",
+    "高兴": "great",
+    "快乐": "great",
+    "愉快": "great",
+    "不错": "good",
+    "还好": "good",
+    "一般": "neutral",
+    "普通": "neutral",
+    "难过": "bad",
+    "伤心": "bad",
+    "糟糕": "terrible",
+    "很差": "terrible",
+}
+
 
 # ============ 日记 ============
 class DiaryBase(BaseModel):
@@ -32,6 +48,20 @@ class DiaryBase(BaseModel):
         """content 空值时使用空字符串"""
         if v is None:
             return ""
+        return v
+
+    @field_validator("mood", mode="before")
+    @classmethod
+    def validate_mood(cls, v):
+        """将中文心情转换为英文"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # 检查是否是有效的英文值
+            if v in ["great", "good", "neutral", "bad", "terrible"]:
+                return v
+            # 尝试映射中文值
+            return MOOD_MAP.get(v, None)
         return v
 
 
@@ -63,6 +93,20 @@ class DiaryUpdate(BaseModel):
         """content 空值时使用空字符串"""
         if v is None:
             return ""
+        return v
+
+    @field_validator("mood", mode="before")
+    @classmethod
+    def validate_mood(cls, v):
+        """将中文心情转换为英文"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # 检查是否是有效的英文值
+            if v in ["great", "good", "neutral", "bad", "terrible"]:
+                return v
+            # 尝试映射中文值
+            return MOOD_MAP.get(v, None)
         return v
 
 
