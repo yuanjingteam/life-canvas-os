@@ -11,11 +11,34 @@ from sqlalchemy.orm import Session
 from backend.models.user import User, UserSettings
 from backend.schemas.user import UserResponse, UserUpdate, UserSettingsResponse, UserSettingsUpdate
 from backend.schemas.common import error_response
+from backend.core.config import settings
+from backend.services.base import get_current_user
 
 
-# 加密密钥（实际应用中应该从环境变量或配置文件中读取）
-ENCRYPTION_KEY = b'7ZmylayOdbwxCp_Lh_aU7OxsE5SGWRb1KV_Z0HygzXY='
-cipher = Fernet(ENCRYPTION_KEY)
+# 从配置获取加密密钥（支持环境变量和安全文件存储）
+_cipher: Optional[Fernet] = None
+
+
+def _get_cipher() -> Fernet:
+    """
+    获取 Fernet 加密实例（懒加载单例模式）
+
+    Returns:
+        Fernet 加密实例
+    """
+    global _cipher
+    if _cipher is None:
+        key = settings.get_encryption_key
+        # Fernet 需要 32 字节的 URL-safe base64 编码密钥
+        # 如果密钥不是 32 字节，使用哈希生成正确的密钥
+        if len(key) != 32:
+            import base64
+            import hashlib
+            # 使用 SHA256 哈希生成 32 字节的密钥，然后 base64 编码
+            hashed_key = hashlib.sha256(key).digest()
+            key = base64.urlsafe_b64encode(hashed_key)
+        _cipher = Fernet(key)
+    return _cipher
 
 
 # 支持的 AI 提供商
@@ -34,7 +57,7 @@ class UserService:
     @staticmethod
     def get_user(db: Session) -> Optional[User]:
         """获取用户（单用户应用，默认返回第一个用户）"""
-        return db.query(User).first()
+        return get_current_user(db)
 
     @staticmethod
     def get_user_profile(db: Session) -> Tuple[dict, int]:
@@ -204,12 +227,14 @@ class UserService:
     @staticmethod
     def encrypt_api_key(api_key: str) -> str:
         """加密 API Key"""
+        cipher = _get_cipher()
         encrypted = cipher.encrypt(api_key.encode('utf-8'))
         return base64.urlsafe_b64encode(encrypted).decode('utf-8')
 
     @staticmethod
     def decrypt_api_key(encrypted_key: str) -> str:
         """解密 API Key"""
+        cipher = _get_cipher()
         encrypted_bytes = base64.urlsafe_b64decode(encrypted_key.encode('utf-8'))
         decrypted = cipher.decrypt(encrypted_bytes)
         return decrypted.decode('utf-8')

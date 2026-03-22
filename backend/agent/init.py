@@ -15,6 +15,7 @@ from .skills.registry import SkillRegistry
 from .tools.registry import ToolRegistry
 from .core.context import ContextManager, get_context_manager
 from .core.executor import ReActExecutor
+from backend.core.config import settings
 
 # 全局 Agent 执行器实例
 _agent_executor: Optional[ReActExecutor] = None
@@ -174,12 +175,13 @@ def initialize_agent() -> ReActExecutor:
     tool_registry = ToolRegistry()
     tools = tool_registry.get_all()
 
-    # 创建执行器
+    # 创建执行器（使用配置中的最大迭代次数）
     _agent_executor = ReActExecutor(
         llm_client=llm_client,
         context_manager=_context_manager,
         skills=skills,
         tools=tools,
+        max_iterations=settings.AGENT_MAX_ITERATIONS,
     )
 
     return _agent_executor

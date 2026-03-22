@@ -1,11 +1,13 @@
 """
-ReAct 执行器
+ReAct 执行器（增强版）
 
-实现 Reason + Act 交替进行的 Agent 执行逻辑。
+实现 Reason + Act 交替进行的 Agent 执行逻辑，带有详细的推理过程追踪。
 """
 
 import json
 from typing import Dict, Any, Optional, List, Tuple
+from dataclasses import dataclass, asdict
+from datetime import datetime
 from ..llm.base import (
     LLMMessage,
     LLMToolDefinition,
@@ -23,6 +25,17 @@ from .context import ContextManager
 logger = get_agent_logger()
 
 
+@dataclass
+class ReasoningStep:
+    """推理步骤数据结构"""
+    iteration: int
+    thought: str  # LLM 的思考内容
+    action: Optional[str]  # 执行的动作（技能名称）
+    action_input: Optional[Dict[str, Any]]  # 动作输入参数
+    observation: Optional[str]  # 观察结果（技能执行结果）
+    timestamp: str  # 时间戳
+
+
 class ReActExecutor:
     """
     ReAct 执行器
@@ -31,11 +44,13 @@ class ReActExecutor:
     - 得到最终答案
     - 需要用户确认
     - 达到最大迭代次数
-    """
 
-    # 执行器配置
-    MAX_ITERATIONS = 5  # 最大迭代次数
-    CONFIRMATION_REQUIRED = "confirmation_required"
+    ReAct 推理流程：
+    1. Thought（思考）: 分析用户意图，决定下一步行动
+    2. Action（行动）: 调用技能/工具执行操作
+    3. Observation（观察）: 获取操作结果
+    4. 循环 1-3 直到得出最终答案
+    """
 
     def __init__(
         self,
@@ -43,6 +58,7 @@ class ReActExecutor:
         context_manager: ContextManager,
         skills: Dict[str, BaseSkill],
         tools: Dict[str, BaseTool],
+        max_iterations: int = 5,
     ):
         """
         初始化执行器
@@ -52,11 +68,16 @@ class ReActExecutor:
             context_manager: 上下文管理器
             skills: 技能字典
             tools: 工具字典
+            max_iterations: 最大迭代次数
         """
         self.llm = llm_client
         self.context_manager = context_manager
         self.skills = skills
         self.tools = tools
+        self.max_iterations = max_iterations
+
+        # 推理过程追踪
+        self.reasoning_traces: List[ReasoningStep] = []
 
     async def execute(
         self,
@@ -65,7 +86,7 @@ class ReActExecutor:
         user_id: Optional[str] = None,
     ) -> Tuple[SkillResult, bool]:
         """
-        执行用户请求
+        执行用户请求（带推理过程追踪）
 
         Args:
             message: 用户消息
@@ -93,44 +114,82 @@ class ReActExecutor:
         # 构建 Tool 定义
         tool_definitions = self._build_tool_definitions()
 
+        logger.info(f"[ReAct] 开始执行，session_id={session_id}, message_length={len(message)}")
+
         # 执行 ReAct 循环
         iteration = 0
-        while iteration < self.MAX_ITERATIONS:
+        self.reasoning_traces = []  # 重置推理追踪
+
+        while iteration < self.max_iterations:
             iteration += 1
+            logger.info(f"[ReAct] 第 {iteration}/{self.max_iterations} 次迭代")
 
             try:
-                # 调用 LLM
+                # ========== Step 1: Thought（思考）==========
+                # 调用 LLM 进行推理
                 response = await self.llm.chat(
                     messages=messages,
                     tools=tool_definitions if tool_definitions else None,
                 )
 
-                # 分析响应
-                if response.has_tool_calls:
+                # 提取思考内容
+                thought = response.content or ""
+                has_tool_call = response.has_tool_calls
+
+                logger.info(f"[ReAct] Thought: {thought[:200]}..." if len(thought) > 200 else f"[ReAct] Thought: {thought}")
+
+                # ========== Step 2: Action（行动）==========
+                if has_tool_call:
                     # 有工具调用
                     tool_results = await self._execute_tool_calls(
-                        response.tool_calls, context
+                        response.tool_calls, context, iteration
                     )
 
-                    # 添加观察结果到消息
+                    # 记录推理步骤
+                    for tool_call in response.tool_calls:
+                        function = tool_call.get("function", {})
+                        reasoning_step = ReasoningStep(
+                            iteration=iteration,
+                            thought=thought,
+                            action=function.get("name"),
+                            action_input=function.get("arguments", {}),
+                            observation="",  # 稍后填充
+                            timestamp=datetime.now().isoformat()
+                        )
+
+                        # 添加观察结果
+                        for result in tool_results:
+                            if result.get("skill") == function.get("name"):
+                                reasoning_step.observation = json.dumps(
+                                    {"success": result.get("success"), "response": result.get("response")},
+                                    ensure_ascii=False
+                                )
+                                break
+
+                        self.reasoning_traces.append(reasoning_step)
+
+                    # 添加观察结果到消息历史（供下一轮推理使用）
                     messages.append(
                         LLMMessage(
                             role="assistant",
-                            content=response.content or "正在处理...",
+                            content=thought or "正在处理...",
                         )
                     )
 
                     for result in tool_results:
+                        obs_content = f"执行结果：{json.dumps(result, ensure_ascii=False)}"
                         messages.append(
                             LLMMessage(
                                 role="user",
-                                content=f"执行结果：{json.dumps(result, ensure_ascii=False)}",
+                                content=obs_content,
                             )
                         )
+                        logger.info(f"[ReAct] Observation: {obs_content[:200]}..." if len(obs_content) > 200 else f"[ReAct] Observation: {obs_content}")
 
                     # 检查是否有需要确认的操作
                     for result in tool_results:
                         if result.get("requires_confirmation"):
+                            logger.info(f"[ReAct] 需要用户确认：{result.get('confirmation_message')}")
                             return (
                                 SkillResult.ok(
                                     response="需要确认",
@@ -144,27 +203,51 @@ class ReActExecutor:
                             )
 
                     # 没有确认请求，返回工具执行结果
-                    # 合并所有工具的响应
                     responses = [r.get("response", "") for r in tool_results if r.get("response")]
                     final_response = "\n".join(responses) if responses else "操作已完成"
 
+                    logger.info(f"[ReAct] 执行完成，返回结果")
                     return SkillResult.ok(final_response), False
 
                 else:
-                    # 无工具调用，直接返回
-                    final_result = SkillResult.ok(response.content or "我暂时没有更好的建议，换个话题试试吧～")
+                    # ========== Step 3: Final Answer（最终答案）==========
+                    # 无工具调用，LLM 直接返回最终答案
+                    logger.info(f"[ReAct] 得出最终答案")
+
+                    # 记录最后的推理步骤
+                    reasoning_step = ReasoningStep(
+                        iteration=iteration,
+                        thought=thought,
+                        action=None,
+                        action_input=None,
+                        observation="最终答案",
+                        timestamp=datetime.now().isoformat()
+                    )
+                    self.reasoning_traces.append(reasoning_step)
+
+                    final_result = SkillResult.ok(thought or "我暂时没有更好的建议，换个话题试试吧～")
 
                     # 添加到上下文
-                    self.context_manager.add_message_to_context(session_id, "assistant", response.content or "我暂时没有更好的建议，换个话题试试吧～")
+                    self.context_manager.add_message_to_context(session_id, "assistant", thought or "我暂时没有更好的建议，换个话题试试吧～")
 
                     return final_result, False
 
             except Exception as e:
-                logger.error(f"ReAct 执行出错：{e}")
+                logger.error(f"[ReAct] 执行出错：{e}", exc_info=True)
                 return SkillResult.fail(f"执行出错：{str(e)}"), False
 
         # 达到最大迭代次数
+        logger.warning(f"[ReAct] 达到最大迭代次数 ({self.max_iterations})，未能完成任务")
         return SkillResult.fail("达到最大迭代次数，未能完成任务"), False
+
+    def get_reasoning_traces(self) -> List[Dict[str, Any]]:
+        """
+        获取推理过程追踪
+
+        Returns:
+            推理步骤列表
+        """
+        return [asdict(trace) for trace in self.reasoning_traces]
 
     def _build_messages(
         self, context: ContextState, user_message: str
@@ -201,7 +284,7 @@ class ReActExecutor:
         return definitions
 
     async def _execute_tool_calls(
-        self, tool_calls: List[Dict[str, Any]], context: ContextState
+        self, tool_calls: List[Dict[str, Any]], context: ContextState, iteration: int = 0
     ) -> List[Dict[str, Any]]:
         """执行工具调用"""
         results = []
@@ -210,6 +293,8 @@ class ReActExecutor:
             function = tool_call.get("function", {})
             name = function.get("name")
             arguments = function.get("arguments", {})
+
+            logger.info(f"[ReAct] 执行技能：{name}, 参数：{arguments}")
 
             # 解析参数
             try:
