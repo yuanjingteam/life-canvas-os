@@ -1,5 +1,5 @@
-import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import { Button } from '~/renderer/components/ui/button'
 import { Input } from '~/renderer/components/ui/input'
@@ -9,7 +9,7 @@ import { parseAmount } from '~/renderer/pages/assets/utils/asset-formatters'
 
 interface AssetCreateCardProps {
   categories: CategoryCard[]
-  onAddAsset: (name: string, categoryName: string, amount: number) => void
+  onAddAsset: (name: string, categoryName: string, amount: number) => Promise<boolean>
   onCreateCategory: (name: string) => void
 }
 
@@ -20,6 +20,9 @@ export function AssetCreateCard({
 }: AssetCreateCardProps) {
   const [assetName, setAssetName] = useState('')
   const [assetAmount, setAssetAmount] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
   const {
     categoryQuery,
     createCategoryFromQuery,
@@ -33,27 +36,46 @@ export function AssetCreateCard({
     setIsCategoryOpen,
   } = useAssetCategorySelector(categories)
 
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsCategoryOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [setIsCategoryOpen])
+
   const isAssetFormValid =
     assetName.trim().length > 0 &&
     normalizedQuery.length > 0 &&
-    parseAmount(assetAmount) > 0
+    parseAmount(assetAmount) > 0 &&
+    !isSubmitting
 
-  const handleAddAsset = () => {
+  const handleAddAsset = async () => {
     const nameValue = assetName.trim()
     const amountValue = parseAmount(assetAmount)
     if (!nameValue || !normalizedQuery || amountValue <= 0) return
 
-    onAddAsset(nameValue, normalizedQuery, amountValue)
-    setAssetName('')
-    setAssetAmount('')
-    setCategoryQuery('')
-    setIsCategoryOpen(false)
+    setIsSubmitting(true)
+    try {
+      const success = await onAddAsset(nameValue, normalizedQuery, amountValue)
+      if (success) {
+        setAssetName('')
+        setAssetAmount('')
+        setCategoryQuery('')
+        setIsCategoryOpen(false)
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <GlassCard className="relative w-[320px] flex-none overflow-hidden p-6">
+    <GlassCard className="relative w-[320px] flex-none p-6">
       {/* 背景渐变 */}
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-200/40 via-white/40 to-white/80 dark:from-amber-500/10 dark:via-white/5 dark:to-white/0" />
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-200/40 via-white/40 to-white/80 dark:from-amber-500/10 dark:via-white/5 dark:to-white/0" />
 
       <div className="relative flex h-full flex-col gap-5">
         <div className="flex items-center gap-3">
@@ -100,7 +122,7 @@ export function AssetCreateCard({
             </div>
 
             {/* 所属分类 */}
-            <div className="space-y-1.5">
+            <div className="space-y-1.5" ref={containerRef}>
               <label className="ml-1 text-[11px] font-medium text-apple-textSec">
                 所属分类
               </label>
@@ -132,20 +154,20 @@ export function AssetCreateCard({
                         </span>
                       </button>
                     ) : null}
-                    <div className="mt-1 max-h-40 overflow-y-auto">
+                    <div className="mt-1 max-h-40 overflow-y-auto pb-2 scrollbar-thin scrollbar-thumb-apple-border">
                       {filteredCategories.length > 0 ? (
                         filteredCategories.map(category => (
                           <button
-                            className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-apple-textMain transition hover:bg-apple-accent/10"
+                            className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-apple-textMain transition hover:bg-apple-accent/10 group"
                             key={category.id}
                             onClick={() => selectCategory(category.name)}
                             type="button"
                           >
                             <span className="flex items-center gap-2">
-                              <span className="text-base">{category.emoji}</span>
+                              <span className="text-base group-hover:scale-110 transition-transform">{category.emoji}</span>
                               {category.name}
                             </span>
-                            <span className="text-[10px] text-apple-textSec">
+                            <span className="text-[10px] text-apple-textSec opacity-0 group-hover:opacity-100 transition-opacity">
                               {category.amount}
                             </span>
                           </button>
@@ -167,7 +189,14 @@ export function AssetCreateCard({
             disabled={!isAssetFormValid}
             onClick={handleAddAsset}
           >
-            保存资产
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                保存中...
+              </>
+            ) : (
+              '保存资产'
+            )}
           </Button>
         </div>
       </div>

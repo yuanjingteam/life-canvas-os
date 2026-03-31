@@ -58,7 +58,7 @@ export default function AssetOverviewPage() {
         </div>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-1">
+      <div className="flex gap-4 pb-1">
         <div className="flex min-w-[520px] flex-1 flex-col gap-4">
           <AssetSummaryCard totals={totals} />
           <NetAssetTrendCard trend={trendData} />
