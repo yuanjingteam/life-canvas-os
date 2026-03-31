@@ -37,6 +37,7 @@ export function Sidebar({
     const routeMap: Record<string, string> = {
       dashboard: '/dashboard',
       fuel: '/system/fuel',
+      asset: '/asset',
       journal: '/journal',
       timeline: '/timeline',
       agent: '/agent',

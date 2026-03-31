@@ -5,7 +5,6 @@ import { PinLockScreen } from '../auth/PinLockScreen'
 import { PinWelcomePage } from '../auth/PinWelcomePage'
 import { FloatingBall } from '../agent/FloatingBall'
 import { useApp } from '~/renderer/contexts/AppContext'
-import { request } from '~/renderer/api/config'
 import { usePinApi } from '~/renderer/hooks'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 import { getCache, setCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
@@ -39,7 +38,8 @@ export function MainLayout() {
   const getActiveTab = () => {
     const path = location.pathname
     if (path === '/dashboard') return 'dashboard'
-    if (path === '/system/fuel') return 'fuel'
+    if (path.startsWith('/asset')) return 'asset'
+    if (path.startsWith('/system/fuel')) return 'fuel'
     if (path.startsWith('/journal')) return 'journal'
     if (path === '/timeline') return 'timeline'
     if (path === '/agent') return 'agent'
