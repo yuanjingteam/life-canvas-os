@@ -1,21 +1,22 @@
 import { useMemo, useState } from 'react'
 import type { CategoryCard } from '~/renderer/pages/assets/components/AssetCategoryGrid'
 
-export function useAssetCategorySelector(categories: CategoryCard[]) {
+export function useAssetCategorySelector(categories: CategoryCard[] = []) {
+  const safeCategories = categories || []
   const [categoryQuery, setCategoryQuery] = useState('')
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const normalizedQuery = categoryQuery.trim()
   const hasCategoryMatch =
     normalizedQuery.length > 0 &&
-    categories.some(category => category.name.includes(normalizedQuery))
+    safeCategories.some(category => category.name.includes(normalizedQuery))
   const createCategoryLabel = normalizedQuery
     ? `新建分类 ${normalizedQuery}`
     : '新建分类'
 
   const filteredCategories = useMemo(() => {
-    if (!normalizedQuery) return categories
-    return categories.filter(category => category.name.includes(normalizedQuery))
-  }, [categories, normalizedQuery])
+    if (!normalizedQuery) return safeCategories
+    return safeCategories.filter(category => category.name.includes(normalizedQuery))
+  }, [safeCategories, normalizedQuery])
 
   const selectCategory = (name: string) => {
     setCategoryQuery(name)
@@ -26,7 +27,7 @@ export function useAssetCategorySelector(categories: CategoryCard[]) {
     onCreate: (name: string) => void
   ) => {
     if (!normalizedQuery) return
-    if (categories.some(category => category.name === normalizedQuery)) {
+    if (safeCategories.some(category => category.name === normalizedQuery)) {
       selectCategory(normalizedQuery)
       return
     }
@@ -37,7 +38,7 @@ export function useAssetCategorySelector(categories: CategoryCard[]) {
   }
 
   return {
-    categories,
+    categories: safeCategories,
     categoryQuery,
     createCategoryLabel,
     createCategoryFromQuery,

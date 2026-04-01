@@ -126,6 +126,11 @@ export const AgentEvents = {
 
   INSIGHT_GENERATED: 'insight:generated',
 
+  // 资产事件
+  ASSET_CREATED: 'asset:created',
+  ASSET_UPDATED: 'asset:updated',
+  ASSET_DELETED: 'asset:deleted',
+
   // 会话事件
   SESSION_CREATED: 'session:created',
   SESSION_SWITCHED: 'session:switched',

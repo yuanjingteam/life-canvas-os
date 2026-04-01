@@ -168,6 +168,16 @@ def initialize_agent() -> ReActExecutor:
     skill_registry.register(CompleteSystemActionSkill(), category="system")
     skill_registry.register(ListSystemActionsSkill(), category="system")
 
+    # 注册资产系统 Skills
+    from .skills.asset_skills import (
+        GetAssetSummarySkill,
+        ListAssetCategoriesSkill,
+        CreateAssetItemSkill,
+    )
+    skill_registry.register(GetAssetSummarySkill(), category="asset")
+    skill_registry.register(ListAssetCategoriesSkill(), category="asset")
+    skill_registry.register(CreateAssetItemSkill(), category="asset")
+
     # 获取所有 Skills
     skills = skill_registry.get_all()
 

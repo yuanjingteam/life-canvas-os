@@ -25,7 +25,7 @@ export function useAssetCategoriesState() {
       const res = await assetApi.getSummary()
       if (!res.ok) throw new Error('获取资产汇总失败')
       const result = await res.json()
-      return result.data
+      return result.data || { total_assets: 0, total_liabilities: 0, net_assets: 0, categories: [] }
     },
   })
 
@@ -36,7 +36,7 @@ export function useAssetCategoriesState() {
       const res = await assetApi.getSnapshots()
       if (!res.ok) throw new Error('获取快照失败')
       const result = await res.json()
-      return result.data.items || []
+      return result.data?.items || []
     },
   })
 
@@ -162,7 +162,7 @@ export function useAssetCategoriesState() {
   }
 
   const handleAddAsset = async (name: string, categoryName: string, amount: number) => {
-    let cat = summary?.categories.find((c: any) => c.name === categoryName)
+    let cat = summary?.categories?.find((c: any) => c.name === categoryName)
     if (!cat) {
       // 自动创建分类时，补全所有字段以避免 422
       const res = await assetApi.createCategory({
