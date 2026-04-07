@@ -39,6 +39,7 @@ import {
   ScoreHistoryChart,
   type ScoreHistoryDataPoint,
 } from '~/renderer/components/diet/ScoreHistoryChart'
+import { ConsultAgent } from '~/renderer/components/diet/ConsultAgent'
 import { cn } from '~/renderer/lib/utils'
 
 const PAGE_SIZE = 10
@@ -468,11 +469,17 @@ export function FuelSystemPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* 头部 - 标题和评分 */}
       <header className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-apple-textMain dark:text-white flex items-center gap-3">
-            <Sparkles className="text-orange-500" />
-            饮食系统
-          </h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold text-apple-textMain dark:text-white flex items-center gap-3">
+              <Sparkles className="text-orange-500" />
+              饮食系统
+            </h1>
+            <ConsultAgent 
+              message="请根据我目前的饮食记录和身体指标，给我一些专业的营养建议。" 
+              className="mt-1"
+            />
+          </div>
           <p className="text-apple-textSec dark:text-white/40 mt-1 text-sm">
             坚持优于完美。记录您的基准饮食，追踪偏离时刻。
           </p>

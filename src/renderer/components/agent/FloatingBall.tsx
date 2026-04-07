@@ -2,7 +2,7 @@
  * 悬浮球组件
  * Agent 入口点，点击展开聊天面板
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn } from '~/renderer/lib/utils'
@@ -57,6 +57,19 @@ export function FloatingBall({ className }: FloatingBallProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null)
   const { getAIConfig } = useAiApi()
+
+  // 监听外部打开请求
+  useEffect(() => {
+    const handleToggleEvent = (e: any) => {
+      if (e.detail?.open !== undefined) {
+        setIsOpen(e.detail.open)
+      } else {
+        setIsOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('agent-toggle', handleToggleEvent)
+    return () => window.removeEventListener('agent-toggle', handleToggleEvent)
+  }, [])
 
   // 导航到设置页面
   const navigateToSettings = useCallback(() => {

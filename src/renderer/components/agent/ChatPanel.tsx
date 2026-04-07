@@ -399,30 +399,32 @@ export function ChatPanel({ className }: ChatPanelProps) {
   }, [viewMode])
 
   // 处理发送消息
-  const handleSend = useCallback(async () => {
-    const trimmedInput = input.trim()
-    if (!trimmedInput || isStreaming) return
+  const handleSend = useCallback(
+    async (forcedMessage?: string) => {
+      const messageText = forcedMessage || input
+      const trimmedInput = messageText.trim()
+      if (!trimmedInput || isStreaming) return
 
-    // 如果是新会话（没有 sessionId），使用用户的第一条消息作为标题
-    if (!sessionId) {
-      setCurrentSessionTitle(
-        trimmedInput.slice(0, 15) + (trimmedInput.length > 15 ? '...' : '')
-      )
-    }
+      // 如果是新会话（没有 sessionId），使用用户的第一条消息作为标题
+      if (!sessionId) {
+        setCurrentSessionTitle(
+          trimmedInput.slice(0, 15) + (trimmedInput.length > 15 ? '...' : '')
+        )
+      }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: trimmedInput,
-      timestamp: new Date().toISOString(),
-    }
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setIsStreaming(true)
-    setStreamingContent('')
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: trimmedInput,
+        timestamp: new Date().toISOString(),
+      }
+      setMessages(prev => [...prev, userMessage])
+      if (!forcedMessage) setInput('')
+      setIsStreaming(true)
+      setStreamingContent('')
 
-    try {
-      const response = await sendMessage(trimmedInput, sessionId, true)
+      try {
+        const response = await sendMessage(trimmedInput, sessionId, true)
 
       if (response instanceof ReadableStream) {
         const reader = response.getReader()
@@ -457,6 +459,7 @@ export function ChatPanel({ className }: ChatPanelProps) {
                   }
                   setMessages(prev => [...prev, errorMessage])
                 } else if (data.type === 'stream_end') {
+                  console.log('[DEBUG] stream_end data:', JSON.stringify(data, null, 2))
                   if (data.error) {
                     toast.error('处理失败', {
                       description: data.error,
@@ -470,6 +473,8 @@ export function ChatPanel({ className }: ChatPanelProps) {
                     }
                     setMessages(prev => [...prev, errorMessage])
                   } else if (data.result) {
+                    console.log('[DEBUG] stream_end result:', JSON.stringify(data.result, null, 2))
+                    console.log('[DEBUG] confirmation_required:', data.result.confirmation_required)
                     handleResponse(data.result as AgentChatResponse)
                     // 刷新会话列表
                     refreshSessions()
@@ -535,6 +540,21 @@ export function ChatPanel({ className }: ChatPanelProps) {
     refreshSessions,
   ])
 
+  // 监听外部发送消息请求
+  useEffect(() => {
+    const handleForcedSend = (e: any) => {
+      if (e.detail?.message) {
+        // 给一点点延迟确保面板已完全渲染并就绪
+        setTimeout(() => {
+          handleSend(e.detail.message)
+        }, 100)
+      }
+    }
+    window.addEventListener('agent-send-message', handleForcedSend)
+    return () =>
+      window.removeEventListener('agent-send-message', handleForcedSend)
+  }, [handleSend])
+
   // 处理响应
   const handleResponse = useCallback((response: AgentChatResponse) => {
     if (response.error) {
@@ -573,6 +593,7 @@ export function ChatPanel({ className }: ChatPanelProps) {
     }
 
     if (response.confirmation_required) {
+      console.log('[DEBUG] Showing confirmation dialog:', response.confirmation_required)
       setConfirmation(response.confirmation_required)
     }
 

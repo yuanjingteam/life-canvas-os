@@ -12,7 +12,7 @@ import asyncio
 import uuid
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, BaseMessage, ToolMessage
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
@@ -217,12 +217,54 @@ class AgentExecutor:
             if result and "messages" in result:
                 # 遍历所有消息，收集工具调用信息
                 for msg in result["messages"]:
+                    # 处理 ToolMessage（工具执行结果） - 关键修复！
+                    if isinstance(msg, ToolMessage):
+                        tool_content = msg.content
+                        logger.info(f"ToolMessage received, content type: {type(tool_content)}, content preview: {str(tool_content)[:200]}")
+
+                        # 检查是否是确认请求（JSON格式的响应）
+                        if isinstance(tool_content, str) and tool_content.startswith("{"):
+                            try:
+                                parsed = json.loads(tool_content)
+                                logger.info(f"ToolMessage parsed JSON: requires_confirmation={parsed.get('requires_confirmation')}, skill={parsed.get('skill')}")
+
+                                # 处理错误响应
+                                if parsed.get("error"):
+                                    logger.warning(f"Tool execution error: {parsed.get('error')}")
+                                    continue
+
+                                # 处理确认请求
+                                if parsed.get("requires_confirmation"):
+                                    confirmation_required = ConfirmationRequired(
+                                        confirmation_id=str(uuid.uuid4()),
+                                        action=ActionInfo(
+                                            skill=parsed.get("skill", ""),
+                                            action=parsed.get("skill", ""),
+                                            params=parsed.get("params", {}),
+                                            risk_level=parsed.get("risk_level", "HIGH")
+                                        ),
+                                        message=parsed.get("message", "此操作需要确认"),
+                                        risk_level=parsed.get("risk_level", "HIGH")
+                                    )
+                                    # 保存待确认信息到上下文
+                                    context.set_entity_reference(
+                                        "pending_confirmation",
+                                        {
+                                            "confirmation_id": confirmation_required.confirmation_id,
+                                            "skill": parsed.get("skill"),
+                                            "params": parsed.get("params", {})
+                                        }
+                                    )
+                                    logger.info(f"Created confirmation_required from ToolMessage: {confirmation_required.confirmation_id}")
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"ToolMessage JSON parse error: {e}")
+
+                    # 处理 AIMessage（收集工具调用信息用于 actions 列表）
                     if isinstance(msg, AIMessage):
                         # 收集所有工具调用
                         if hasattr(msg, 'tool_calls') and msg.tool_calls:
                             for tc in msg.tool_calls:
                                 tool_name = tc.get("name", "")
-                                tool_result = tc.get("result", "")
 
                                 # 验证工具名称是否有效（防止幻觉）
                                 if tool_name and not validate_tool_name(tool_name):
@@ -230,38 +272,7 @@ class AgentExecutor:
                                     # 跳过无效的工具调用
                                     continue
 
-                                # 检查是否是确认请求（JSON格式的响应）
-                                if isinstance(tool_result, str) and tool_result.startswith("{"):
-                                    try:
-                                        parsed = json.loads(tool_result)
-                                        # 处理错误响应
-                                        if parsed.get("error"):
-                                            logger.warning(f"Tool execution error: {parsed.get('error')}")
-                                            continue
-                                        if parsed.get("requires_confirmation"):
-                                            confirmation_required = ConfirmationRequired(
-                                                confirmation_id=str(uuid.uuid4()),
-                                                action=ActionInfo(
-                                                    skill=parsed.get("skill", ""),
-                                                    action=parsed.get("skill", ""),
-                                                    params=parsed.get("params", {}),
-                                                    risk_level=parsed.get("risk_level", "HIGH")
-                                                ),
-                                                message=parsed.get("message", "此操作需要确认"),
-                                                risk_level=parsed.get("risk_level", "HIGH")
-                                            )
-                                            # 保存待确认信息到上下文
-                                            context.set_entity_reference(
-                                                "pending_confirmation",
-                                                {
-                                                    "confirmation_id": confirmation_required.confirmation_id,
-                                                    "skill": parsed.get("skill"),
-                                                    "params": parsed.get("params", {})
-                                                }
-                                            )
-                                    except json.JSONDecodeError:
-                                        pass
-
+                                # 注意：tc 中不包含执行结果，结果在 ToolMessage 中
                                 action = {
                                     "skill": tool_name,
                                     "action": tool_name,
@@ -394,6 +405,7 @@ class AgentExecutor:
                 }
                 # 如果有 confirmation_required，也需要手动处理
                 if response.confirmation_required:
+                    logger.info(f"Sending confirmation_required in stream_end: {response.confirmation_required.confirmation_id}, action={response.confirmation_required.action.skill}")
                     result_data["confirmation_required"] = {
                         "confirmation_id": response.confirmation_required.confirmation_id,
                         "message": response.confirmation_required.message,
@@ -406,6 +418,8 @@ class AgentExecutor:
                             "risk_level": response.confirmation_required.action.risk_level
                         }
                     }
+                else:
+                    logger.info(f"stream_end: no confirmation_required in this response")
                 print(f"[DEBUG] About to yield stream_end", flush=True)
                 yield {
                     "type": "stream_end",

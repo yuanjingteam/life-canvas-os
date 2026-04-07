@@ -11,5 +11,7 @@ from backend.agent.skills import journal
 from backend.agent.skills import system
 from backend.agent.skills import insight
 from backend.agent.skills import diet
+from backend.agent.skills import math
+from backend.agent.skills import nutrition
 
 __all__ = ["BaseSkill", "SkillRegistry"]

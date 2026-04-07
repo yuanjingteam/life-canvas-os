@@ -79,7 +79,9 @@ if IS_DEV:
     from backend.core.logging_config import setup_logging
 
     # 设置日志
-    setup_logging(log_level="INFO", enable_json=True)
+    # 如果指定了 data_dir，则日志也放在该目录下，避免触发 uvicorn 重载
+    log_dir = os.path.join(args.data_dir, "logs") if args.data_dir else None
+    setup_logging(log_level="INFO", log_dir=log_dir, enable_json=True)
 
     # 定义 lifespan 上下文管理器（替代已弃用的 on_event）
     @asynccontextmanager
@@ -114,6 +116,13 @@ if IS_DEV:
         # 显示连接池状态
         pool_status = DatabaseManager.get_pool_status()
         print(f"[INFO] Pool status: {pool_status}")
+
+        # 预热 RAG 模型
+        try:
+            from backend.agent.skills.nutrition import QueryNutritionRAGSkill
+            QueryNutritionRAGSkill.prewarm()
+        except Exception as e:
+            print(f"[WARN] RAG pre-warm failed: {e}")
 
         print("="*50 + "\n")
 
@@ -175,13 +184,30 @@ if IS_DEV:
         }
 
     if __name__ == "__main__":
+        # 在开发模式下，如果指定了 data_dir，我们需要确保 uvicorn 不会监视它
+        # 否则，数据库写入会触发无限重启
         uvicorn.run(
             "backend.main:app",
             host="127.0.0.1",
             port=8000,
             reload=True,
-            log_level="info"
+            reload_dirs=["backend"],
+            reload_excludes=[
+                "backend/db/**/*",
+                "backend/logs/**/*",
+                "*/__pycache__/*",
+                "*.db",
+                "*.db-journal",
+                "*.db-wal",
+                "logs/**/*",
+                "db/**/*",
+                "**/*.bin",
+                "**/*.pkl",
+                "**/*.sqlite3"
+            ],
+            log_level="info",
         )
+
 
 else:
     # 生产模式：IPC 通信（通过 stdin/stdout 与 Electron 通信）
@@ -349,6 +375,13 @@ else:
         from backend.api.auth import handle_auth_action
         from backend.api.agent import handle_agent_action, get_user_ai_config, get_current_user_id
         from backend.agent.langchain.agent import AgentExecutor
+
+        # 预热 RAG 模型
+        try:
+            from backend.agent.skills.nutrition import QueryNutritionRAGSkill
+            QueryNutritionRAGSkill.prewarm()
+        except Exception as e:
+            print(f"[WARN] RAG pre-warm failed: {e}", file=sys.stderr)
 
         def send_stream_event(event_type: str, data: dict):
             """发送流式事件（通过 stdout）"""
