@@ -542,7 +542,7 @@ export function SettingsPage() {
               <div className="pt-4 border-t border-apple-border dark:border-white/5">
                 <div className="flex justify-between items-end mb-2">
                   <span className="text-sm font-medium text-apple-textSec dark:text-white/40">
-                    实时生命进度
+                    生命旅程进度
                   </span>
                   <span className="text-lg font-bold text-apple-textMain dark:text-white">
                     {lifeProgress.toFixed(1)}%
@@ -550,7 +550,7 @@ export function SettingsPage() {
                 </div>
                 <div className="w-full bg-apple-bg2 dark:bg-white/5 h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-apple-accent to-indigo-500 h-full transition-all duration-1000"
+                    className="bg-linear-to-r from-apple-accent to-indigo-500 h-full transition-all duration-1000"
                     style={{ width: `${lifeProgress}%` }}
                   />
                 </div>
@@ -835,7 +835,7 @@ export function SettingsPage() {
             <Separator />
 
             {pinStatus && !pinStatus.has_pin && (
-              <div className="p-4 bg-gradient-to-r from-purple-500/5 to-indigo-500/5 rounded-xl border border-purple-500/20">
+              <div className="p-4 bg-linear-to-r from-purple-500/5 to-indigo-500/5 rounded-xl border border-purple-500/20">
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
                     <Shield size={20} />
@@ -1106,7 +1106,7 @@ export function SettingsPage() {
       {/* 导出格式选择弹窗 */}
       {showExportDialog && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <GlassCard className="!p-6 max-w-md w-full">
+          <GlassCard className="p-6! max-w-md w-full">
             <h3 className="text-lg font-bold text-apple-textMain dark:text-white mb-2">
               选择导出格式
             </h3>
@@ -1116,11 +1116,11 @@ export function SettingsPage() {
 
             <div className="space-y-3">
               <Button
-                className="w-full justify-between"
+                className="w-full py-4 h-auto cursor-pointer"
                 onClick={() => handleExportFormatSelect("json")}
                 variant="outline"
               >
-                <div className="flex items-center gap-3 my-3">
+                <div className="flex items-center gap-3 w-full">
                   <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
                     <Database size={20} />
                   </div>
@@ -1134,11 +1134,11 @@ export function SettingsPage() {
               </Button>
 
               <Button
-                className="w-full justify-between"
+                className="w-full py-4 h-auto cursor-pointer"
                 onClick={() => handleExportFormatSelect("zip")}
                 variant="outline"
               >
-                <div className="flex items-center gap-3 my-3">
+                <div className="flex items-center gap-3 w-full">
                   <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
                     <Download size={20} />
                   </div>
@@ -1198,7 +1198,7 @@ export function SettingsPage() {
       {/* 确认重置对话框 */}
       {showResetConfirmDialog && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <GlassCard className="!p-8 max-w-md w-full space-y-6">
+          <GlassCard className="p-8! max-w-md w-full space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center">
                 <AlertTriangle className="text-red-500" size={40} />
