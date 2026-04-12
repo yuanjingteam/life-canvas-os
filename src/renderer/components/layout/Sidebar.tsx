@@ -2,7 +2,6 @@ import { ChevronRight, Settings, PanelLeftClose, PanelLeft } from 'lucide-react'
 import {
   Avatar,
   AvatarFallback,
-  AvatarImage,
 } from '~/renderer/components/ui/avatar'
 import { NAV_ITEMS } from '~/renderer/lib/constants'
 import { useNavigate } from 'react-router-dom'
@@ -118,9 +117,6 @@ export function Sidebar({
             ) : (
               <>
                 <Avatar className="w-11 h-11 rounded-full bg-gradient-to-br from-apple-accent to-blue-600 border-2 border-white dark:border-white/20 shadow-lg shrink-0">
-                  <AvatarImage
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${state.user.name}`}
-                  />
                   <AvatarFallback className="bg-gradient-to-br from-apple-accent to-blue-600 text-white font-bold text-base">
                     {state.user.name.charAt(0)}
                   </AvatarFallback>
