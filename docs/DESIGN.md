@@ -137,7 +137,7 @@ Life Canvas OS
     ├── 用户档案
     │   ├── 基本信息（姓名、生日、MBTI 等）
     │   ├── 价值观设置
-    │   └── 预期寿命
+    │   └── 百岁目标
     ├── AI 配置
     │   ├── 提供商选择（DeepSeek/豆包 二选一）
     │   ├── API 密钥配置（加密存储）
@@ -705,7 +705,7 @@ CREATE TABLE user_profile (
     birthday DATE,                                       -- 出生日期，格式 YYYY-MM-DD，用于计算生命进度
     mbti TEXT,                                           -- MBTI性格类型，16种类型之一
     values TEXT,                                         -- 价值观，JSON数组格式，如'["自由","创造力","成长"]'
-    life_expectancy INTEGER DEFAULT 85,                  -- 预期寿命，默认85岁，用于生命倒计时
+    life_expectancy INTEGER DEFAULT 85,                  -- 百岁目标，默认85岁，用于生命倒计时
     locked_at TIMESTAMP,                                 -- 应用锁定时间戳，用于自动锁定功能
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,      -- 记录创建时间
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP       -- 记录最后更新时间
