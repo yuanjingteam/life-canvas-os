@@ -1,6 +1,6 @@
 {
   "[javascript]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
 
   "[json]": {
@@ -8,11 +8,11 @@
   },
 
   "[typescript]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
 
   "[typescriptreact]": {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": false
   },
 
   "biome.enabled": true,
