@@ -240,3 +240,59 @@ GitHub 会自动发送 Actions 执行结果到你的邮箱。
 - [GitHub Actions 文档](https://docs.github.com/cn/actions)
 - [electron-builder 文档](https://www.electron.build/)
 - [PyInstaller 文档](https://pyinstaller.org/)
+
+## 11. AI 全自动测试闭环配置
+
+### 11.1 架构概览
+
+```
+AI 写代码 → Git 推送 → 构建测试失败 → AI 分析原因 → AI 修复 → 测试通过 → 人工审核/自动合并
+```
+
+### 11.2 所需 Secrets 配置
+
+在 `Settings` → `Secrets and variables` → `Actions` 中添加：
+
+| Secret 名称 | 说明 | 必需 |
+|-------------|------|------|
+| `CLAUDE_API_KEY` | Anthropic API Key（用于 Claude Code） | 是 |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key（用于项目 AI 功能） | 否 |
+
+### 11.3 Variables 配置
+
+在 `Settings` → `Secrets and variables` → `Actions` 中添加：
+
+| Variable 名称 | 说明 | 默认值 |
+|---------------|------|--------|
+| `CLAUDE_MODEL` | Claude 模型 | `claude-opus-4-5` |
+
+### 11.4 工作流程说明
+
+1. **`build.yml`** — 现有 CI，包含 pytest + Playwright 测试
+2. **`ai-fix.yml`** — 新增，测试失败时自动触发
+
+   - 下载失败的测试报告
+   - 使用 Claude Code 分析失败原因
+   - 自动修复代码并推送
+   - 创建修复 PR（如有修改）
+
+### 11.5 测试通过标准
+
+| 测试类型 | 工具 | 状态 |
+|----------|------|------|
+| 后端单元测试 | pytest | ✅ 已集成 |
+| 前端 API 测试 | Playwright | ✅ 已集成 |
+| 端到端测试 | Playwright | ✅ 已集成 |
+| 移动端测试 | Playwright | ✅ 已集成 |
+
+### 11.6 递归修复限制
+
+AI 自动修复最多尝试 3 次。如果 3 次后仍然失败，系统会：
+1. 在 PR 中标注需要人工介入
+2. 发送通知
+
+### 11.7 触发条件
+
+AI 自动修复在以下情况触发：
+- `build.yml` 执行完成且结论为 `failure`
+- 有可关联的 PR（通过 branch 或 SHA 查找）

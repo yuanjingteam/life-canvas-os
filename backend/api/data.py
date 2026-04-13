@@ -4,8 +4,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 import tempfile
 import os
+import shutil
 from datetime import datetime
 from urllib.parse import quote, unquote
+from pathlib import Path
 
 from backend.db.session import get_db
 from backend.services.data_service import DataService
@@ -267,3 +269,123 @@ async def reset_system(db: Session = Depends(get_db)):
         data=data,
         message="系统重置成功"
     )
+
+
+@router.post("/migrate")
+async def migrate_data(new_data_dir: str, db: Session = Depends(get_db)):
+    """
+    迁移数据到新目录
+
+    此操作会：
+    1. 验证目标目录
+    2. 复制所有数据文件到新目录
+    3. 验证复制完整性
+    4. 删除旧目录数据（释放空间）
+
+    Args:
+        new_data_dir: 新数据目录路径
+    """
+    try:
+        # 获取当前数据目录
+        current_data_dir = os.getenv("APP_DATA_DIR")
+        if not current_data_dir:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=error_response(message="当前数据目录未设置", code=500)
+            )
+
+        # 验证目标目录
+        new_path = Path(new_data_dir)
+        if not new_path.exists():
+            new_path.mkdir(parents=True, exist_ok=True)
+
+        if not os.access(new_data_dir, os.W_OK):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=error_response(message="目标目录不可写", code=403)
+            )
+
+        # 关闭当前数据库连接
+        from backend.db.session import DatabaseManager
+        db.close()
+        DatabaseManager.close_all_connections()
+
+        # 强制垃圾回收并等待文件句柄释放
+        import gc
+        gc.collect()
+
+        # 复制数据文件
+        files_to_copy = [
+            "life_canvas.db",
+            "life_canvas.db-wal",
+            "life_canvas.db-shm",
+        ]
+
+        copied_files = []
+        for file_name in files_to_copy:
+            src = Path(current_data_dir) / file_name
+            dst = new_path / file_name
+            if src.exists():
+                shutil.copy2(src, dst)
+                copied_files.append(file_name)
+
+        # 验证复制完整性
+        for file_name in copied_files:
+            src = Path(current_data_dir) / file_name
+            dst = new_path / file_name
+            if src.exists() and dst.exists():
+                src_size = src.stat().st_size
+                dst_size = dst.stat().st_size
+                if src_size != dst_size:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=error_response(
+                            message=f"文件复制验证失败: {file_name}",
+                            code=500
+                        )
+                    )
+
+        # 删除旧目录文件
+        for file_name in files_to_copy:
+            old_file = Path(current_data_dir) / file_name
+            if old_file.exists():
+                try:
+                    old_file.unlink()
+                except OSError:
+                    pass  # 忽略删除失败（可能被锁定）
+
+        # 更新环境变量
+        os.environ["APP_DATA_DIR"] = new_data_dir
+
+        # 重新初始化数据库连接
+        from backend.db.session import DatabaseManager
+        DatabaseManager.recreate_engine()
+
+        # 验证新数据库连接
+        if not DatabaseManager.test_connection():
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=error_response(message="数据库迁移成功但连接测试失败", code=500)
+            )
+
+        return success_response(
+            data={
+                "old_data_dir": current_data_dir,
+                "new_data_dir": new_data_dir,
+                "copied_files": copied_files,
+                "migrated_at": datetime.now().isoformat()
+            },
+            message="数据迁移成功"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        import sys
+        print(f"[ERROR] Migration failed: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=error_response(message=f"迁移失败: {str(e)}", code=500)
+        )

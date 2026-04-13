@@ -21,21 +21,28 @@ export function ConsultAgent({
   variant = 'glass',
 }: ConsultAgentProps) {
   const handleConsult = () => {
-    // 1. 打开 Agent 面板
-    window.dispatchEvent(new CustomEvent('agent-toggle', { detail: { open: true } }))
-    
-    // 2. 发送预设消息
-    // 给一点延迟确保面板已加载
+    // 1. 创建全新对话（清除之前的会话）
+    window.dispatchEvent(new CustomEvent('agent-new-chat'))
+
+    // 2. 打开 Agent 面板
+    window.dispatchEvent(
+      new CustomEvent('agent-toggle', { detail: { open: true } })
+    )
+
+    // 3. 发送预设消息
+    // 给一点延迟确保面板已加载并创建新对话
     setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('agent-send-message', { detail: { message } }))
+      window.dispatchEvent(
+        new CustomEvent('agent-send-message', { detail: { message } })
+      )
     }, 300)
   }
 
   return (
     <Button
+      className={cn('gap-2 group', className)}
       onClick={handleConsult}
       variant={variant as any}
-      className={cn('gap-2 group', className)}
     >
       <Sparkles className="w-4 h-4 text-orange-500 group-hover:animate-pulse" />
       {label}

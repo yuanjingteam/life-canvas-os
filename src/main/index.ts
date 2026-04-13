@@ -26,9 +26,19 @@ console.error = safeConsoleWrite(console.error)
 console.log = safeConsoleWrite(console.log)
 
 makeAppWithSingleInstanceLock(async () => {
-  // 启动 Python 后端进程
+  // 启动 Python 后端进程并等待就绪
   console.log('[Main] Starting Python backend...')
-  pythonManager.start()
+
+  const backendReady = await pythonManager.startAndWaitForReady()
+
+  if (!backendReady) {
+    // 超时处理：退出应用
+    console.error('[Main] Backend failed to start, exiting...')
+    app.exit(1)
+    return
+  }
+
+  console.log('[Main] Python backend ready, creating window...')
 
   // 注册 IPC 处理程序
   ipcMain.handle('file:select-and-copy', async () => {
@@ -49,6 +59,22 @@ makeAppWithSingleInstanceLock(async () => {
     const sourcePath = result.filePaths[0]
     console.log(`[IPC] Selected file: ${sourcePath}`)
     return { canceled: false, filePath: sourcePath }
+  })
+
+  // 选择目录 IPC handler
+  ipcMain.handle('directory:select', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择数据存储目录',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true }
+    }
+
+    const dirPath = result.filePaths[0]
+    console.log(`[IPC] Selected directory: ${dirPath}`)
+    return { canceled: false, dirPath }
   })
 
   // 导出数据 IPC handler - 保存文件到指定路径
@@ -127,6 +153,45 @@ makeAppWithSingleInstanceLock(async () => {
       }
     }
   )
+
+  // 数据迁移 IPC handlers
+  // 选择数据目录（通过系统对话框）
+  ipcMain.handle('migrate:select-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择数据存储目录',
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: pythonManager.getDataDir(),
+    })
+    if (result.canceled || !result.filePaths[0]) {
+      return { canceled: true }
+    }
+    return { canceled: false, dirPath: result.filePaths[0] }
+  })
+
+  // 获取当前数据目录
+  ipcMain.handle('migrate:get-data-dir', () => {
+    return pythonManager.getDataDir()
+  })
+
+  // 保存数据目录配置
+  ipcMain.handle('migrate:save-config', (_event, newDataDir: string) => {
+    pythonManager.saveConfiguredDataDir(newDataDir)
+    return { success: true }
+  })
+
+  // 重启 Python 后端
+  ipcMain.handle('migrate:restart-backend', async () => {
+    try {
+      await pythonManager.restart()
+      const ready = await pythonManager.startAndWaitForReady()
+      return { success: ready }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
+    }
+  })
 
   await app.whenReady()
   const window = await makeAppSetup(MainWindow)

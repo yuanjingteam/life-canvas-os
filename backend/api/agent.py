@@ -25,9 +25,9 @@ from backend.schemas.agent_context import (
     MessageResponse
 )
 from backend.schemas.common import success_response, error_response
-from backend.agent.langchain.agent import AgentExecutor
+from backend.agent.langgraph import AgentExecutor
 from backend.agent.core.context import get_context_manager_with_db
-from backend.agent.langchain.tools import get_tool_schemas
+from backend.agent.langgraph.tools import get_tool_schemas
 from backend.agent.utils.logger import get_logger
 
 logger = get_logger("api")

@@ -175,15 +175,36 @@ async def get_ai_config(db: Session = Depends(get_db)):
     获取 AI 配置（不返回完整 API Key）
     """
     import sys
-    print(f"[DEBUG] Starting get_ai_config", file=sys.stderr)
+    import traceback as tb
+
     try:
         data, status_code = UserService.get_ai_config_masked(db)
-        print(f"[DEBUG] Got data: {data}, status: {status_code}", file=sys.stderr)
+
+        # 验证返回数据的完整性
+        if data is not None and not isinstance(data, dict):
+            print(f"[DEBUG] Invalid data type: {type(data)}", file=sys.stderr)
+            raise HTTPException(
+                status_code=500,
+                detail=error_response(
+                    message="数据格式错误",
+                    code=500,
+                    data={"expected": "dict", "got": str(type(data))}
+                )
+            )
+
+    except HTTPException:
+        raise  # 重新抛出 HTTPException
     except Exception as e:
         print(f"[DEBUG] Error in get_ai_config: {type(e).__name__}: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc(file=sys.stderr)
-        raise
+        print(f"[DEBUG] Traceback: {tb.format_exc()}", file=sys.stderr)
+        raise HTTPException(
+            status_code=500,
+            detail=error_response(
+                message=f"获取 AI 配置失败: {str(e)}",
+                code=500,
+                data={"error_type": type(e).__name__}
+            )
+        )
 
     if status_code == 404:
         raise HTTPException(

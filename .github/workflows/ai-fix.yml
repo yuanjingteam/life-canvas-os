@@ -1,0 +1,416 @@
+name: AI 自动修复
+
+on:
+  workflow_run:
+    workflows: ["构建测试"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  MAX_RETRIES: 3
+  FIX_LABEL: "ai-fix-in-progress"
+
+jobs:
+  # ============================================================
+  # 主修复流程：只在前一个 workflow 失败时执行
+  # ============================================================
+  ai-fix:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    outputs:
+      attempt: ${{ steps.pr-check.outputs.attempt || '1' }}
+      has_changes: ${{ steps.check-changes.outputs.has_changes || 'false' }}
+      fix_branch: ${{ steps.commit.outputs.fix_branch || '' }}
+      is_new_fix: ${{ steps.pr-check.outputs.is_new }}
+      pr_url: ${{ steps.pr-check.outputs.pr_url }}
+    steps:
+      # ============================================================
+      # 1. 提取基础信息
+      # ============================================================
+      - name: 提取基础信息
+        id: info
+        run: |
+          echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+          echo "run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_OUTPUT
+
+      # ============================================================
+      # 2. 检查是否已有对应的修复 PR
+      # ============================================================
+      - name: 检查现有修复 PR
+        id: pr-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 查找与当前 SHA 关联的 AI 修复 PR
+          # 方案：通过 commit message 中的 run_id 查找
+          SHA="${{ steps.info.outputs.sha }}"
+          
+          # 查找是否有标记了 ai-fix-in-progress 的 PR
+          PR_INFO=$(gh pr list \
+            --label "${{ env.FIX_LABEL }}" \
+            --state open \
+            --json number,title,body,labels \
+            --jq '.[0]' 2>/dev/null || echo "null")
+          
+          if [ "$PR_INFO" != "null" ] && [ -n "$PR_INFO" ]; then
+            PR_NUM=$(echo "$PR_INFO" | jq -r '.number')
+            PR_URL="https://github.com/${{ github.repository }}/pull/$PR_NUM"
+            
+            # 检查这个 PR 对应的是不是同一次 CI 失败
+            # 通过 body 中的 run_id 判断
+            RUN_ID_IN_PR=$(echo "$PR_INFO" | jq -r '.body' | grep -oP 'workflow run: \K[0-9]+' | head -1 || echo "")
+            
+            if [ "$RUN_ID_IN_PR" == "${{ steps.info.outputs.run_id }}" ]; then
+              # 同一次失败，检查尝试次数
+              ATTEMPT=$(echo "$PR_INFO" | jq -r '.labels[] | select(.name | startswith("fix-attempt-")) | .name' | \
+                awk -F'-' '{print $NF}' | sort -n | tail -1 || echo "0")
+              ATTEMPT=$((ATTEMPT + 1))
+              
+              echo "is_new=false" >> $GITHUB_OUTPUT
+              echo "attempt=$ATTEMPT" >> $GITHUB_OUTPUT
+              echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+              echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+              echo "发现已有修复 PR #$PR_NUM，尝试次数: $ATTEMPT"
+            else
+              # 不同一次的失败，创建新的 PR
+              echo "is_new=true" >> $GITHUB_OUTPUT
+              echo "attempt=1" >> $GITHUB_OUTPUT
+              echo "pr_url=" >> $GITHUB_OUTPUT
+              echo "pr_number=" >> $GITHUB_OUTPUT
+              echo "发现其他失败的修复 PR，创建新的"
+            fi
+          else
+            # 没有现有 PR，创建新的
+            echo "is_new=true" >> $GITHUB_OUTPUT
+            echo "attempt=1" >> $GITHUB_OUTPUT
+            echo "pr_url=" >> $GITHUB_OUTPUT
+            echo "pr_number=" >> $GITHUB_OUTPUT
+            echo "没有现有修复 PR，创建新的"
+          fi
+
+      # ============================================================
+      # 3. 检查是否超过最大重试次数
+      # ============================================================
+      - name: 检查重试限制
+        id: retry-check
+        run: |
+          ATTEMPT=${{ steps.pr-check.outputs.attempt || '1' }}
+          if [ "$ATTEMPT" -gt ${{ env.MAX_RETRIES }} ]; then
+            echo "已达到最大重试次数 (${{ env.MAX_RETRIES }}), 跳过修复"
+            echo "skip_fix=true" >> $GITHUB_OUTPUT
+            echo "skip_reason=max_retries_exceeded" >> $GITHUB_OUTPUT
+          else
+            echo "skip_fix=false" >> $GITHUB_OUTPUT
+          fi
+          echo "当前尝试次数: $ATTEMPT / ${{ env.MAX_RETRIES }}"
+
+      # ============================================================
+      # 4. 检出代码
+      # ============================================================
+      - name: 检出代码
+        if: steps.retry-check.outputs.skip_fix != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.info.outputs.sha }}
+          fetch-depth: 0
+
+      # ============================================================
+      # 5. 下载 CI 产物
+      # ============================================================
+      - name: 下载 CI 产物
+        if: steps.retry-check.outputs.skip_fix != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ./ci-artifacts
+          gh run download ${{ steps.info.outputs.run_id }} \
+            --name pytest-report \
+            --dir ./ci-artifacts/pytest 2>/dev/null || echo "无 pytest 报告"
+          gh run download ${{ steps.info.outputs.run_id }} \
+            --name playwright-report \
+            --dir ./ci-artifacts/playwright 2>/dev/null || echo "无 playwright 报告"
+          gh run download ${{ steps.info.outputs.run_id }} \
+            --name playwright-screenshots \
+            --dir ./ci-artifacts/pw-screenshots 2>/dev/null || echo "无截图"
+
+      # ============================================================
+      # 6. 生成失败分析报告
+      # ============================================================
+      - name: 生成失败分析报告
+        if: steps.retry-check.outputs.skip_fix != 'true'
+        id: report
+        run: |
+          {
+            echo "# AI 自动修复分析报告"
+            echo ""
+            echo "**源 Workflow**: [${{ steps.info.outputs.run_id }}](${{ steps.info.outputs.run_url }})"
+            echo "**分支**: ${{ steps.info.outputs.branch }}"
+            echo "**提交**: \`${{ steps.info.outputs.sha }}\`"
+            echo "**尝试次数**: ${{ steps.pr-check.outputs.attempt }} / ${{ env.MAX_RETRIES }}"
+            echo ""
+            echo "## pytest 失败用例"
+            if [ -d ./ci-artifacts/pytest ] && [ "$(ls -A ./ci-artifacts/pytest 2>/dev/null)" ]; then
+              find ./ci-artifacts/pytest -name "*.xml" -exec cat {} \; 2>/dev/null | \
+                python3 -c "
+import sys, re
+content = sys.stdin.read()
+failures = re.findall(r'testcase[^>]*name=\"([^\"]+)\"[^>]*>.*?<failure[^>]*>(.*?)</failure>', content, re.DOTALL)
+errors = re.findall(r'testcase[^>]*name=\"([^\"]+)\"[^>]*>.*?<error[^>]*>(.*?)</error>', content, re.DOTALL)
+for name, msg in failures:
+    print(f'FAIL: {name}')
+    print(f'  {msg[:300].strip()}')
+for name, msg in errors:
+    print(f'ERROR: {name}')
+    print(f'  {msg[:300].strip()}')
+" 2>/dev/null || echo "无法解析 pytest 报告"
+            else
+              echo "无 pytest 报告"
+            fi
+            echo ""
+            echo "## Playwright 截图"
+            if [ -d ./ci-artifacts/pw-screenshots ] && [ "$(ls -A ./ci-artifacts/pw-screenshots 2>/dev/null)" ]; then
+              find ./ci-artifacts/pw-screenshots -type f \( -name "*.png" -o -name "*.jpg" \) 2>/dev/null | head -5
+            else
+              echo "无 Playwright 截图"
+            fi
+          } > ai_fix_report.md
+          cat ai_fix_report.md
+
+      # ============================================================
+      # 7. 安装 Claude Code CLI
+      # ============================================================
+      - name: 安装 Claude Code CLI
+        if: steps.retry-check.outputs.skip_fix != 'true' && secrets.CLAUDE_API_KEY
+        run: |
+          if ! command -v claude-code &> /dev/null; then
+            echo "安装 Claude Code CLI..."
+            npm install -g @anthropic/claude-code 2>&1 | tail -3
+          fi
+          if command -v claude-code &> /dev/null; then
+            echo "✅ Claude Code CLI 就绪"
+          else
+            echo "⚠️ Claude Code CLI 安装可能失败"
+          fi
+
+      # ============================================================
+      # 8. 调用 Claude 分析并修复
+      # ============================================================
+      - name: 调用 Claude Code 分析并修复
+        if: steps.retry-check.outputs.skip_fix != 'true' && secrets.CLAUDE_API_KEY
+        id: ai-fix
+        env:
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.CLAUDE_MODEL || 'claude-opus-4-5' }}
+        run: |
+          if ! command -v claude-code &> /dev/null; then
+            echo "❌ Claude Code CLI 不可用"
+            exit 1
+          fi
+          
+          claude-code --print \
+            --model $ANTHROPIC_MODEL \
+            "## 任务：修复 CI 测试失败
+
+这是第 ${{ steps.pr-check.outputs.attempt }} 次修复尝试（共 ${{ env.MAX_RETRIES }} 次）。
+
+失败信息：
+$(cat ai_fix_report.md)
+
+## 项目技术栈
+- 前端：Electron + React 19 + Vite + shadcn/ui + TailwindCSS
+- 后端：Python 3.11 + FastAPI + SQLAlchemy + pytest
+- 代码规范：中文注释，英文变量命名
+
+## 约束
+- 只修复导致测试失败的问题
+- pytest 失败检查 backend/ 目录
+- Playwright 失败检查 e2e/ 目录
+- 提交信息用中文
+
+请分析并修复。" 2>&1 | tee claude_output.txt || true
+          
+          echo "Claude Code 执行完成"
+
+      # ============================================================
+      # 9. 检查代码修改
+      # ============================================================
+      - name: 检查代码修改
+        id: check-changes
+        if: steps.retry-check.outputs.skip_fix != 'true'
+        run: |
+          if git status --porcelain | grep -q .; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ 检测到代码修改"
+            git status --short
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "⚠️ 未检测到代码修改"
+          fi
+
+      # ============================================================
+      # 10. 提交并更新 PR
+      # ============================================================
+      - name: 提交修复
+        id: commit
+        if: steps.check-changes.outputs.has_changes == 'true'
+        env:
+          GIT_AUTHOR_NAME: "AI Auto-Fix"
+          GIT_AUTHOR_EMAIL: "ai@openclaw.local"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 确定分支名
+          if [ "${{ steps.pr-check.outputs.is_new }}" == "true" ]; then
+            # 新修复
+            FIX_BRANCH="ai-fix/run-${{ steps.info.outputs.run_id }}"
+          else
+            # 已有 PR 的更新
+            FIX_BRANCH="ai-fix/run-${{ steps.info.outputs.run_id }}"
+          fi
+          echo "fix_branch=$FIX_BRANCH" >> $GITHUB_OUTPUT
+          
+          # 检查分支是否已存在
+          if git ls-remote --heads origin $FIX_BRANCH 2>/dev/null | grep -q .; then
+            echo "分支已存在，拉取最新..."
+            git fetch origin $FIX_BRANCH
+            git checkout $FIX_BRANCH
+            git pull origin $FIX_BRANCH
+          else
+            git checkout -b $FIX_BRANCH
+          fi
+          
+          git config --local user.name "AI Auto-Fix"
+          git config --local user.email "ai@openclaw.local"
+          
+          git add -A
+          
+          # 检查是否有实际修改
+          if git diff --staged --stat | grep -v "^$" | grep -q .; then
+            git commit -m "fix: AI 自动修复测试失败 (第 ${{ steps.pr-check.outputs.attempt }} 次尝试)
+
+来源 workflow run: ${{ steps.info.outputs.run_id }}
+"
+            git push origin $FIX_BRANCH 2>&1 || echo "推送失败"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "没有实际修改，跳过提交"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ============================================================
+      # 11. 创建或更新 PR
+      # ============================================================
+      - name: 创建/更新修复 PR
+        if: steps.check-changes.outputs.has_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FIX_BRANCH="${{ steps.commit.outputs.fix_branch }}"
+          
+          if [ "${{ steps.pr-check.outputs.is_new }}" == "true" ]; then
+            # 创建新 PR
+            gh pr create \
+              --title "🤖 AI 自动修复 (attempt #${{ steps.pr-check.outputs.attempt }})" \
+              --body "## AI 自动修复
+
+来源: [Workflow #${{ steps.info.outputs.run_id }}](${{ steps.info.outputs.run_url }})
+
+- 尝试次数: ${{ steps.pr-check.outputs.attempt }} / ${{ env.MAX_RETRIES }}
+- 修复分支: \`$FIX_BRANCH\`
+
+请在 CI 通过后合并。" \
+              --label "${{ env.FIX_LABEL }}" \
+              --label "fix-attempt-${{ steps.pr-check.outputs.attempt }}" \
+              --base main \
+              --head $FIX_BRANCH 2>&1 || \
+            echo "PR 可能已存在"
+          else
+            # 更新现有 PR
+            PR_NUM="${{ steps.pr-check.outputs.pr_number }}"
+            if [ -n "$PR_NUM" ]; then
+              gh pr edit $PR_NUM \
+                --body "## AI 自动修复
+
+来源: [Workflow #${{ steps.info.outputs.run_id }}](${{ steps.info.outputs.run_url }})
+
+- 尝试次数: ${{ steps.pr-check.outputs.attempt }} / ${{ env.MAX_RETRIES }}
+- 修复分支: \`$FIX_BRANCH\`
+
+上次尝试未成功，AI 正在继续修复...
+
+请在 CI 通过后合并。" 2>&1 || echo "更新 PR 失败"
+              
+              # 移除旧标签，添加新标签
+              gh pr edit $PR_NUM --remove-label "fix-attempt-$(({{ steps.pr-check.outputs.attempt }} - 1))" 2>/dev/null || true
+              gh pr edit $PR_NUM --add-label "fix-attempt-${{ steps.pr-check.outputs.attempt }}" 2>&1 || true
+            fi
+          fi
+
+      # ============================================================
+      # 12. 触发重新构建
+      # ============================================================
+      - name: 触发重新构建
+        if: steps.check-changes.outputs.has_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+            --method POST \
+            --field ref=${{ steps.commit.outputs.fix_branch }} \
+            2>&1 || echo "触发构建失败"
+
+      # ============================================================
+      # 13. 状态报告
+      # ============================================================
+      - name: 状态报告
+        run: |
+          echo "========================================"
+          echo "       AI 自动修复状态"
+          echo "========================================"
+          echo "源失败: ${{ steps.info.outputs.run_url }}"
+          echo "尝试次数: ${{ steps.pr-check.outputs.attempt }} / ${{ env.MAX_RETRIES }}"
+          echo "有新修复: ${{ steps.pr-check.outputs.is_new }}"
+          echo "有代码修改: ${{ steps.check-changes.outputs.has_changes }}"
+          echo "跳过原因: ${{ steps.retry-check.outputs.skip_reason || '无' }}"
+          echo "========================================"
+
+  # ============================================================
+  # 修复失败通知（超过最大重试次数）
+  # ============================================================
+  notify-max-retries:
+    runs-on: ubuntu-latest
+    needs: ai-fix
+    if: always() && needs.ai-fix.outputs.skip_fix == 'true'
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: 生成人工介入通知
+        run: |
+          echo "========================================"
+          echo "⚠️ AI 自动修复已达最大重试次数"
+          echo "========================================"
+          echo ""
+          echo "源失败: https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}"
+          echo "分支: ${{ github.event.workflow_run.head_branch }}"
+          echo ""
+          echo "AI 已尝试 ${{ env.MAX_RETRIES }} 次仍未能修复此问题。"
+          echo ""
+          echo "建议："
+          echo "1. 本地复现问题"
+          echo "2. 手动分析失败原因"
+          echo "3. 直接修复代码"
+          echo "4. 推送修复并关闭 AI 修复标签"
+          echo ""
+          echo "相关 PR: ${{ needs.ai-fix.outputs.pr_url }}"
+          echo "========================================"
+          
+          # 添加标签表示需要人工介入
+          if [ -n "${{ needs.ai-fix.outputs.pr_url }}" ]; then
+            gh pr edit ${{ needs.ai-fix.outputs.pr_url }} \
+              --remove-label "${{ env.FIX_LABEL }}" \
+              --add-label "needs-human-fix" 2>/dev/null || true
+          fi

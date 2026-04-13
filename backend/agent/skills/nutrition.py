@@ -132,15 +132,19 @@ class QueryNutritionRAGSkill(BaseSkill):
         global _RERANKER_CACHE
         if _RERANKER_CACHE is None:
             from flashrank import Ranker
-            # 使用临时文件夹作为重排缓存，避免触发 uvicorn 重启
-            import tempfile
-            cache_dir = os.path.join(tempfile.gettempdir(), "life_canvas_rerank")
+            # 使用 APP_DATA_DIR 下的 rerank_cache 目录，持久化缓存模型
+            data_dir = os.environ.get("APP_DATA_DIR")
+            if data_dir:
+                cache_dir = os.path.join(data_dir, "rerank_cache")
+            else:
+                import tempfile
+                cache_dir = os.path.join(tempfile.gettempdir(), "life_canvas_rerank")
             _RERANKER_CACHE = Ranker(model_name="ms-marco-MiniLM-L-12-v2", cache_dir=cache_dir)
         return _RERANKER_CACHE
 
     @classmethod
     def prewarm(cls):
-        """Pre-warm models on startup."""
+        """Pre-warm models on startup (synchronous)."""
         try:
             logger.info("Pre-warming Nutrition RAG Models (Hybrid & Reranker)...")
             skill = cls()
@@ -153,6 +157,27 @@ class QueryNutritionRAGSkill(BaseSkill):
             logger.info("Nutrition RAG Models Pre-warmed.")
         except Exception as e:
             logger.error(f"RAG pre-warm critical failure: {e}")
+
+    @classmethod
+    def prewarm_background(cls):
+        """Background pre-warm RAG models without blocking startup."""
+        def _prewarm():
+            try:
+                logger.info("Background pre-warming Nutrition RAG Models...")
+                skill = cls()
+                skill._get_vector_db()
+                skill._get_bm25_data()
+                try:
+                    skill._get_reranker()
+                except Exception as re_err:
+                    logger.warning(f"Reranker pre-warm skipped or failed: {re_err}")
+                logger.info("Nutrition RAG Models Pre-warmed in background.")
+            except Exception as e:
+                logger.error(f"RAG pre-warm critical failure: {e}")
+
+        thread = threading.Thread(target=_prewarm, daemon=True)
+        thread.start()
+        logger.info("RAG background pre-warm started")
 
     @property
     def name(self) -> str:

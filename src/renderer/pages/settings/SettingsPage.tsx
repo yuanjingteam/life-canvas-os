@@ -21,6 +21,8 @@ import {
   Palette,
   Settings,
   FileText,
+  FolderOpen,
+  HardDrive,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useApp } from '~/renderer/contexts/AppContext'
@@ -52,6 +54,7 @@ import {
 } from '~/renderer/components/ui/select'
 import { removeCache, CACHE_KEYS } from '~/renderer/lib/cacheUtils'
 import { MBTI_TYPES } from '~/renderer/lib/constants'
+import { migrateData, getCurrentDataDir } from '~/renderer/lib/dataMigration'
 
 export function SettingsPage() {
   const [searchParams] = useSearchParams()
@@ -76,6 +79,7 @@ export function SettingsPage() {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [isMigrating, setIsMigrating] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [showPinDialog, setShowPinDialog] = useState(false)
   const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false)
@@ -89,6 +93,7 @@ export function SettingsPage() {
   })
   const [isEditingAI, setIsEditingAI] = useState(false) // 是否处于编辑模式
   const [existingAIConfig, setExistingAIConfig] = useState<any>(null) // 已存在的 AI 配置
+  const [currentDataDir, setCurrentDataDir] = useState<string>('') // 当前数据目录
   const isLoadingProfileRef = useRef(false)
   const getUserProfileRef = useRef(getUserProfile)
 
@@ -198,6 +203,11 @@ export function SettingsPage() {
         } catch (error) {
           console.error('Failed to load PIN status or user settings:', error)
         }
+      }
+
+      // 数据管理 - 加载当前数据目录
+      if (activeTab === 'data') {
+        setCurrentDataDir(getCurrentDataDir())
       }
     }
 
@@ -428,6 +438,46 @@ export function SettingsPage() {
       console.error('Import failed:', error)
     } finally {
       setIsImporting(false)
+    }
+  }
+
+  // 处理存储位置变更
+  const handleChangeStorageLocation = async () => {
+    try {
+      // 调用 Electron API 选择新目录
+      const result = await window.App.fileOps.selectDirectory()
+      if (result.canceled || !result.dirPath) {
+        return
+      }
+
+      const newDir = result.dirPath
+      if (newDir === currentDataDir) {
+        toast.info('选择了相同的目录，无需迁移')
+        return
+      }
+
+      // 确认操作
+      const confirmed = window.confirm(
+        `确定要将数据迁移到新目录吗？\n\n新目录: ${newDir}\n\n数据迁移可能需要一些时间，请耐心等待。`
+      )
+      if (!confirmed) {
+        return
+      }
+
+      setIsMigrating(true)
+      const migrationResult = await migrateData(newDir)
+
+      if (migrationResult.success) {
+        toast.success('数据迁移成功！')
+        setCurrentDataDir(newDir)
+      } else {
+        toast.error(`迁移失败: ${migrationResult.message || '未知错误'}`)
+      }
+    } catch (error) {
+      console.error('Change storage location failed:', error)
+      toast.error('更改存储位置失败')
+    } finally {
+      setIsMigrating(false)
     }
   }
 
@@ -1007,6 +1057,32 @@ export function SettingsPage() {
                 数据管理
               </div>
               <div className="space-y-2">
+                {/* 存储位置 */}
+                <div className="p-3 bg-apple-bg2/50 dark:bg-white/5 rounded-xl border border-apple-border dark:border-white/10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <HardDrive className="text-blue-500" size={16} />
+                    <span className="text-sm font-medium text-apple-textMain dark:text-white">
+                      存储位置
+                    </span>
+                  </div>
+                  <p className="text-xs text-apple-textSec dark:text-white/40 mb-3 break-all">
+                    {currentDataDir || '加载中...'}
+                  </p>
+                  <Button
+                    className="w-full justify-between"
+                    disabled={isMigrating}
+                    onClick={handleChangeStorageLocation}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="text-blue-500" size={14} />
+                      <span>{isMigrating ? '迁移中...' : '更改存储位置'}</span>
+                    </div>
+                    <ChevronRight size={14} />
+                  </Button>
+                </div>
+
                 <Button
                   className="w-full justify-between"
                   disabled={isExporting}

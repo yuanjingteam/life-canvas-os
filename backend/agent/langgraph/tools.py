@@ -158,11 +158,49 @@ class SkillToToolWrapper(LangChainBaseTool):
                 })
 
             # 正常返回消息
-            return result.message
+            return self._format_result(result)
 
         except Exception as e:
             logger.error(f"Skill execution failed: {self.skill_name} - {e}")
             return json.dumps({"error": str(e)})
+
+    def _format_result(self, result) -> str:
+        """
+        格式化 SkillResult 返回给 LLM
+
+        如果有数据，添加到返回消息中，让 LLM 能够看到实际的查询结果
+        """
+        # 如果有数据且是列表，格式化展示
+        if result.data is not None:
+            if isinstance(result.data, list):
+                if len(result.data) == 0:
+                    return result.message
+
+                # 格式化列表数据，展示关键信息
+                items = []
+                for item in result.data[:5]:  # 最多展示5条
+                    if isinstance(item, dict):
+                        # 提取关键字段
+                        created_at = item.get("created_at", "未知时间")
+                        content = item.get("content", "")
+                        mood = item.get("mood", "")
+                        # 截取内容前100字符
+                        content_preview = content[:100] + "..." if len(content) > 100 else content
+                        item_str = f"[{created_at}] {content_preview}"
+                        if mood:
+                            item_str = f"[{created_at}][{mood}] {content_preview}"
+                        items.append(item_str)
+                    else:
+                        items.append(str(item))
+
+                if items:
+                    separator = "\n"
+                    return f"{result.message}\n\n{separator.join(items)}"
+
+            # 非列表数据，直接返回
+            return f"{result.message}\n\n{result.data}"
+
+        return result.message
 
 
 def create_langchain_tool_from_skill(

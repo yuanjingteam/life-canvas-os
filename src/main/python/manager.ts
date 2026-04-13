@@ -4,9 +4,10 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
-import { platform } from 'node:os'
+import { platform, homedir } from 'node:os'
+import fs from 'node:fs'
 
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 
 // 记录启动时的进程 PID，用于清理僵尸进程
 let startedPid: number | null = null
@@ -25,6 +26,90 @@ export class PythonManager {
   private responseCallbacks = new Map<string, (response: any) => void>()
   private stdoutBuffer = Buffer.alloc(0) // 改用 Buffer
   public isReady = false
+  // 重启限制相关
+  private restartCount = 0
+  private lastRestartTime = 0
+  private isRestarting = false
+  private readonly maxRestartCount = 5
+  private readonly restartTimeWindow = 60000 // 60秒内最多重启5次
+  // 后端就绪等待配置
+  private readonly backendReadyTimeout = 30000 // 30秒（FastAPI 启动快，RAG 预热在后台执行）
+  private readonly healthCheckInterval = 300 // 300ms 检查一次
+  private readonly initialDelay = 1500 // 初始等待1.5秒
+
+  // 配置文件路径（独立于应用数据目录）
+  private getConfigPath(): string {
+    return path.join(homedir(), '.lifecanvas', 'config.json')
+  }
+
+  // 读取数据目录配置
+  private getConfiguredDataDir(): string | null {
+    const configPath = this.getConfigPath()
+    if (fs.existsSync(configPath)) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+        return config.data_dir || null
+      } catch {
+        return null
+      }
+    }
+    return null
+  }
+
+  // 保存数据目录配置
+  saveConfiguredDataDir(dataDir: string): void {
+    const configDir = path.dirname(this.getConfigPath())
+    fs.mkdirSync(configDir, { recursive: true })
+    fs.writeFileSync(
+      this.getConfigPath(),
+      JSON.stringify({ data_dir: dataDir, version: 1 })
+    )
+  }
+
+  // 获取当前配置的数据目录
+  getDataDir(): string {
+    return this.getConfiguredDataDir() || app.getPath('userData')
+  }
+
+  // 选择目录（首次启动或迁移时）
+  async selectDataDirectory(): Promise<string | null> {
+    const result = await dialog.showOpenDialog({
+      title: '选择数据存储目录',
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: homedir(),
+    })
+    if (result.canceled || !result.filePaths[0]) return null
+    return result.filePaths[0]
+  }
+
+  /**
+   * 启动 Python 后端并等待就绪
+   * @returns Promise<boolean> true=就绪, false=超时
+   */
+  async startAndWaitForReady(): Promise<boolean> {
+    // 先启动进程
+    this.start()
+
+    // 等待初始启动时间（让进程完成fork/启动）
+    await new Promise(resolve => setTimeout(resolve, this.initialDelay))
+
+    // 轮询健康检查
+    const startTime = Date.now()
+    while (Date.now() - startTime < this.backendReadyTimeout) {
+      if (await this.healthCheck()) {
+        console.log('[Python Manager] Backend ready after startup')
+        return true
+      }
+      // 等待一段时间再检查
+      await new Promise(resolve =>
+        setTimeout(resolve, this.healthCheckInterval)
+      )
+    }
+
+    // 超时
+    console.error('[Python Manager] Backend ready timeout')
+    return false
+  }
 
   /**
    * 启动 Python 后端进程
@@ -32,9 +117,15 @@ export class PythonManager {
   start() {
     const isDev = process.env.NODE_ENV === 'development'
 
+    // 获取数据目录（配置 > 默认 userData）
+    let dataDir = this.getConfiguredDataDir()
+    if (!dataDir) {
+      // 首次启动时使用默认值，后续可通过设置页面更改
+      dataDir = app.getPath('userData')
+    }
+
     let pythonPath: string
     let args: string[]
-    const userDataPath = app.getPath('userData')
 
     if (isDev) {
       // 开发环境：使用虚拟环境中的 Python
@@ -47,13 +138,13 @@ export class PythonManager {
       const pythonExe = isWindows ? 'python.exe' : 'python3'
       pythonPath = path.join(projectRoot, 'venv', pythonBinDir, pythonExe)
       const mainPyPath = path.join(projectRoot, 'backend', 'main.py')
-      args = [mainPyPath, '--dev', '--data-dir', userDataPath]
+      args = [mainPyPath, '--dev', '--data-dir', dataDir]
 
       console.log('[Python Manager] Dev paths:', {
         projectRoot,
         pythonPath,
         mainPyPath,
-        userDataPath,
+        dataDir,
       })
     } else {
       // 生产环境：使用打包的 Python 可执行文件
@@ -67,7 +158,7 @@ export class PythonManager {
         backendName
       )
       // 传递 --data-dir 参数指定数据存储目录
-      args = ['--data-dir', userDataPath]
+      args = ['--data-dir', dataDir]
 
       console.log('[Python Manager] Production mode, executable:', pythonPath)
     }
@@ -76,6 +167,7 @@ export class PythonManager {
       pythonPath,
       args,
       isDev,
+      dataDir,
     })
 
     this.process = spawn(pythonPath, args, {
@@ -118,9 +210,28 @@ export class PythonManager {
       console.error(`[Python Manager] Process exited with code ${code}`)
       this.isReady = false
 
-      // 非正常退出时自动重启
+      // 非正常退出时自动重启（带熔断机制）
       if (code !== 0 && code !== null) {
-        console.log('[Python Manager] Restarting in 2 seconds...')
+        const now = Date.now()
+
+        // 如果距离上次重启超过时间窗口，重置计数
+        if (now - this.lastRestartTime > this.restartTimeWindow) {
+          this.restartCount = 0
+        }
+
+        // 检查是否超过重启限制
+        if (this.restartCount >= this.maxRestartCount) {
+          console.error(
+            `[Python Manager] Restart limit reached (${this.maxRestartCount} times in ${this.restartTimeWindow / 1000}s). Stopping restart.`
+          )
+          return
+        }
+
+        this.restartCount++
+        this.lastRestartTime = now
+        console.log(
+          `[Python Manager] Restarting in 2 seconds... (attempt ${this.restartCount}/${this.maxRestartCount})`
+        )
         setTimeout(() => this.restart(), 2000)
       }
     })
@@ -322,10 +433,11 @@ export class PythonManager {
             '[Python Manager] Force killing process due to timeout...'
           )
           resolved = true
-          this.forceKill(currentPid)
-          this.process = null
-          this.isReady = false
-          resolve()
+          this.forceKill(currentPid).then(() => {
+            this.process = null
+            this.isReady = false
+            resolve()
+          })
         }
       }, timeout)
 
@@ -378,57 +490,92 @@ export class PythonManager {
    * 强制终止进程（跨平台）
    * Windows 使用 taskkill 确保终止整个进程树
    */
-  private forceKill(pid: number): void {
-    const isWindows = platform() === 'win32'
+  private forceKill(pid: number): Promise<void> {
+    return new Promise(resolve => {
+      const isWindows = platform() === 'win32'
 
-    if (isWindows) {
-      try {
-        // /F = 强制终止, /T = 终止进程树中的所有子进程
-        spawn('taskkill', ['/pid', pid.toString(), '/f', '/t'], {
+      if (isWindows) {
+        // Windows: 使用 taskkill /T /F 终止进程树（包括所有子进程）
+        const proc = spawn('taskkill', ['/pid', pid.toString(), '/T', '/F'], {
           stdio: 'ignore',
-          detached: true,
         })
-        console.log(`[Python Manager] taskkill sent for PID ${pid}`)
-      } catch (e) {
-        console.error('[Python Manager] taskkill failed:', e)
-        // 回退：尝试常规 kill
+
+        proc.on('close', code => {
+          console.log(`[Python Manager] taskkill exited with code ${code}`)
+          resolve()
+        })
+
+        proc.on('error', err => {
+          console.error('[Python Manager] taskkill error:', err)
+          // Windows 不支持 Unix 信号，回退使用 taskkill /IM 终止所有 Python 进程
+          const fallback = spawn('taskkill', ['/IM', 'python.exe', '/F'], {
+            stdio: 'ignore',
+          })
+          fallback.on('close', () => resolve())
+        })
+      } else {
         try {
           process.kill(pid, 'SIGKILL')
         } catch {
           // 进程可能已经退出
         }
+        resolve()
       }
-    } else {
-      try {
-        process.kill(pid, 'SIGKILL')
-      } catch {
-        // 进程可能已经退出
-      }
-    }
+    })
   }
 
   /**
    * 重启 Python 进程
    */
   async restart() {
-    // 检查是否已经有进程在运行
-    if (this.process?.pid) {
-      await this.stop()
-      // 等待进程完全退出
-      await new Promise(resolve => setTimeout(resolve, 500))
+    // 防止并发重启
+    if (this.isRestarting) {
+      console.log('[Python Manager] Restart already in progress, skipping...')
+      return
     }
-    this.start()
+
+    this.isRestarting = true
+    try {
+      // 检查是否已经有进程在运行
+      if (this.process?.pid) {
+        await this.stop()
+        // 等待进程真正退出（最多5秒）
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      this.start()
+    } finally {
+      this.isRestarting = false
+    }
   }
 
   /**
-   * 健康检查
+   * 健康检查 - 开发模式使用 HTTP，生产模式使用 IPC
    */
   async healthCheck(): Promise<boolean> {
-    try {
-      await this.sendRequest('ping', {}, 5000)
-      return true
-    } catch (_e) {
-      return false
+    const isDev = process.env.NODE_ENV === 'development'
+
+    if (isDev) {
+      // 开发模式：使用 HTTP 健康检查（更可靠，跨进程）
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000)
+        const response = await fetch('http://localhost:8000/ping', {
+          method: 'GET',
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+        return response.ok
+      } catch (_e) {
+        return false
+      }
+    } else {
+      // 生产模式：使用 IPC ping/pong
+      try {
+        await this.sendRequest('ping', {}, 5000)
+        return true
+      } catch (_e) {
+        return false
+      }
     }
   }
 }

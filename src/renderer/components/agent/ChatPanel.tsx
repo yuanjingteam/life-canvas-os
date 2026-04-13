@@ -273,9 +273,25 @@ export function ChatPanel({ className }: ChatPanelProps) {
   // 处理选择会话
   const handleSelectSession = useCallback(
     async (targetSessionId: string, title?: string) => {
+      // 如果切换回正在流式响应的当前 session，保留 streaming 状态并跳过历史加载
+      const isReturningToStreamingSession =
+        targetSessionId === sessionId && isStreaming
+
+      if (!isReturningToStreamingSession) {
+        // 清除 streaming 状态，避免思考动画显示在新 session 界面
+        setIsStreaming(false)
+        setStreamingContent('')
+      }
+
       // 更新当前会话标题
       if (title) {
         setCurrentSessionTitle(title)
+      }
+
+      // 如果是切换回正在流式响应的 session，跳过历史加载以保留 in-progress 消息
+      if (isReturningToStreamingSession) {
+        setViewMode('chat')
+        return
       }
 
       // 设置加载状态
@@ -313,11 +329,13 @@ export function ChatPanel({ className }: ChatPanelProps) {
         setIsLoadingHistory(false)
       }
     },
-    [getHistory, updateSessionId, scrollToBottom]
+    [getHistory, updateSessionId, scrollToBottom, isStreaming, sessionId]
   )
 
   // 处理新会话
   const handleNewChat = useCallback(() => {
+    setIsStreaming(false)
+    setStreamingContent('')
     setMessages([])
     setViewMode('chat')
     setCurrentSessionTitle('新对话')
@@ -405,8 +423,11 @@ export function ChatPanel({ className }: ChatPanelProps) {
       const trimmedInput = messageText.trim()
       if (!trimmedInput || isStreaming) return
 
+      // 如果是外部强制发送的消息，强制使用新会话（忽略已有 sessionId）
+      const effectiveSessionId = forcedMessage ? '' : sessionId
+
       // 如果是新会话（没有 sessionId），使用用户的第一条消息作为标题
-      if (!sessionId) {
+      if (!effectiveSessionId) {
         setCurrentSessionTitle(
           trimmedInput.slice(0, 15) + (trimmedInput.length > 15 ? '...' : '')
         )
@@ -424,121 +445,134 @@ export function ChatPanel({ className }: ChatPanelProps) {
       setStreamingContent('')
 
       try {
-        const response = await sendMessage(trimmedInput, sessionId, true)
+        const response = await sendMessage(trimmedInput, effectiveSessionId, true)
 
-      if (response instanceof ReadableStream) {
-        const reader = response.getReader()
-        const decoder = new TextDecoder()
+        if (response instanceof ReadableStream) {
+          const reader = response.getReader()
+          const decoder = new TextDecoder()
 
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
 
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
+            const chunk = decoder.decode(value)
+            const lines = chunk.split('\n')
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6))
-                if (data.session_id && !sessionId) {
-                  updateSessionId(data.session_id)
-                }
-                if (data.type === 'stream_chunk' && data.content) {
-                  setStreamingContent(prev => prev + data.content)
-                } else if (data.type === 'error') {
-                  toast.error('处理失败', {
-                    description: data.message,
-                  })
-                  const errorMessage: Message = {
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: data.message || '处理失败，请稍后重试',
-                    timestamp: new Date().toISOString(),
-                    error: true,
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+                  if (data.session_id && !effectiveSessionId) {
+                    updateSessionId(data.session_id)
+                    // Refresh sessions list immediately to show new session
+                    refreshSessions()
                   }
-                  setMessages(prev => [...prev, errorMessage])
-                } else if (data.type === 'stream_end') {
-                  console.log('[DEBUG] stream_end data:', JSON.stringify(data, null, 2))
-                  if (data.error) {
+                  if (data.type === 'stream_chunk' && data.content) {
+                    setStreamingContent(prev => prev + data.content)
+                  } else if (data.type === 'error') {
                     toast.error('处理失败', {
-                      description: data.error,
+                      description: data.message,
                     })
                     const errorMessage: Message = {
-                      id: data.session_id + Date.now().toString(),
+                      id: Date.now().toString(),
                       role: 'assistant',
-                      content: data.error,
+                      content: data.message || '处理失败，请稍后重试',
                       timestamp: new Date().toISOString(),
                       error: true,
                     }
                     setMessages(prev => [...prev, errorMessage])
-                  } else if (data.result) {
-                    console.log('[DEBUG] stream_end result:', JSON.stringify(data.result, null, 2))
-                    console.log('[DEBUG] confirmation_required:', data.result.confirmation_required)
-                    handleResponse(data.result as AgentChatResponse)
-                    // 刷新会话列表
-                    refreshSessions()
+                  } else if (data.type === 'stream_end') {
+                    console.log(
+                      '[DEBUG] stream_end data:',
+                      JSON.stringify(data, null, 2)
+                    )
+                    if (data.error) {
+                      toast.error('处理失败', {
+                        description: data.error,
+                      })
+                      const errorMessage: Message = {
+                        id: data.session_id + Date.now().toString(),
+                        role: 'assistant',
+                        content: data.error,
+                        timestamp: new Date().toISOString(),
+                        error: true,
+                      }
+                      setMessages(prev => [...prev, errorMessage])
+                    } else if (data.result) {
+                      console.log(
+                        '[DEBUG] stream_end result:',
+                        JSON.stringify(data.result, null, 2)
+                      )
+                      console.log(
+                        '[DEBUG] confirmation_required:',
+                        data.result.confirmation_required
+                      )
+                      handleResponse(data.result as AgentChatResponse)
+                      // 刷新会话列表
+                      refreshSessions()
+                    }
+                    setIsStreaming(false)
+                    setStreamingContent('')
                   }
-                  setIsStreaming(false)
-                  setStreamingContent('')
+                } catch {
+                  // 忽略解析错误
                 }
-              } catch {
-                // 忽略解析错误
               }
             }
           }
+        } else {
+          handleResponse(response as AgentChatResponse)
+          // 刷新会话列表
+          refreshSessions()
         }
-      } else {
-        handleResponse(response as AgentChatResponse)
-        // 刷新会话列表
-        refreshSessions()
-      }
-    } catch (error) {
-      console.error('Send message error:', error)
-      const agentError = error as AgentError
+      } catch (error) {
+        console.error('Send message error:', error)
+        const agentError = error as AgentError
 
-      if (agentError.type === AgentErrorType.AI_NOT_CONFIGURED) {
-        toast.error('AI 服务未配置', {
-          description: agentError.hint || '请先在设置中配置 AI 服务',
-          action: {
-            label: '去设置',
-            onClick: navigateToSettings,
-          },
-        })
-      } else if (agentError.type === AgentErrorType.NETWORK_ERROR) {
-        toast.error('网络连接失败', {
-          description: agentError.hint || '请检查网络连接',
-        })
-      } else {
-        toast.error('处理失败', {
-          description: agentError.message || '请稍后重试',
-        })
-      }
+        if (agentError.type === AgentErrorType.AI_NOT_CONFIGURED) {
+          toast.error('AI 服务未配置', {
+            description: agentError.hint || '请先在设置中配置 AI 服务',
+            action: {
+              label: '去设置',
+              onClick: navigateToSettings,
+            },
+          })
+        } else if (agentError.type === AgentErrorType.NETWORK_ERROR) {
+          toast.error('网络连接失败', {
+            description: agentError.hint || '请检查网络连接',
+          })
+        } else {
+          toast.error('处理失败', {
+            description: agentError.message || '请稍后重试',
+          })
+        }
 
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          agentError.hint ||
-          agentError.message ||
-          '抱歉，处理您的请求时出错了。请稍后重试。',
-        timestamp: new Date().toISOString(),
-        error: true,
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content:
+            agentError.hint ||
+            agentError.message ||
+            '抱歉，处理您的请求时出错了。请稍后重试。',
+          timestamp: new Date().toISOString(),
+          error: true,
+        }
+        setMessages(prev => [...prev, errorMessage])
+      } finally {
+        setIsStreaming(false)
+        setStreamingContent('')
       }
-      setMessages(prev => [...prev, errorMessage])
-    } finally {
-      setIsStreaming(false)
-      setStreamingContent('')
-    }
-  }, [
-    input,
-    isStreaming,
-    sendMessage,
-    sessionId,
-    navigateToSettings,
-    updateSessionId,
-    refreshSessions,
-  ])
+    },
+    [
+      input,
+      isStreaming,
+      sendMessage,
+      sessionId,
+      navigateToSettings,
+      updateSessionId,
+      refreshSessions,
+    ]
+  )
 
   // 监听外部发送消息请求
   useEffect(() => {
@@ -554,6 +588,18 @@ export function ChatPanel({ className }: ChatPanelProps) {
     return () =>
       window.removeEventListener('agent-send-message', handleForcedSend)
   }, [handleSend])
+
+  // 监听创建新对话请求
+  useEffect(() => {
+    const handleNewChat = () => {
+      // 清除当前会话，创建新对话
+      setMessages([])
+      setCurrentSessionTitle('新对话')
+      clearSession()
+    }
+    window.addEventListener('agent-new-chat', handleNewChat)
+    return () => window.removeEventListener('agent-new-chat', handleNewChat)
+  }, [clearSession])
 
   // 处理响应
   const handleResponse = useCallback((response: AgentChatResponse) => {
@@ -593,7 +639,10 @@ export function ChatPanel({ className }: ChatPanelProps) {
     }
 
     if (response.confirmation_required) {
-      console.log('[DEBUG] Showing confirmation dialog:', response.confirmation_required)
+      console.log(
+        '[DEBUG] Showing confirmation dialog:',
+        response.confirmation_required
+      )
       setConfirmation(response.confirmation_required)
     }
 

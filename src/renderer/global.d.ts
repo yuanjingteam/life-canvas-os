@@ -24,10 +24,22 @@ export interface FileOpsAPI {
   ): Promise<{ success: boolean; data?: Buffer; error?: string }>
 }
 
+export interface MigrateAPI {
+  /** 选择数据目录（通过系统对话框） */
+  selectDirectory(): Promise<{ canceled: boolean; dirPath?: string }>
+  /** 获取当前数据目录 */
+  getDataDir(): Promise<string>
+  /** 保存数据目录配置 */
+  saveConfig(newDataDir: string): Promise<{ success: boolean }>
+  /** 重启 Python 后端 */
+  restartBackend(): Promise<{ success: boolean; error?: string }>
+}
+
 export interface AppAPI {
   sayHelloFromBridge(): void
   username: string | undefined
   fileOps: FileOpsAPI
+  migrate: MigrateAPI
 }
 
 declare global {

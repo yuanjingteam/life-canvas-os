@@ -475,9 +475,10 @@ export function FuelSystemPage() {
               <Sparkles className="text-orange-500" />
               饮食系统
             </h1>
-            <ConsultAgent 
-              message="请根据我目前的饮食记录和身体指标，给我一些专业的营养建议。" 
-              className="mt-1"
+            <ConsultAgent
+              className="mt-1 text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 cursor-pointer"
+              label="咨询营养师"
+              message="请根据我目前的饮食记录和身体指标，给我一些专业的营养建议。"
             />
           </div>
           <p className="text-apple-textSec dark:text-white/40 mt-1 text-sm">

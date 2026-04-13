@@ -71,6 +71,17 @@ export function FloatingBall({ className }: FloatingBallProps) {
     return () => window.removeEventListener('agent-toggle', handleToggleEvent)
   }, [])
 
+  // 监听创建新对话请求
+  useEffect(() => {
+    const handleNewChatEvent = () => {
+      // 创建新对话并打开面板
+      setIsOpen(true)
+    }
+    window.addEventListener('agent-new-chat', handleNewChatEvent)
+    return () =>
+      window.removeEventListener('agent-new-chat', handleNewChatEvent)
+  }, [])
+
   // 导航到设置页面
   const navigateToSettings = useCallback(() => {
     navigate('/settings')

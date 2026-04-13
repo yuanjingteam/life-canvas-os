@@ -117,10 +117,10 @@ if IS_DEV:
         pool_status = DatabaseManager.get_pool_status()
         print(f"[INFO] Pool status: {pool_status}")
 
-        # 预热 RAG 模型
+        # 预热 RAG 模型（后台执行，不阻塞启动）
         try:
             from backend.agent.skills.nutrition import QueryNutritionRAGSkill
-            QueryNutritionRAGSkill.prewarm()
+            QueryNutritionRAGSkill.prewarm_background()
         except Exception as e:
             print(f"[WARN] RAG pre-warm failed: {e}")
 
@@ -186,24 +186,20 @@ if IS_DEV:
     if __name__ == "__main__":
         # 在开发模式下，如果指定了 data_dir，我们需要确保 uvicorn 不会监视它
         # 否则，数据库写入会触发无限重启
+        # 使用绝对路径避免相对路径解析问题（当运行 python backend/main.py 时，CWD 是 backend/）
+        project_root = Path(__file__).resolve().parent.parent
         uvicorn.run(
             "backend.main:app",
             host="127.0.0.1",
             port=8000,
             reload=True,
-            reload_dirs=["backend"],
-            reload_excludes=[
-                "backend/db/**/*",
-                "backend/logs/**/*",
-                "*/__pycache__/*",
-                "*.db",
-                "*.db-journal",
-                "*.db-wal",
-                "logs/**/*",
-                "db/**/*",
-                "**/*.bin",
-                "**/*.pkl",
-                "**/*.sqlite3"
+            reload_dirs=[
+                str(project_root / "backend" / "api"),
+                str(project_root / "backend" / "core"),
+                str(project_root / "backend" / "models"),
+                str(project_root / "backend" / "schemas"),
+                str(project_root / "backend" / "services"),
+                str(project_root / "backend" / "agent"),
             ],
             log_level="info",
         )
@@ -213,6 +209,7 @@ else:
     # 生产模式：IPC 通信（通过 stdin/stdout 与 Electron 通信）
     import asyncio
     import logging
+    import signal
     from httpx import AsyncClient
 
     # 配置 stderr 使用 UTF-8 编码
@@ -359,6 +356,16 @@ else:
 
     def ipc_loop():
         """IPC 通信循环"""
+        # 注册信号处理器（用于优雅关闭）
+        shutdown_event = threading.Event()
+
+        def signal_handler(signum, frame):
+            print(f"[IPC] Received signal {signum}, initiating graceful shutdown...", file=sys.stderr, flush=True)
+            shutdown_event.set()
+
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+
         # 确保数据库已初始化
         from backend.db.session import SessionLocal
         from backend.db.init_db import ensure_database_initialized
@@ -374,12 +381,12 @@ else:
         # 导入认证处理器
         from backend.api.auth import handle_auth_action
         from backend.api.agent import handle_agent_action, get_user_ai_config, get_current_user_id
-        from backend.agent.langchain.agent import AgentExecutor
+        from backend.agent.langgraph import AgentExecutor
 
-        # 预热 RAG 模型
+        # 预热 RAG 模型（后台执行，不阻塞启动）
         try:
             from backend.agent.skills.nutrition import QueryNutritionRAGSkill
-            QueryNutritionRAGSkill.prewarm()
+            QueryNutritionRAGSkill.prewarm_background()
         except Exception as e:
             print(f"[WARN] RAG pre-warm failed: {e}", file=sys.stderr)
 
@@ -454,7 +461,7 @@ else:
         }
 
         # 使用二进制模式读取 stdin
-        while True:
+        while not shutdown_event.is_set():
             try:
                 # 读取长度前缀（直到换行符）
                 length_bytes = b''
@@ -525,15 +532,31 @@ else:
                 sys.stdout.buffer.write(error_bytes)
                 sys.stdout.buffer.flush()
 
+        # 优雅关闭：关闭数据库连接
+        print("[IPC] Shutdown initiated, closing database connections...", file=sys.stderr, flush=True)
+        try:
+            from backend.db.session import DatabaseManager
+            DatabaseManager.close_all_connections()
+            print("[IPC] Database connections closed", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"[IPC] Error closing database: {e}", file=sys.stderr, flush=True)
+
     if __name__ == "__main__":
-        # 在单独线程中启动 IPC 循环
+        # 主线程 shutdown event（传递给 ipc_loop）
+        # ipc_loop 内部会创建自己的 shutdown_event 并注册信号处理器
         ipc_thread = threading.Thread(target=ipc_loop, daemon=True)
         ipc_thread.start()
 
-        # 保持主线程运行
+        # 保持主线程运行，但可以响应 KeyboardInterrupt
         import time
-        while True:
-            time.sleep(1)
+        try:
+            while ipc_thread.is_alive():
+                time.sleep(0.5)
+        except KeyboardInterrupt:
+            print("[IPC] KeyboardInterrupt received, shutting down...", file=sys.stderr, flush=True)
+            # 触发 ipc_loop 的 shutdown
+            import os
+            os.kill(os.getpid(), signal.SIGTERM)
 
     # 为生产模式导出 app 变量（供 uvicorn 等使用）
     app = get_app_instance()
