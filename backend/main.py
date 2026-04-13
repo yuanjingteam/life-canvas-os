@@ -61,6 +61,8 @@ if IS_DEV:
     from backend.api.insights import router as insights_router
     from backend.api.data import router as data_router
     from backend.api.timeline import router as timeline_router
+    from backend.api.asset import router as asset_router
+    from backend.api.agent import router as agent_router
 
     # 导入中间件和异常处理
     from backend.core.middleware import (
@@ -156,6 +158,8 @@ if IS_DEV:
     app.include_router(insights_router, tags=["insights"])
     app.include_router(data_router, tags=["data-management"])
     app.include_router(timeline_router, tags=["timeline"])
+    app.include_router(asset_router, tags=["assets"])
+    app.include_router(agent_router, tags=["agent"])
 
     @app.get("/")
     async def root():
@@ -205,6 +209,8 @@ else:
                     from backend.api.insights import router as insights_router
                     from backend.api.data import router as data_router
                     from backend.api.timeline import router as timeline_router
+                    from backend.api.asset import router as asset_router
+                    from backend.api.agent import router as agent_router
                     from backend.core.exceptions import setup_exception_handlers
 
                     # 创建 FastAPI 应用
@@ -237,6 +243,8 @@ else:
                     _app.include_router(insights_router, tags=["insights"])
                     _app.include_router(data_router, tags=["data-management"])
                     _app.include_router(timeline_router, tags=["timeline"])
+                    _app.include_router(asset_router, tags=["assets"])
+                    _app.include_router(agent_router, tags=["agent"])
 
         return _app
 
@@ -314,10 +322,18 @@ else:
             return api_call_wrapper(method, path, filtered_params, None)
 
     def ipc_loop():
-        """IPC 通信循环"""
+        """IPC 通信循环（带认证机制）"""
         # 确保数据库已初始化
         from backend.db.session import SessionLocal
         from backend.db.init_db import ensure_database_initialized
+
+        # 导入认证处理器
+        from backend.api.auth import handle_auth_action
+        from backend.core.security import get_ipc_authenticator, settings
+
+        # 初始化认证器
+        authenticator = get_ipc_authenticator()
+        auth_enabled = settings.IPC_AUTH_ENABLED
 
         try:
             db = SessionLocal()
@@ -326,9 +342,6 @@ else:
             print("[INFO] Database initialized successfully in IPC mode", file=sys.stderr)
         except Exception as e:
             print(f"[ERROR] Database initialization failed: {e}", file=sys.stderr)
-
-        # 导入认证处理器
-        from backend.api.auth import handle_auth_action
 
         action_handlers = {
             'ping': lambda params: {'action': 'pong', 'status': 'ok'},
@@ -366,6 +379,29 @@ else:
 
                 json_data = json_bytes.decode('utf-8')
                 request = json.loads(json_data)
+
+                # ========== IPC 认证验证 ==========
+                if auth_enabled:
+                    # 验证签名
+                    is_valid, payload, error_msg = authenticator.verify_request(request)
+
+                    if not is_valid:
+                        print(f"[IPC] 认证失败：{error_msg}", file=sys.stderr, flush=True)
+                        error_response = {
+                            'id': request.get('id', ''),
+                            'success': False,
+                            'error': f'认证失败：{error_msg}',
+                            'code': 'AUTH_FAILED'
+                        }
+                        error_str = json.dumps(error_response, ensure_ascii=False)
+                        error_bytes = error_str.encode('utf-8')
+                        sys.stdout.buffer.write(f'{len(error_bytes)}\n'.encode('utf-8'))
+                        sys.stdout.buffer.write(error_bytes)
+                        sys.stdout.buffer.flush()
+                        continue
+
+                    # 认证通过，使用解析后的 payload
+                    request = payload
 
                 # 路由到对应的处理器
                 action = request.get('action', '')

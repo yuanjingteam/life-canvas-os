@@ -11,6 +11,7 @@ import {
   Save,
   CheckCircle2,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '~/renderer/components/ui/button'
@@ -30,6 +31,8 @@ import { PinLockScreen } from '~/renderer/components/auth/PinLockScreen'
 import { usePinStatus } from '~/renderer/hooks/usePinStatus'
 import { usePinApi } from '~/renderer/hooks'
 import { GlassCard } from '~/renderer/components/GlassCard'
+import { useAgentEvents, AgentEvents } from '~/renderer/hooks/useAgentEvents'
+import { getEventBus } from '~/renderer/lib/event-bus'
 
 const PAGE_SIZE = 50
 const AUTO_SAVE_DELAY = 1000 // 自动保存延迟（毫秒）
@@ -118,6 +121,44 @@ export function JournalPage() {
       isLoadingRef.current = false
     }
   }, [listJournals, fetchPinStatus])
+
+  // 监听日记创建事件，触发刷新
+  useEffect(() => {
+    const handleJournalCreated = () => {
+      console.log('Journal created event received, refreshing list...')
+      loadJournals()
+    }
+
+    const handleJournalUpdated = () => {
+      console.log('Journal updated event received, refreshing list...')
+      loadJournals()
+    }
+
+    const handleJournalDeleted = () => {
+      console.log('Journal deleted event received, refreshing list...')
+      loadJournals()
+    }
+
+    const eventBus = getEventBus()
+    const unsubscribeCreate = eventBus.on(
+      AgentEvents.JOURNAL_CREATED,
+      handleJournalCreated
+    )
+    const unsubscribeUpdate = eventBus.on(
+      AgentEvents.JOURNAL_UPDATED,
+      handleJournalUpdated
+    )
+    const unsubscribeDelete = eventBus.on(
+      AgentEvents.JOURNAL_DELETED,
+      handleJournalDeleted
+    )
+
+    return () => {
+      unsubscribeCreate()
+      unsubscribeUpdate()
+      unsubscribeDelete()
+    }
+  }, [loadJournals])
 
   // 切换日期的展开/收起状态
   const toggleDateExpand = useCallback((date: string) => {
@@ -405,10 +446,13 @@ export function JournalPage() {
   // 过滤日记列表
   const filteredJournals = journals.filter(j => {
     const query = searchQuery.toLowerCase()
+    const title = j.title?.toLowerCase() || ''
+    const content = j.content?.toLowerCase() || ''
+    const tags = j.tags?.map(tag => tag.toLowerCase()) || []
     return (
-      j.title?.toLowerCase().includes(query) ||
-      j.content.toLowerCase().includes(query) ||
-      j.tags?.some(tag => tag.toLowerCase().includes(query))
+      title.includes(query) ||
+      content.includes(query) ||
+      tags.some(tag => tag.includes(query))
     )
   })
 

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from backend.models.user import User
 from backend.schemas.user import PinSetupResponse, PinVerifyResponse
 from backend.schemas.common import error_response
+from backend.core.config import settings
+from backend.services.base import get_current_user
 
 
 def _parse_datetime(dt):
@@ -38,7 +40,7 @@ class AuthService:
     @staticmethod
     def get_user(db: Session) -> Optional[User]:
         """获取用户（单用户应用，默认返回第一个用户）"""
-        return db.query(User).first()
+        return get_current_user(db)
 
     @staticmethod
     def create_default_user(db: Session) -> User:
@@ -131,16 +133,16 @@ class AuthService:
         else:
             # 验证失败，增加失败次数
             user.pin_attempts += 1
-            remaining_attempts = 3 - user.pin_attempts
+            remaining_attempts = settings.PIN_MAX_ATTEMPTS - user.pin_attempts
 
             # 检查是否需要锁定
-            if user.pin_attempts >= 3:
-                user.pin_locked_until = datetime.now() + timedelta(seconds=30)
+            if user.pin_attempts >= settings.PIN_MAX_ATTEMPTS:
+                user.pin_locked_until = datetime.now() + timedelta(seconds=settings.PIN_LOCK_DURATION_SECONDS)
                 db.commit()
                 return error_response(
-                    message="PIN 验证失败次数过多，已锁定 30 秒",
+                    message=f"PIN 验证失败次数过多，已锁定{settings.PIN_LOCK_DURATION_SECONDS}秒",
                     code=429,
-                    data={"remaining_seconds": 30}
+                    data={"remaining_seconds": settings.PIN_LOCK_DURATION_SECONDS}
                 ), 429
 
             db.commit()

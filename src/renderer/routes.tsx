@@ -14,11 +14,22 @@ const FuelSystemPage = lazy(() =>
     default: m.FuelSystemPage,
   }))
 )
+const AssetOverviewPage = lazy(() =>
+  import('~/renderer/pages/assets/AssetOverviewPage').then(m => ({
+    default: m.default,
+  }))
+)
+const AssetCategoryDetailPage = lazy(() =>
+  import('~/renderer/pages/assets/AssetCategoryDetailPage').then(m => ({
+    default: m.default,
+  }))
+)
 const JournalPage = lazy(() =>
   import('~/renderer/pages/journal/JournalPage').then(m => ({
     default: m.JournalPage,
   }))
 )
+
 const TimelinePage = lazy(() =>
   import('~/renderer/pages/timeline/TimelinePage').then(m => ({
     default: m.TimelinePage,
@@ -59,28 +70,11 @@ const InsightHistoryDetailPage = lazy(() =>
     default: m.InsightHistoryDetailPage,
   }))
 )
-
-// 页面组件（暂时使用占位符）
-function PlaceholderPage({ name }: { name: string }) {
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div>
-        <h1 className="text-4xl font-black text-apple-textMain dark:text-white tracking-tight">
-          {name}
-        </h1>
-        <p className="text-apple-textSec dark:text-white/40 mt-2 text-lg">
-          此页面正在开发中...
-        </p>
-      </div>
-
-      <div className="glass-effect rounded-2xl p-8 text-center">
-        <p className="text-apple-textSec dark:text-white/60">
-          敬请期待更多功能
-        </p>
-      </div>
-    </div>
-  )
-}
+const AgentPage = lazy(() =>
+  import('~/renderer/pages/agent/AgentPage').then(m => ({
+    default: m.AgentPage,
+  }))
+)
 
 export function AppRoutes() {
   return (
@@ -98,6 +92,22 @@ export function AppRoutes() {
               </Suspense>
             }
             path="/dashboard"
+          />
+          <Route
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <AssetCategoryDetailPage />
+              </Suspense>
+            }
+            path="/asset/categories/:category"
+          />
+          <Route
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <AssetOverviewPage />
+              </Suspense>
+            }
+            path="/asset"
           />
           <Route
             element={
@@ -180,7 +190,15 @@ export function AppRoutes() {
             path="/insights/history/detail"
           />
           <Route
-            element={<PlaceholderPage name="子系统详情" />}
+            element={
+              <Suspense fallback={<PageLoading />}>
+                <AgentPage />
+              </Suspense>
+            }
+            path="/agent"
+          />
+          <Route
+            element={<Navigate replace to="/dashboard" />}
             path="/system/:type"
           />
         </Route>

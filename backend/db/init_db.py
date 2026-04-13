@@ -18,6 +18,8 @@ from backend.models.dimension import (
 from backend.models.diary import Diary, DiaryAttachment, DiaryEditHistory
 from backend.models.insight import Insight
 from backend.models.record import DailyRecord
+from backend.models.asset import AssetCategory, AssetItem, AssetSnapshot
+from backend.models.session import AgentSession, AgentMessage
 
 
 def ensure_database_initialized(db: Session) -> bool:
@@ -59,6 +61,9 @@ def ensure_database_initialized(db: Session) -> bool:
     # 4. 确保8个系统存在
     _create_default_systems(db)
 
+    # 5. 确保资产系统默认数据存在
+    _create_default_assets(db)
+
     return len(new_tables) > 0
 
 
@@ -76,6 +81,9 @@ def init_db(db: Session) -> None:
 
     # 4. 初始化 8 个系统
     _create_default_systems(db)
+
+    # 5. 初始化资产系统默认数据
+    _create_default_assets(db)
 
     print("\n[SUCCESS] Database initialization completed!")
 
@@ -146,5 +154,71 @@ if __name__ == "__main__":
         print(f"Initialization failed: {e}")
         db.rollback()
         raise
-    finally:
-        db.close()
+
+
+def _create_default_assets(db: Session) -> None:
+    """初始化资产系统默认数据"""
+    user = db.query(User).first()
+    if not user:
+        return
+
+    # 1. 检查是否已经有分类，如果有则跳过
+    if db.query(AssetCategory).filter(AssetCategory.user_id == user.id).first():
+        return
+
+    print("[INFO] Seeding default asset data...")
+
+    # 2. 创建默认分类
+    default_categories = [
+        {"name": "现金", "emoji": "💵", "color": "amber", "kind": "asset"},
+        {"name": "活期/储蓄", "emoji": "🏦", "color": "sky", "kind": "asset"},
+        {"name": "投资理财", "emoji": "📈", "color": "emerald", "kind": "asset"},
+        {"name": "固定资产", "emoji": "🏠", "color": "orange", "kind": "asset"},
+        {"name": "应收款", "emoji": "🤝", "color": "indigo", "kind": "asset"},
+        {"name": "负债", "emoji": "🧾", "color": "rose", "kind": "liability"},
+        {"name": "保险/公积金/养老金", "emoji": "🛡️", "color": "violet", "kind": "asset"},
+        {"name": "其他", "emoji": "📦", "color": "slate", "kind": "asset"},
+    ]
+
+    cat_map = {}
+    for cat_data in default_categories:
+        cat = AssetCategory(user_id=user.id, **cat_data)
+        db.add(cat)
+        db.flush()  # 获取 ID
+        cat_map[cat_data["name"]] = cat.id
+
+    # 3. 添加一些初始资产项
+    initial_items = [
+        {"name": "钱包现金", "amount": 500.0, "category_id": cat_map["现金"]},
+        {"name": "招商银行储蓄卡", "amount": 12000.0, "category_id": cat_map["活期/储蓄"]},
+        {"name": "沪深300指数基金", "amount": 50000.0, "category_id": cat_map["投资理财"]},
+        {"name": "自住房产", "amount": 1500000.0, "category_id": cat_map["固定资产"]},
+        {"name": "信用卡欠款", "amount": 3500.0, "category_id": cat_map["负债"]},
+    ]
+
+    for item_data in initial_items:
+        item = AssetItem(user_id=user.id, **item_data)
+        db.add(item)
+
+    # 4. 生成过去 12 个月的模拟快照（用于趋势图）
+    from datetime import date, timedelta
+    today = date.today()
+    for i in range(12, 0, -1):
+        # 模拟每月 1 号的快照
+        snap_date = date(today.year, today.month, 1) - timedelta(days=i * 30)
+        # 模拟资产缓慢增长
+        base_assets = 1500000 + (12 - i) * 5000
+        base_liabilities = 5000 - (12 - i) * 200
+
+        snapshot = AssetSnapshot(
+            user_id=user.id,
+            snapshot_date=snap_date,
+            total_assets=float(base_assets),
+            total_liabilities=float(base_liabilities),
+            net_assets=float(base_assets - base_liabilities),
+            note="系统初始化生成的模拟数据"
+        )
+        db.add(snapshot)
+
+    db.commit()
+    print("[OK] Created default asset categories, items and snapshots")
