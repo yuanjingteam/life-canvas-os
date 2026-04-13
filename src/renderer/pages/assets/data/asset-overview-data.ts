@@ -8,4 +8,3 @@ export const NEW_CATEGORY_TONES = [
 ]
 
 export const NEW_CATEGORY_EMOJIS = ['✨', '🧩', '🎈', '🪴']
-

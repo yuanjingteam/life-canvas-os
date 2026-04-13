@@ -76,7 +76,6 @@ const AgentPage = lazy(() =>
   }))
 )
 
-
 export function AppRoutes() {
   return (
     <HashRouter>

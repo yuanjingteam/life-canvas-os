@@ -74,30 +74,35 @@ export default function AssetOverviewPage() {
         categories={displayCategories}
         editingId={editingId}
         inputRef={inputRef}
+        isDeleteMode={isDeleteMode}
         onAddCategory={handleAddCategory}
+        onDeleteCategory={handleDeleteCategory}
         onEditEnd={() => setEditingId(null)}
         onNameChange={handleNameChange}
         onNavigate={category =>
           navigate(`/asset/categories/${encodeURIComponent(category.name)}`)
         }
-        isDeleteMode={isDeleteMode}
         setIsDeleteMode={setIsDeleteMode}
-        onDeleteCategory={handleDeleteCategory}
       />
 
-      <Dialog open={!!deletingCategoryId} onOpenChange={(open) => !open && setDeletingCategoryId(null)}>
+      <Dialog
+        onOpenChange={open => !open && setDeletingCategoryId(null)}
+        open={!!deletingCategoryId}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>删除分类</DialogTitle>
             <DialogDescription>
-              确定要删除分类 "{displayCategories.find(c => c.id === deletingCategoryId)?.name}" 及其所有资产项吗？此操作不可撤销。
+              确定要删除分类 "
+              {displayCategories.find(c => c.id === deletingCategoryId)?.name}"
+              及其所有资产项吗？此操作不可撤销。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeletingCategoryId(null)}>
+            <Button onClick={() => setDeletingCategoryId(null)} variant="ghost">
               取消
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteCategory}>
+            <Button onClick={confirmDeleteCategory} variant="destructive">
               确认删除
             </Button>
           </DialogFooter>
@@ -106,5 +111,3 @@ export default function AssetOverviewPage() {
     </div>
   )
 }
-
-

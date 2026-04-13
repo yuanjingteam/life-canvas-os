@@ -34,20 +34,22 @@ export function AssetCategorySection({
     <div className="pb-10">
       <div className="mb-4 flex items-end justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-apple-textMain">资产分类</h2>
+          <h2 className="text-lg font-semibold text-apple-textMain">
+            资产分类
+          </h2>
           <p className="text-sm text-apple-textSec">
             每个卡片都是一个小账本，点进去看详情。
           </p>
         </div>
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsDeleteMode(!isDeleteMode)}
           className={`gap-2 ${
             isDeleteMode
               ? 'bg-apple-bgSecondary text-apple-textMain hover:bg-apple-bgSecondary/80'
               : 'text-apple-textSec hover:text-apple-textMain'
           }`}
+          onClick={() => setIsDeleteMode(!isDeleteMode)}
+          size="sm"
+          variant="ghost"
         >
           {isDeleteMode ? (
             <>
@@ -65,12 +67,6 @@ export function AssetCategorySection({
       <AssetCategoryGrid
         categories={categories}
         editingId={editingId}
-        inputRef={inputRef}
-        onNameChange={onNameChange}
-        onEditEnd={onEditEnd}
-        onNavigate={onNavigate}
-        isDeleteMode={isDeleteMode}
-        onDeleteCategory={onDeleteCategory}
         extraCard={
           <GlassCard
             className="flex min-h-[120px] cursor-pointer items-center justify-center border border-dashed border-apple-border/70 bg-white/40 p-5 text-apple-textSec transition hover:-translate-y-0.5 hover:border-apple-accent/40 hover:shadow-lg dark:bg-white/5"
@@ -84,8 +80,13 @@ export function AssetCategorySection({
             </div>
           </GlassCard>
         }
+        inputRef={inputRef}
+        isDeleteMode={isDeleteMode}
+        onDeleteCategory={onDeleteCategory}
+        onEditEnd={onEditEnd}
+        onNameChange={onNameChange}
+        onNavigate={onNavigate}
       />
     </div>
   )
 }
-

@@ -18,8 +18,5 @@ export const updateCategoryName = (
     category.id === id ? { ...category, name: value } : category
   )
 
-export const findCategoryByName = (
-  categories: CategoryCard[],
-  name: string
-) => categories.find(category => category.name === name)
-
+export const findCategoryByName = (categories: CategoryCard[], name: string) =>
+  categories.find(category => category.name === name)

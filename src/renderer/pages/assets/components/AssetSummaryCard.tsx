@@ -39,4 +39,3 @@ export function AssetSummaryCard({ totals }: AssetSummaryCardProps) {
     </GlassCard>
   )
 }
-

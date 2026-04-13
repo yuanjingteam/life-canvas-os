@@ -22,21 +22,24 @@ export function AssetCategoryNewItemCard({
       <div className="mt-4 space-y-3">
         <Input
           className="h-9"
+          onChange={event => form.onNameChange(event.target.value)}
           placeholder="资产名称"
           value={form.newName}
-          onChange={event => form.onNameChange(event.target.value)}
         />
         <Input
           className="h-9"
+          onChange={event => form.onAmountChange(event.target.value)}
           placeholder="金额"
           value={form.newAmount}
-          onChange={event => form.onAmountChange(event.target.value)}
         />
-        <Button className="w-full" disabled={!form.isValid} onClick={form.onAdd}>
+        <Button
+          className="w-full"
+          disabled={!form.isValid}
+          onClick={form.onAdd}
+        >
           保存
         </Button>
       </div>
     </GlassCard>
   )
 }
-

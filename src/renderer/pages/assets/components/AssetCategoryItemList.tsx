@@ -3,7 +3,10 @@ import { GlassCard } from '~/renderer/components/GlassCard'
 import { Button } from '~/renderer/components/ui/button'
 import { Input } from '~/renderer/components/ui/input'
 import type { AssetItem } from '~/renderer/pages/assets/hooks/use-asset-category-items'
-import { formatAmount, parseAmount } from '~/renderer/pages/assets/utils/asset-formatters'
+import {
+  formatAmount,
+  parseAmount,
+} from '~/renderer/pages/assets/utils/asset-formatters'
 
 interface AssetCategoryItemListProps {
   data: {
@@ -37,9 +40,9 @@ export function AssetCategoryItemList({
         <div className="flex items-center gap-2">
           <Input
             className="h-9 w-full max-w-[220px] bg-white/70 text-sm dark:bg-white/10"
+            onChange={event => handlers.onSearchChange(event.target.value)}
             placeholder="搜索资产"
             value={data.searchQuery}
-            onChange={event => handlers.onSearchChange(event.target.value)}
           />
           <Button
             className="h-9 w-9 shrink-0 shadow-sm"
@@ -70,19 +73,21 @@ export function AssetCategoryItemList({
                   {isEditing ? (
                     <Input
                       className="h-8 max-w-[220px] bg-white/80 text-sm dark:bg-white/10"
-                      value={data.draftName}
                       onChange={event =>
                         handlers.onDraftNameChange(event.target.value)
                       }
+                      value={data.draftName}
                     />
                   ) : (
-                    <p className="font-medium text-apple-textMain">{item.name}</p>
+                    <p className="font-medium text-apple-textMain">
+                      {item.name}
+                    </p>
                   )}
                   <p
+                    aria-hidden={isEditing}
                     className={`text-xs text-apple-textSec ${
                       isEditing ? 'opacity-0' : ''
                     }`}
-                    aria-hidden={isEditing}
                   >
                     最近更新：{item.updatedAt}
                   </p>
@@ -92,24 +97,24 @@ export function AssetCategoryItemList({
                     <>
                       <Input
                         className="h-8 w-[120px] bg-white/80 text-sm dark:bg-white/10"
-                        value={data.draftAmount}
                         onChange={event =>
                           handlers.onDraftAmountChange(event.target.value)
                         }
+                        value={data.draftAmount}
                       />
                       <Button
-                        size="icon"
-                        variant="ghost"
                         className="text-rose-500 hover:text-rose-600"
                         onClick={handlers.onCancelEdit}
+                        size="icon"
+                        variant="ghost"
                       >
                         <X size={16} />
                       </Button>
                       <Button
-                        size="icon"
-                        variant="ghost"
                         className="text-emerald-500 hover:text-emerald-600"
                         onClick={handlers.onSaveEdit}
+                        size="icon"
+                        variant="ghost"
                       >
                         <Check size={16} />
                       </Button>
@@ -120,16 +125,18 @@ export function AssetCategoryItemList({
                         ¥{formatAmount(parseAmount(item.amount))}
                       </span>
                       <Button
+                        onClick={() => handlers.onStartEdit(item)}
                         size="icon"
                         variant="ghost"
-                        onClick={() => handlers.onStartEdit(item)}
                       >
                         <Pencil size={16} />
                       </Button>
                       <Button
+                        onClick={() =>
+                          handlers.onDeleteItem(item.id, item.name)
+                        }
                         size="icon"
                         variant="ghost"
-                        onClick={() => handlers.onDeleteItem(item.id, item.name)}
                       >
                         <Trash2 size={16} />
                       </Button>
@@ -144,4 +151,3 @@ export function AssetCategoryItemList({
     </GlassCard>
   )
 }
-

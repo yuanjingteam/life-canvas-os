@@ -20,31 +20,31 @@ export function NetAssetTrendCard({ trend }: NetAssetTrendCardProps) {
     <GlassCard className="flex flex-col p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-apple-textMain">
-          <TrendingUp size={16} className="text-emerald-500" />
+          <TrendingUp className="text-emerald-500" size={16} />
           <span className="font-medium text-sm">净资产趋势（最近12月）</span>
         </div>
       </div>
 
       <div className="h-40 w-full overflow-hidden">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer height="100%" width="100%">
           <AreaChart
             data={trend}
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           >
             <defs>
-              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="colorValue" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis
-              dataKey="date"
               axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 10, fill: '#888' }}
+              dataKey="date"
               minTickGap={20}
+              tick={{ fontSize: 10, fill: '#888' }}
+              tickLine={false}
             />
-            <YAxis hide domain={['auto', 'auto']} />
+            <YAxis domain={['auto', 'auto']} hide />
             <Tooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
@@ -63,13 +63,13 @@ export function NetAssetTrendCard({ trend }: NetAssetTrendCardProps) {
               }}
             />
             <Area
-              type="monotone"
+              animationDuration={1500}
               dataKey="value"
+              fill="url(#colorValue)"
+              fillOpacity={1}
               stroke="#10b981"
               strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorValue)"
-              animationDuration={1500}
+              type="monotone"
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -81,4 +81,3 @@ export function NetAssetTrendCard({ trend }: NetAssetTrendCardProps) {
     </GlassCard>
   )
 }
-

@@ -15,7 +15,9 @@ export function useAssetCategorySelector(categories: CategoryCard[] = []) {
 
   const filteredCategories = useMemo(() => {
     if (!normalizedQuery) return safeCategories
-    return safeCategories.filter(category => category.name.includes(normalizedQuery))
+    return safeCategories.filter(category =>
+      category.name.includes(normalizedQuery)
+    )
   }, [safeCategories, normalizedQuery])
 
   const selectCategory = (name: string) => {
@@ -23,9 +25,7 @@ export function useAssetCategorySelector(categories: CategoryCard[] = []) {
     setIsCategoryOpen(false)
   }
 
-  const createCategoryFromQuery = (
-    onCreate: (name: string) => void
-  ) => {
+  const createCategoryFromQuery = (onCreate: (name: string) => void) => {
     if (!normalizedQuery) return
     if (safeCategories.some(category => category.name === normalizedQuery)) {
       selectCategory(normalizedQuery)
@@ -51,4 +51,3 @@ export function useAssetCategorySelector(categories: CategoryCard[] = []) {
     setIsCategoryOpen,
   }
 }
-

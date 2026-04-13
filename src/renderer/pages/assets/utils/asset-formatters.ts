@@ -16,4 +16,3 @@ export const formatPercent = (value: number) => `${value.toFixed(1)}%`
 
 export const isLiabilityCategory = (category: CategoryCard) =>
   category.id === 'liability' || category.name.includes('负债')
-

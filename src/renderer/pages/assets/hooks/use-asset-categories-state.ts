@@ -3,9 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { assetApi } from '~/renderer/api/asset'
 import type { CategoryCard } from '~/renderer/pages/assets/components/AssetCategoryGrid'
-import {
-  NEW_CATEGORY_EMOJIS,
-} from '~/renderer/pages/assets/data/asset-overview-data'
+import { NEW_CATEGORY_EMOJIS } from '~/renderer/pages/assets/data/asset-overview-data'
 import {
   formatAmount,
   formatPercent,
@@ -25,7 +23,14 @@ export function useAssetCategoriesState() {
       const res = await assetApi.getSummary()
       if (!res.ok) throw new Error('获取资产汇总失败')
       const result = await res.json()
-      return result.data || { total_assets: 0, total_liabilities: 0, net_assets: 0, categories: [] }
+      return (
+        result.data || {
+          total_assets: 0,
+          total_liabilities: 0,
+          net_assets: 0,
+          categories: [],
+        }
+      )
     },
   })
 
@@ -73,14 +78,20 @@ export function useAssetCategoriesState() {
   // 映射后端颜色到前端渐变
   const getTone = (color: string) => {
     const toneMap: Record<string, string> = {
-      amber: 'from-amber-200/70 via-amber-100/40 to-white/70 dark:from-amber-500/20 dark:via-amber-400/10 dark:to-white/5',
+      amber:
+        'from-amber-200/70 via-amber-100/40 to-white/70 dark:from-amber-500/20 dark:via-amber-400/10 dark:to-white/5',
       sky: 'from-sky-200/70 via-sky-100/40 to-white/70 dark:from-sky-500/20 dark:via-sky-400/10 dark:to-white/5',
-      emerald: 'from-emerald-200/70 via-emerald-100/40 to-white/70 dark:from-emerald-500/20 dark:via-emerald-400/10 dark:to-white/5',
-      orange: 'from-orange-200/70 via-orange-100/40 to-white/70 dark:from-orange-500/20 dark:via-orange-400/10 dark:to-white/5',
-      indigo: 'from-indigo-200/70 via-indigo-100/40 to-white/70 dark:from-indigo-500/20 dark:via-indigo-400/10 dark:to-white/5',
+      emerald:
+        'from-emerald-200/70 via-emerald-100/40 to-white/70 dark:from-emerald-500/20 dark:via-emerald-400/10 dark:to-white/5',
+      orange:
+        'from-orange-200/70 via-orange-100/40 to-white/70 dark:from-orange-500/20 dark:via-orange-400/10 dark:to-white/5',
+      indigo:
+        'from-indigo-200/70 via-indigo-100/40 to-white/70 dark:from-indigo-500/20 dark:via-indigo-400/10 dark:to-white/5',
       rose: 'from-rose-200/70 via-rose-100/40 to-white/70 dark:from-rose-500/20 dark:via-rose-400/10 dark:to-white/5',
-      violet: 'from-violet-200/70 via-violet-100/40 to-white/70 dark:from-violet-500/20 dark:via-violet-400/10 dark:to-white/5',
-      slate: 'from-slate-200/70 via-slate-100/40 to-white/70 dark:from-slate-500/20 dark:via-slate-400/10 dark:to-white/5',
+      violet:
+        'from-violet-200/70 via-violet-100/40 to-white/70 dark:from-violet-500/20 dark:via-violet-400/10 dark:to-white/5',
+      slate:
+        'from-slate-200/70 via-slate-100/40 to-white/70 dark:from-slate-500/20 dark:via-slate-400/10 dark:to-white/5',
       teal: 'from-teal-200/70 via-teal-100/40 to-white/70 dark:from-teal-500/20 dark:via-teal-400/10 dark:to-white/5',
       cyan: 'from-cyan-200/70 via-cyan-100/40 to-white/70 dark:from-cyan-500/20 dark:via-cyan-400/10 dark:to-white/5',
       pink: 'from-pink-200/70 via-pink-100/40 to-white/70 dark:from-pink-500/20 dark:via-pink-400/10 dark:to-white/5',
@@ -124,10 +135,15 @@ export function useAssetCategoriesState() {
   const trendData = useMemo(() => {
     if (!snapshots || snapshots.length === 0) return []
     // 返回包含日期和数值的对象数组，供图表使用
-    return snapshots.slice(0, 12).reverse().map((s: any) => ({
-      date: new Date(s.snapshot_date).toLocaleDateString(undefined, { month: 'short' }),
-      value: s.net_assets
-    }))
+    return snapshots
+      .slice(0, 12)
+      .reverse()
+      .map((s: any) => ({
+        date: new Date(s.snapshot_date).toLocaleDateString(undefined, {
+          month: 'short',
+        }),
+        value: s.net_assets,
+      }))
   }, [snapshots])
 
   const handleAddCategory = () => {
@@ -161,7 +177,11 @@ export function useAssetCategoriesState() {
     })
   }
 
-  const handleAddAsset = async (name: string, categoryName: string, amount: number) => {
+  const handleAddAsset = async (
+    name: string,
+    categoryName: string,
+    amount: number
+  ) => {
     let cat = summary?.categories?.find((c: any) => c.name === categoryName)
     if (!cat) {
       // 自动创建分类时，补全所有字段以避免 422
@@ -184,7 +204,9 @@ export function useAssetCategoriesState() {
     }
   }
 
-  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null)
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(
+    null
+  )
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (id: string) => assetApi.deleteCategory(Number(id)),

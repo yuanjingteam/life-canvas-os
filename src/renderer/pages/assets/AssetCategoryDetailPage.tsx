@@ -17,7 +17,10 @@ import { useAssetCategoryItems } from '~/renderer/pages/assets/hooks/use-asset-c
 export default function AssetCategoryDetailPage() {
   const navigate = useNavigate()
   const { category } = useParams()
-  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null)
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   const {
     addNewItem,
@@ -90,7 +93,10 @@ export default function AssetCategoryDetailPage() {
         }}
       />
 
-      <Dialog open={!!itemToDelete} onOpenChange={open => !open && setItemToDelete(null)}>
+      <Dialog
+        onOpenChange={open => !open && setItemToDelete(null)}
+        open={!!itemToDelete}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>确认删除资产项</DialogTitle>
@@ -99,17 +105,17 @@ export default function AssetCategoryDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setItemToDelete(null)}>
+            <Button onClick={() => setItemToDelete(null)} variant="ghost">
               取消
             </Button>
             <Button
-              variant="destructive"
               onClick={async () => {
                 if (itemToDelete) {
                   await deleteItem(itemToDelete.id)
                   setItemToDelete(null)
                 }
               }}
+              variant="destructive"
             >
               确认删除
             </Button>

@@ -9,7 +9,11 @@ import { parseAmount } from '~/renderer/pages/assets/utils/asset-formatters'
 
 interface AssetCreateCardProps {
   categories: CategoryCard[]
-  onAddAsset: (name: string, categoryName: string, amount: number) => Promise<boolean>
+  onAddAsset: (
+    name: string,
+    categoryName: string,
+    amount: number
+  ) => Promise<boolean>
   onCreateCategory: (name: string) => void
 }
 
@@ -39,7 +43,10 @@ export function AssetCreateCard({
   // 点击外部关闭下拉菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsCategoryOpen(false)
       }
     }
@@ -83,8 +90,12 @@ export function AssetCreateCard({
             <Plus size={20} />
           </div>
           <div>
-            <h3 className="text-base font-bold text-apple-textMain">新增资产</h3>
-            <p className="text-[10px] text-apple-textSec">记录每一笔财富的增长</p>
+            <h3 className="text-base font-bold text-apple-textMain">
+              新增资产
+            </h3>
+            <p className="text-[10px] text-apple-textSec">
+              记录每一笔财富的增长
+            </p>
           </div>
         </div>
 
@@ -97,9 +108,9 @@ export function AssetCreateCard({
               </label>
               <Input
                 className="h-10 bg-white/70 text-sm shadow-sm dark:bg-white/10"
+                onChange={event => setAssetName(event.target.value)}
                 placeholder="例如：招商银行储蓄卡"
                 value={assetName}
-                onChange={event => setAssetName(event.target.value)}
               />
             </div>
 
@@ -114,9 +125,9 @@ export function AssetCreateCard({
                 </span>
                 <Input
                   className="h-10 bg-white/70 pl-7 text-sm shadow-sm dark:bg-white/10"
+                  onChange={event => setAssetAmount(event.target.value)}
                   placeholder="0.00"
                   value={assetAmount}
-                  onChange={event => setAssetAmount(event.target.value)}
                 />
               </div>
             </div>
@@ -129,24 +140,28 @@ export function AssetCreateCard({
               <div className="relative">
                 <Input
                   className="h-10 bg-white/70 text-sm shadow-sm dark:bg-white/10"
-                  placeholder="搜索或创建分类"
-                  value={categoryQuery}
                   onChange={event => {
                     setCategoryQuery(event.target.value)
                     setIsCategoryOpen(true)
                   }}
                   onFocus={() => setIsCategoryOpen(true)}
+                  placeholder="搜索或创建分类"
+                  value={categoryQuery}
                 />
                 {isCategoryOpen ? (
                   <div className="absolute left-0 right-0 top-[46px] z-20 rounded-xl border border-white/60 bg-white/95 p-2 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-apple-dark/90">
                     {normalizedQuery ? (
                       <button
                         className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-apple-textMain transition hover:bg-apple-accent/10"
-                        onClick={() => createCategoryFromQuery(onCreateCategory)}
+                        onClick={() =>
+                          createCategoryFromQuery(onCreateCategory)
+                        }
                         type="button"
                       >
                         <span className="flex items-center gap-2">
-                          <span className="text-apple-accent font-medium">+</span>
+                          <span className="text-apple-accent font-medium">
+                            +
+                          </span>
                           {createCategoryLabel}
                         </span>
                         <span className="text-[10px] bg-apple-accent/10 text-apple-accent px-1.5 py-0.5 rounded">
@@ -164,7 +179,9 @@ export function AssetCreateCard({
                             type="button"
                           >
                             <span className="flex items-center gap-2">
-                              <span className="text-base group-hover:scale-110 transition-transform">{category.emoji}</span>
+                              <span className="text-base group-hover:scale-110 transition-transform">
+                                {category.emoji}
+                              </span>
                               {category.name}
                             </span>
                             <span className="text-[10px] text-apple-textSec opacity-0 group-hover:opacity-100 transition-opacity">
@@ -203,4 +220,3 @@ export function AssetCreateCard({
     </GlassCard>
   )
 }
-

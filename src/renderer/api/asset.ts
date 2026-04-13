@@ -45,7 +45,10 @@ export const assetApi = {
     return apiRequest('/api/assets/summary')
   },
 
-  getSnapshots(params?: { start_date?: string; end_date?: string }): Promise<Response> {
+  getSnapshots(params?: {
+    start_date?: string
+    end_date?: string
+  }): Promise<Response> {
     const query = new URLSearchParams(params as any).toString()
     return apiRequest(`/api/assets/snapshots${query ? `?${query}` : ''}`)
   },
@@ -71,7 +74,12 @@ export const assetApi = {
 
   updateCategory(
     id: number,
-    data: { name?: string; emoji?: string; color?: string; kind?: 'asset' | 'liability' }
+    data: {
+      name?: string
+      emoji?: string
+      color?: string
+      kind?: 'asset' | 'liability'
+    }
   ): Promise<Response> {
     return apiRequest(`/api/assets/categories/${id}`, {
       method: 'PUT',
@@ -92,7 +100,10 @@ export const assetApi = {
     return apiRequest(`/api/assets/categories/${categoryId}/items`)
   },
 
-  createItem(categoryId: number, data: { name: string; amount: number; note?: string }): Promise<Response> {
+  createItem(
+    categoryId: number,
+    data: { name: string; amount: number; note?: string }
+  ): Promise<Response> {
     return apiRequest(`/api/assets/categories/${categoryId}/items`, {
       method: 'POST',
       headers: {
@@ -102,7 +113,10 @@ export const assetApi = {
     })
   },
 
-  updateItem(itemId: number, data: { name?: string; amount?: number; note?: string }): Promise<Response> {
+  updateItem(
+    itemId: number,
+    data: { name?: string; amount?: number; note?: string }
+  ): Promise<Response> {
     return apiRequest(`/api/assets/items/${itemId}`, {
       method: 'PUT',
       headers: {
@@ -118,4 +132,3 @@ export const assetApi = {
     })
   },
 }
-

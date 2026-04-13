@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, type ReactNode, RefObject } from 'react'
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import { ArrowRight, X } from 'lucide-react'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import {
@@ -44,7 +50,7 @@ function TruncatedName({ name }: { name: string }) {
   }, [name])
 
   const content = (
-    <span ref={textRef} className="max-w-[120px] truncate font-semibold">
+    <span className="max-w-[120px] truncate font-semibold" ref={textRef}>
       {name}
     </span>
   )
@@ -80,10 +86,10 @@ export function AssetCategoryGrid({
 
           return (
             <GlassCard
-              key={category.id}
               className={`relative min-h-[120px] cursor-pointer overflow-hidden p-5 transition hover:-translate-y-0.5 hover:border-apple-accent/40 hover:shadow-lg ${
                 isDeleteMode ? 'border-red-200/50 hover:border-red-400/50' : ''
               }`}
+              key={category.id}
               onClick={() => {
                 if (isEditing) return
                 if (isDeleteMode) {
@@ -101,38 +107,38 @@ export function AssetCategoryGrid({
                   <span className="text-lg shrink-0">{category.emoji}</span>
                   {isEditing ? (
                     <Input
-                      ref={inputRef}
-                      value={category.name}
+                      className="h-7 w-32 bg-white/70 text-sm dark:bg-white/10"
+                      onBlur={onEditEnd}
                       onChange={event =>
                         onNameChange(category.id, event.target.value)
                       }
-                      onBlur={onEditEnd}
+                      onClick={event => event.stopPropagation()}
                       onKeyDown={event => {
                         if (event.key === 'Enter') {
                           event.currentTarget.blur()
                         }
                       }}
-                      onClick={event => event.stopPropagation()}
-                      className="h-7 w-32 bg-white/70 text-sm dark:bg-white/10"
                       placeholder="分类名称"
+                      ref={inputRef}
+                      value={category.name}
                     />
                   ) : (
                     <TruncatedName name={category.name} />
                   )}
-                  <Badge variant="secondary" className="shrink-0">
+                  <Badge className="shrink-0" variant="secondary">
                     {category.percent}
                   </Badge>
                 </div>
 
                 {isDeleteMode ? (
                   <X
-                    size={18}
                     className="absolute top-0 right-0 text-red-500 transition-colors hover:text-red-700"
+                    size={18}
                   />
                 ) : (
                   <ArrowRight
-                    size={16}
                     className="absolute top-0 right-0 text-apple-textSec"
+                    size={16}
                   />
                 )}
 
@@ -153,4 +159,3 @@ export function AssetCategoryGrid({
     </TooltipProvider>
   )
 }
-

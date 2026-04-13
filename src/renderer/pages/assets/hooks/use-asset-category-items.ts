@@ -162,7 +162,7 @@ export function useAssetCategoryItems() {
 
     const query = searchQuery.trim().toLowerCase()
     if (!query) return result
-    return result.filter((item) => item.name.toLowerCase().includes(query))
+    return result.filter(item => item.name.toLowerCase().includes(query))
   }, [items, searchQuery, editingId, draftName, draftAmount])
 
   const categorySummary = useMemo(() => {
@@ -170,7 +170,8 @@ export function useAssetCategoryItems() {
       return { total: '0', count: 0, percent: '0%' }
     }
     const totalAssets = summary?.total_assets || 0
-    const percent = totalAssets > 0 ? (currentCategory.total / totalAssets) * 100 : 0
+    const percent =
+      totalAssets > 0 ? (currentCategory.total / totalAssets) * 100 : 0
 
     return {
       total: formatAmount(currentCategory.total),
@@ -198,4 +199,3 @@ export function useAssetCategoryItems() {
     summary: categorySummary,
   }
 }
-
