@@ -67,6 +67,7 @@ class AssetItemService:
             name=request.name,
             amount=request.amount,
             note=request.note,
+            config=request.config,
         )
         db.add(item)
         db.commit()

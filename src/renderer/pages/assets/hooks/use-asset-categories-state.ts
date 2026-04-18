@@ -117,6 +117,7 @@ export function useAssetCategoriesState() {
         count: cat.items_count,
         emoji: cat.emoji,
         tone: getTone(cat.color),
+        is_system: cat.is_system,
       }
     })
   }, [summary])

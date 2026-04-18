@@ -180,6 +180,24 @@ export function useAssetCategoryItems() {
     }
   }, [currentCategory, summary])
 
+  // 6. Mutation: 更新分类名称
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      assetApi.updateCategory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assets', 'summary'] })
+      toast.success('分类已更新')
+    },
+  })
+
+  const updateCategoryName = (newName: string) => {
+    if (!categoryId || !newName.trim()) return
+    updateCategoryMutation.mutate({
+      id: Number(categoryId),
+      data: { name: newName.trim() },
+    })
+  }
+
   return {
     addNewItem,
     cancelEdit,
@@ -197,5 +215,7 @@ export function useAssetCategoryItems() {
     setSearchQuery,
     startEdit,
     summary: categorySummary,
+    updateCategoryName,
+    currentCategory,
   }
 }

@@ -170,14 +170,14 @@ def _create_default_assets(db: Session) -> None:
 
     # 2. 创建默认分类
     default_categories = [
-        {"name": "现金", "emoji": "💵", "color": "amber", "kind": "asset"},
-        {"name": "活期/储蓄", "emoji": "🏦", "color": "sky", "kind": "asset"},
-        {"name": "投资理财", "emoji": "📈", "color": "emerald", "kind": "asset"},
-        {"name": "固定资产", "emoji": "🏠", "color": "orange", "kind": "asset"},
-        {"name": "应收款", "emoji": "🤝", "color": "indigo", "kind": "asset"},
-        {"name": "负债", "emoji": "🧾", "color": "rose", "kind": "liability"},
-        {"name": "保险/公积金/养老金", "emoji": "🛡️", "color": "violet", "kind": "asset"},
-        {"name": "其他", "emoji": "📦", "color": "slate", "kind": "asset"},
+        {"name": "现金", "emoji": "💵", "color": "amber", "kind": "asset", "is_system": True},
+        {"name": "活期/储蓄", "emoji": "🏦", "color": "sky", "kind": "asset", "is_system": True},
+        {"name": "投资理财", "emoji": "📈", "color": "emerald", "kind": "asset", "is_system": True},
+        {"name": "固定资产", "emoji": "🏠", "color": "orange", "kind": "asset", "is_system": True},
+        {"name": "应收款", "emoji": "🤝", "color": "indigo", "kind": "asset", "is_system": True},
+        {"name": "负债", "emoji": "🧾", "color": "rose", "kind": "liability", "is_system": True},
+        {"name": "保险/公积金/养老金", "emoji": "🛡️", "color": "violet", "kind": "asset", "is_system": True},
+        {"name": "其他", "emoji": "📦", "color": "slate", "kind": "asset", "is_system": True},
     ]
 
     cat_map = {}
@@ -190,7 +190,12 @@ def _create_default_assets(db: Session) -> None:
     # 3. 添加一些初始资产项
     initial_items = [
         {"name": "钱包现金", "amount": 500.0, "category_id": cat_map["现金"]},
-        {"name": "招商银行储蓄卡", "amount": 12000.0, "category_id": cat_map["活期/储蓄"]},
+        {
+            "name": "招商银行储蓄卡",
+            "amount": 12000.0,
+            "category_id": cat_map["活期/储蓄"],
+            "config": {"interest_rate": 0.0175, "interest_type": "yearly"}
+        },
         {"name": "沪深300指数基金", "amount": 50000.0, "category_id": cat_map["投资理财"]},
         {"name": "自住房产", "amount": 1500000.0, "category_id": cat_map["固定资产"]},
         {"name": "信用卡欠款", "amount": 3500.0, "category_id": cat_map["负债"]},

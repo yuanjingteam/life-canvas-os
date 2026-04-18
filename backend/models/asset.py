@@ -1,5 +1,5 @@
 """资产系统模型"""
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, text
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, text, Boolean, JSON
 from sqlalchemy.orm import relationship
 
 from backend.db.base import Base
@@ -16,6 +16,7 @@ class AssetCategory(Base):
     emoji = Column(String(20), default="💼")
     color = Column(String(30), default="amber")
     kind = Column(String(20), default="asset")
+    is_system = Column(Boolean, default=False, server_default=text("0"))
 
     created_at = Column(DateTime, server_default=localnow_func())
     updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())
@@ -37,6 +38,9 @@ class AssetItem(Base):
     name = Column(String(200), nullable=False)
     amount = Column(Float, nullable=False)
     note = Column(String(500), nullable=True)
+
+    # 精细化配置，如利率 {"interest_rate": 0.02, "interest_type": "daily"}
+    config = Column(JSON, nullable=True)
 
     created_at = Column(DateTime, server_default=localnow_func())
     updated_at = Column(DateTime, server_default=localnow_func(), onupdate=localnow_func())

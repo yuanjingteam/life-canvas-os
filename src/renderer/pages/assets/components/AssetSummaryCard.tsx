@@ -1,5 +1,6 @@
 import { Wallet } from 'lucide-react'
 import { GlassCard } from '~/renderer/components/GlassCard'
+import { AnimatedAmount } from './AnimatedAmount'
 
 interface AssetSummaryCardProps {
   totals: {
@@ -19,20 +20,20 @@ export function AssetSummaryCard({ totals }: AssetSummaryCardProps) {
           <span className="font-semibold">总资产</span>
         </div>
         <div className="text-4xl font-semibold text-apple-textMain">
-          {totals.assets}
+          <AnimatedAmount amount={totals.assets} />
         </div>
         <div className="flex flex-wrap gap-3">
           <div className="min-w-[140px] rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm shadow-sm dark:border-white/10 dark:bg-white/10">
             <p className="text-xs text-apple-textSec">总负债</p>
-            <p className="text-base font-semibold text-apple-textMain">
-              {totals.liabilities}
-            </p>
+            <div className="text-base font-semibold text-apple-textMain">
+              <AnimatedAmount amount={totals.liabilities} />
+            </div>
           </div>
           <div className="min-w-[140px] rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm shadow-sm dark:border-white/10 dark:bg-white/10">
             <p className="text-xs text-apple-textSec">净资产</p>
-            <p className="text-base font-semibold text-apple-textMain">
-              {totals.net}
-            </p>
+            <div className="text-base font-semibold text-apple-textMain">
+              <AnimatedAmount amount={totals.net} />
+            </div>
           </div>
         </div>
       </div>

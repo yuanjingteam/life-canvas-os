@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 import { Button } from '~/renderer/components/ui/button'
+import { Input } from '~/renderer/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -38,12 +39,38 @@ export default function AssetCategoryDetailPage() {
     setSearchQuery,
     startEdit,
     summary,
+    updateCategoryName,
+    currentCategory,
   } = useAssetCategoryItems()
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+    }
+  }, [isEditingTitle])
 
   const categoryName = useMemo(() => {
     if (!category) return '分类详情'
     return decodeURIComponent(category)
   }, [category])
+
+  useEffect(() => {
+    setTitleDraft(categoryName)
+  }, [categoryName])
+
+  const handleTitleSave = () => {
+    if (titleDraft.trim() && titleDraft !== categoryName) {
+      updateCategoryName(titleDraft)
+      navigate(`/asset/categories/${encodeURIComponent(titleDraft)}`, {
+        replace: true,
+      })
+    }
+    setIsEditingTitle(false)
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,9 +85,56 @@ export default function AssetCategoryDetailPage() {
             <ArrowLeft size={18} />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold text-apple-textMain">
-              {categoryName}
-            </h1>
+          <div className="group relative flex items-center gap-2">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  className="h-8 w-48 bg-white/70 text-lg font-semibold dark:bg-white/10"
+                  onBlur={() => setIsEditingTitle(false)}
+                  onChange={e => setTitleDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleTitleSave()
+                    if (e.key === 'Escape') setIsEditingTitle(false)
+                  }}
+                  ref={titleInputRef}
+                  value={titleDraft}
+                />
+                <Button
+                  className="h-8 w-8 text-emerald-500"
+                  onClick={handleTitleSave}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Check size={16} />
+                </Button>
+                <Button
+                  className="h-8 w-8 text-rose-500"
+                  onClick={() => setIsEditingTitle(false)}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-xl font-semibold text-apple-textMain">
+                  {categoryName}
+                </h1>
+                <Button
+                  className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                  onClick={() => {
+                    setTitleDraft(categoryName)
+                    setIsEditingTitle(true)
+                  }}
+                  size="icon"
+                  variant="ghost"
+                >
+                  <Pencil size={14} className="text-apple-textSec" />
+                </Button>
+              </>
+            )}
+          </div>
             <p className="text-[11px] text-apple-textSec">
               查看该分类下的资产明细。
             </p>

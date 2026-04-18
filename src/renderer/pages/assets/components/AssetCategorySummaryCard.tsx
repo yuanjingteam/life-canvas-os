@@ -1,4 +1,5 @@
 import { GlassCard } from '~/renderer/components/GlassCard'
+import { AnimatedAmount } from './AnimatedAmount'
 
 interface AssetCategorySummaryCardProps {
   summary: {
@@ -17,9 +18,9 @@ export function AssetCategorySummaryCard({
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-white/40 bg-white/60 p-4 dark:border-white/10 dark:bg-white/5">
           <p className="text-xs text-apple-textSec">总金额</p>
-          <p className="text-lg font-semibold text-apple-textMain">
-            ¥{summary.total}
-          </p>
+          <div className="text-lg font-semibold text-apple-textMain">
+            <AnimatedAmount amount={summary.total} />
+          </div>
         </div>
         <div className="rounded-xl border border-white/40 bg-white/60 p-4 dark:border-white/10 dark:bg-white/5">
           <p className="text-xs text-apple-textSec">占比</p>

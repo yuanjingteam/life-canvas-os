@@ -12,6 +12,7 @@ class AssetCategoryBase(BaseModel):
     emoji: str = Field("💼", max_length=20, description="分类图标")
     color: str = Field("amber", max_length=30, description="颜色标识")
     kind: CategoryKind = Field("asset", description="分类类型")
+    is_system: bool = Field(False, description="是否为系统内置分类")
 
 
 class AssetCategoryCreate(AssetCategoryBase):
@@ -37,6 +38,7 @@ class AssetItemBase(BaseModel):
     name: str = Field(..., max_length=200, description="资产名称")
     amount: float = Field(..., description="金额")
     note: Optional[str] = Field(None, max_length=500, description="备注")
+    config: Optional[dict] = Field(None, description="精细化配置")
 
 
 class AssetItemCreate(AssetItemBase):
@@ -66,6 +68,7 @@ class AssetCategorySummary(BaseModel):
     kind: CategoryKind
     total: float
     items_count: int
+    is_system: bool = False
 
 
 class AssetSummaryResponse(BaseModel):

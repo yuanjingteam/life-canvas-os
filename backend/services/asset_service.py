@@ -83,6 +83,9 @@ class AssetService:
         if not category:
             return error_response(message="分类不存在", code=404), 404
 
+        if category.is_system:
+            return error_response(message="系统内置分类无法删除", code=403), 403
+
         db.delete(category)
         db.commit()
         return {"id": category_id}, 200

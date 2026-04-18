@@ -7,6 +7,7 @@ import React, {
 } from 'react'
 import { ArrowRight, X } from 'lucide-react'
 import { GlassCard } from '~/renderer/components/GlassCard'
+import { AnimatedAmount } from './AnimatedAmount'
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +25,7 @@ export type CategoryCard = {
   count: number
   emoji: string
   tone: string
+  is_system?: boolean
 }
 
 interface AssetCategoryGridProps {
@@ -131,10 +133,12 @@ export function AssetCategoryGrid({
                 </div>
 
                 {isDeleteMode ? (
-                  <X
-                    className="absolute top-0 right-0 text-red-500 transition-colors hover:text-red-700"
-                    size={18}
-                  />
+                  !category.is_system ? (
+                    <X
+                      className="absolute top-0 right-0 text-red-500 transition-colors hover:text-red-700"
+                      size={18}
+                    />
+                  ) : null
                 ) : (
                   <ArrowRight
                     className="absolute top-0 right-0 text-apple-textSec"
@@ -143,9 +147,9 @@ export function AssetCategoryGrid({
                 )}
 
                 <div className="mt-5">
-                  <p className="text-2xl font-semibold text-apple-textMain">
-                    {category.amount}
-                  </p>
+                  <div className="text-2xl font-semibold text-apple-textMain">
+                    <AnimatedAmount amount={category.amount} />
+                  </div>
                   <p className="text-xs text-apple-textSec">
                     资产项 {category.count} 条
                   </p>

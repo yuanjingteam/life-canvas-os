@@ -43,6 +43,7 @@ class AssetSummaryService:
                     kind=category.kind,
                     total=total,
                     items_count=items_count,
+                    is_system=category.is_system or False,
                 )
             )
             if category.kind == "liability":

@@ -2,6 +2,7 @@ import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { GlassCard } from '~/renderer/components/GlassCard'
 import { Button } from '~/renderer/components/ui/button'
 import { Input } from '~/renderer/components/ui/input'
+import { AnimatedAmount } from './AnimatedAmount'
 import type { AssetItem } from '~/renderer/pages/assets/hooks/use-asset-category-items'
 import {
   formatAmount,
@@ -122,7 +123,7 @@ export function AssetCategoryItemList({
                   ) : (
                     <>
                       <span className="text-sm font-semibold text-apple-textMain">
-                        ¥{formatAmount(parseAmount(item.amount))}
+                        <AnimatedAmount amount={item.amount} />
                       </span>
                       <Button
                         onClick={() => handlers.onStartEdit(item)}
